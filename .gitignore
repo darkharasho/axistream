@@ -1,9 +1,12 @@
+node_modules/
 node_modules
 .env
 .env.*
 .DS_Store
+dist/
 dist
 build
 *.log
+.obs-test-config/
 .superpowers
 .sai/
