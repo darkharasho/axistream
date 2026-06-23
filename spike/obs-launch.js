@@ -49,8 +49,10 @@ async function launchObs({ port, password }) {
     '--websocket_debug',
     '--multi',                 // allow running alongside any existing OBS instance
     '--disable-shutdown-check',
-    '--minimize-to-tray',      // first probe of "hidden" operation
   ]
+  // Hidden operation is a separate finding; default to a visible window so
+  // capture/screenshot rendering is reliable. Opt into tray mode explicitly.
+  if (process.env.SPIKE_OBS_HIDDEN) obsArgs.push('--minimize-to-tray')
   const proc = spawn(cmd, obsArgs, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
   proc.stdout.on('data', d => process.stdout.write(`[obs] ${d}`))
   proc.stderr.on('data', d => process.stderr.write(`[obs] ${d}`))

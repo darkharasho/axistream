@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 
-const probeName = process.argv.find(a => /^\d\d-/.test(a)) || '00-env'
+const probeName = process.argv.find(a => /^\d\d/.test(a)) || '00-env'
 const platform = process.platform
 const outDir = path.join(__dirname, 'out')
 fs.mkdirSync(outDir, { recursive: true })
