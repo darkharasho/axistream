@@ -56,6 +56,22 @@ describe('ObsSidecar', () => {
     await sidecar.stop()
     expect(launcher.killApp).toHaveBeenCalled()
   })
+
+  it('stop() suppresses the "crashed" event when OBS exits after intentional teardown', async () => {
+    const { launcher, exit } = fakeLauncher()
+    const fakeClient = { connect: vi.fn().mockResolvedValue({}), disconnect: vi.fn().mockResolvedValue(undefined) }
+    const sidecar = new ObsSidecar({
+      launcher, collection: 'AxiStream',
+      _waitForPort: vi.fn().mockResolvedValue(undefined),
+      _makeClient: () => fakeClient as any,
+    } as any)
+    const onCrash = vi.fn()
+    sidecar.on('crashed', onCrash)
+    await sidecar.start()
+    await sidecar.stop()
+    exit(0) // OBS exits as a result of the kill — should NOT emit 'crashed'
+    expect(onCrash).not.toHaveBeenCalled()
+  })
 })
 
 describe('ObsSidecar robustness', () => {

@@ -34,7 +34,6 @@ export interface ObsSidecarOptions {
   launcher: ObsLauncher
   collection: string
   password?: string
-  readyTries?: number
   expectedObsVersion?: string
   // test seams (optional):
   _waitForPort?: (port: number, timeoutMs: number) => Promise<void>
