@@ -73,7 +73,15 @@ export class Provisioner {
   }
 
   private async buildCollection(client: ReturnType<ProvisionerSidecar['client']>, kind: string): Promise<void> {
-    await callReady(() => client.call('GetSceneCollectionList'))
+    const { currentSceneCollectionName, sceneCollections } =
+      await callReady(() => client.call('GetSceneCollectionList'))
+    if (!sceneCollections.includes(COLLECTION)) {
+      await callReady(() => client.call('CreateSceneCollection', { sceneCollectionName: COLLECTION }))
+      await callReady(() => client.call('GetSceneList'))
+    } else if (currentSceneCollectionName !== COLLECTION) {
+      await callReady(() => client.call('SetCurrentSceneCollection', { sceneCollectionName: COLLECTION }))
+      await callReady(() => client.call('GetSceneList'))
+    }
     // Clean any prior spike/capture leftovers.
     try {
       const { inputs } = await client.call('GetInputList')

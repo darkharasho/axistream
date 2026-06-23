@@ -71,6 +71,82 @@ describe('Provisioner (Wayland)', () => {
   })
 })
 
+describe('Provisioner (Wayland) – collection ensure', () => {
+  let dir: string, config: CaptureConfig
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'axpe-')); config = new CaptureConfig(join(dir, 'c.json')) })
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
+
+  it('creates the collection when absent', async () => {
+    const calls: [string, any][] = []
+    const make = (screenshot: string) => ({
+      call: vi.fn(async (req: string, data?: any) => {
+        calls.push([req, data])
+        const handlers: Record<string, (d?: any) => any> = {
+          GetSceneCollectionList: () => ({ currentSceneCollectionName: 'Untitled', sceneCollections: ['Untitled'] }),
+          CreateSceneCollection: () => ({}),
+          SetCurrentSceneCollection: () => ({}),
+          GetSceneList: () => ({ scenes: [] }),
+          CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+          CreateInput: () => ({}), RemoveInput: () => ({}), RemoveScene: () => ({}),
+          GetSourceScreenshot: () => ({ imageData: screenshot }),
+        }
+        const h = handlers[req]
+        if (!h) throw new Error(`unexpected request ${req}`)
+        return h(data)
+      }),
+    })
+    let client = make(bigVariedB64)
+    const sidecar = {
+      client: () => client as any,
+      restart: vi.fn(async () => { client = make(bigVariedB64) }),
+    }
+    const p = new Provisioner({ sidecar: sidecar as any, config, platform: 'linux', approvalPollTries: 3, approvalPollDelayMs: 5 })
+    const res = await p.provision()
+
+    const createCollCalls = calls.filter(([req, data]) => req === 'CreateSceneCollection' && data?.sceneCollectionName === 'AxiStream')
+    expect(createCollCalls.length).toBeGreaterThan(0)
+    expect(res).toEqual({ ok: true, status: 'READY' })
+  })
+
+  it('switches when collection is present but not current', async () => {
+    const calls: [string, any][] = []
+    const make = (screenshot: string) => ({
+      call: vi.fn(async (req: string, data?: any) => {
+        calls.push([req, data])
+        const handlers: Record<string, (d?: any) => any> = {
+          GetSceneCollectionList: () => ({ currentSceneCollectionName: 'Untitled', sceneCollections: ['Untitled', 'AxiStream'] }),
+          CreateSceneCollection: () => ({}),
+          SetCurrentSceneCollection: () => ({}),
+          GetSceneList: () => ({ scenes: [] }),
+          CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+          CreateInput: () => ({}), RemoveInput: () => ({}), RemoveScene: () => ({}),
+          GetSourceScreenshot: () => ({ imageData: screenshot }),
+        }
+        const h = handlers[req]
+        if (!h) throw new Error(`unexpected request ${req}`)
+        return h(data)
+      }),
+    })
+    let client = make(bigVariedB64)
+    const sidecar = {
+      client: () => client as any,
+      restart: vi.fn(async () => { client = make(bigVariedB64) }),
+    }
+    const p = new Provisioner({ sidecar: sidecar as any, config, platform: 'linux', approvalPollTries: 3, approvalPollDelayMs: 5 })
+    const res = await p.provision()
+
+    // The ensure step must call SetCurrentSceneCollection, not CreateSceneCollection for AxiStream
+    const ensureCreateCalls = calls.filter(([req, data], idx) =>
+      req === 'CreateSceneCollection' && data?.sceneCollectionName === 'AxiStream' &&
+      idx < calls.findIndex(([r]) => r === 'CreateScene')
+    )
+    expect(ensureCreateCalls.length).toBe(0)
+    const switchCalls = calls.filter(([req, data]) => req === 'SetCurrentSceneCollection' && data?.sceneCollectionName === 'AxiStream')
+    expect(switchCalls.length).toBeGreaterThan(0)
+    expect(res).toEqual({ ok: true, status: 'READY' })
+  })
+})
+
 describe('Provisioner (Windows + repair)', () => {
   let dir: string, config: CaptureConfig
   beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'axpw-')); config = new CaptureConfig(join(dir, 'c.json')) })
