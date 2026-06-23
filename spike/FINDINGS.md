@@ -15,8 +15,8 @@ Spike of driving a bundled OBS Studio as a background sidecar over obs-websocket
 | 02 create source     | PASS (created over socket) | not run |
 | 02b portal persists  | YES (approved + remembered, restore token works) | NA |
 | 03 non-black frames  | PASS (via existing source; new-source caveat below) | not run |
-| 04 encoder control   | — | — |
-| 05 RTMPS live        | — | — |
+| 04 encoder control   | PASS (profile encoder used by stream) | not run |
+| 05 RTMPS live        | **PASS** (live on YouTube, 0 dropped frames) | not run |
 
 ## Task 0 — env / OBS acquisition (Linux: PASS)
 - Electron 42.4.1 boots cleanly; Wayland + KDE detected.
@@ -44,6 +44,22 @@ Spike of driving a bundled OBS Studio as a background sidecar over obs-websocket
 - **Architecture decision surfaced:** because real users (like this one) already run OBS, AxiStream must decide between driving a *bundled/isolated* OBS (own config, never touches user scenes) vs the *user's* OBS (reuses setup, risks collisions). Recommend bundled+isolated for v1 predictability.
 - **Interrupted runs leave OBS on the spike collection** and can orphan OBS — the real sidecar manager needs robust restore-on-crash and `flatpak kill` teardown.
 - OBS can report **"not ready"** during startup/collection-switch; all control must retry through that window.
+
+## Task 5 — end-to-end RTMPS to YouTube (Linux: PASS)
+- Set the stream service to `rtmp_custom` / `rtmps://a.rtmps.youtube.com/live2` + key entirely over the socket, switched program scene to the user's `GW2 - Zergling`, `StartStream`, streamed ~20s, `StopStream` — all via obs-websocket.
+- Result: `outputActive: true`, `outputReconnecting: false`, **0 skipped frames / 436 total**, `outputBytes` climbed 0 → ~9.8 MB. User visually confirmed the stream live on YouTube.
+- **RTMPS (TLS) ingest works** — no fallback to plain RTMP needed.
+- Encoder (Task 4) implicitly validated: the stream used the OBS **profile's** configured encoder. Confirms the design that AxiStream applies GW2 presets via OBS profiles/settings, then streams.
+- Probe is non-destructive: saved + restored the user's original stream service settings and program scene afterward. The key is read from a gitignored `.env` and never logged or returned.
+
+## VERDICT (Linux half): **GO**
+Every hard gate and the end-to-end stream pass on Bazzite/Wayland. The OBS-sidecar-over-obs-websocket approach is viable as AxiStream's capture/encode/stream foundation on Linux. Remaining items are scoped design work and the Windows validation, not viability unknowns.
+
+### Carry-forward design constraints (not blockers)
+1. **Fresh Wayland capture source provisioning:** `CreateInput` alone doesn't trigger the portal. Provision via a seeded collection or a one-time portal approval + restore-token reuse.
+2. **Isolation/lifecycle:** bundle an isolated OBS config; robust teardown is `flatpak kill` (Linux); restore-on-crash needed; retry through OBS "not ready".
+3. **Encoder presets:** apply via OBS profiles, not ad-hoc socket settings.
+4. **Hidden operation** still to be validated (capture ran with a visible window).
 
 ## Open risks still to validate
 - **Fresh-source portal trigger over the socket** (Task 2 caveat) — pick the provisioning mechanism (seeded collection / token reuse / activation request).
