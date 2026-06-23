@@ -29,10 +29,8 @@ describe('Provisioner (Wayland)', () => {
   afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
   it('builds, reloads, fires onApprovalNeeded, and reaches READY on first non-black frame', async () => {
-    const calls: string[] = []
     const make = (screenshot: string) => fakeClient({
       GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
-      GetInputKindList: () => ({ inputKinds: ['pipewire-screen-capture-source'] }),
       CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
       CreateInput: () => ({}), RemoveInput: () => ({}), RemoveScene: () => ({}),
       CreateSceneCollection: () => ({}), SetCurrentSceneCollection: () => ({}),
@@ -58,7 +56,6 @@ describe('Provisioner (Wayland)', () => {
   it('stays AWAITING_APPROVAL and does not provision when frames stay black', async () => {
     const make = () => fakeClient({
       GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
-      GetInputKindList: () => ({ inputKinds: ['pipewire-screen-capture-source'] }),
       CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
       CreateInput: () => ({}), RemoveInput: () => ({}), RemoveScene: () => ({}),
       CreateSceneCollection: () => ({}), SetCurrentSceneCollection: () => ({}),
@@ -71,5 +68,43 @@ describe('Provisioner (Wayland)', () => {
     const res = await p.provision(vi.fn())
     expect(res).toEqual({ ok: false, status: 'AWAITING_APPROVAL' })
     expect(config.isProvisioned()).toBe(false)
+  })
+})
+
+describe('Provisioner (Windows + repair)', () => {
+  let dir: string, config: CaptureConfig
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'axpw-')); config = new CaptureConfig(join(dir, 'c.json')) })
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
+
+  it('windows path provisions live with no restart and no approval prompt', async () => {
+    const client = fakeClient({
+      GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
+      GetInputList: () => ({ inputs: [] }),
+      CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+      RemoveScene: () => ({}), CreateInput: () => ({}),
+      GetSourceScreenshot: () => ({ imageData: bigVariedB64 }),
+    })
+    const sidecar = { client: () => client as any, restart: vi.fn() }
+    const onApproval = vi.fn()
+    const p = new Provisioner({ sidecar: sidecar as any, config, platform: 'win32', approvalPollTries: 3, approvalPollDelayMs: 5 })
+    const res = await p.provision(onApproval)
+    expect(sidecar.restart).not.toHaveBeenCalled()
+    expect(onApproval).not.toHaveBeenCalled()
+    expect(res).toEqual({ ok: true, status: 'READY' })
+  })
+
+  it('repair() runs the provision flow again', async () => {
+    const client = fakeClient({
+      GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
+      GetInputList: () => ({ inputs: [] }),
+      CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+      RemoveScene: () => ({}), CreateInput: () => ({}),
+      GetSourceScreenshot: () => ({ imageData: bigVariedB64 }),
+    })
+    const sidecar = { client: () => client as any, restart: vi.fn() }
+    const p = new Provisioner({ sidecar: sidecar as any, config, platform: 'win32', approvalPollTries: 3, approvalPollDelayMs: 5 })
+    const res = await p.repair()
+    expect(res.ok).toBe(true)
+    expect(res.status).toBe('READY')
   })
 })

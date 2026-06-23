@@ -36,6 +36,11 @@ export class Provisioner {
 
   status(): ProvisionStatus { return this.state }
 
+  async repair(onApprovalNeeded?: () => void): Promise<ProvisionResult> {
+    this.state = 'REPAIR'
+    return this.provision(onApprovalNeeded)
+  }
+
   async provision(onApprovalNeeded?: () => void): Promise<ProvisionResult> {
     this.state = 'BUILDING'
     const c = () => this.deps.sidecar.client()
