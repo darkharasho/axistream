@@ -29,13 +29,22 @@ describe('Provisioner (Wayland)', () => {
   afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
   it('builds, reloads, fires onApprovalNeeded, and reaches READY on first non-black frame', async () => {
-    const make = (screenshot: string) => fakeClient({
-      GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
-      CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
-      CreateInput: () => ({}), RemoveInput: () => ({}), RemoveScene: () => ({}),
-      CreateSceneCollection: () => ({}), SetCurrentSceneCollection: () => ({}),
-      GetSceneList: () => ({ scenes: [] }),
-      GetSourceScreenshot: () => ({ imageData: screenshot }),
+    const calls: [string, any][] = []
+    const make = (screenshot: string) => ({
+      call: vi.fn(async (req: string, data?: any) => {
+        calls.push([req, data])
+        const handlers: Record<string, (d?: any) => any> = {
+          GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
+          CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+          CreateInput: () => ({}), RemoveInput: () => ({}), RemoveScene: () => ({}),
+          CreateSceneCollection: () => ({}), SetCurrentSceneCollection: () => ({}),
+          GetSceneList: () => ({ scenes: [] }),
+          GetSourceScreenshot: () => ({ imageData: screenshot }),
+        }
+        const h = handlers[req]
+        if (!h) throw new Error(`unexpected request ${req}`)
+        return h(data)
+      }),
     })
     let client = make(bigVariedB64)
     const sidecar = {
@@ -51,6 +60,14 @@ describe('Provisioner (Wayland)', () => {
     expect(res).toEqual({ ok: true, status: 'READY' })
     expect(config.isProvisioned()).toBe(true)
     expect(p.status()).toBe('READY')
+
+    // The restore token must be persisted to disk: SetCurrentSceneCollection('AxiStreamScratch')
+    // must be called at least twice — once pre-restart (to save AxiStream before reload) and
+    // once post-READY (to flush the runtime restore token after portal approval).
+    const scratchSwitchCalls = calls.filter(
+      ([req, data]) => req === 'SetCurrentSceneCollection' && data?.sceneCollectionName === 'AxiStreamScratch'
+    )
+    expect(scratchSwitchCalls.length).toBeGreaterThanOrEqual(2)
   })
 
   it('stays AWAITING_APPROVAL and does not provision when frames stay black', async () => {
@@ -153,13 +170,22 @@ describe('Provisioner (Windows + repair)', () => {
   afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
   it('windows path provisions live with no restart and no approval prompt', async () => {
-    const client = fakeClient({
-      GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
-      GetInputList: () => ({ inputs: [] }),
-      CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
-      RemoveScene: () => ({}), CreateInput: () => ({}),
-      GetSourceScreenshot: () => ({ imageData: bigVariedB64 }),
-    })
+    const calls: [string, any][] = []
+    const client = {
+      call: vi.fn(async (req: string, data?: any) => {
+        calls.push([req, data])
+        const handlers: Record<string, (d?: any) => any> = {
+          GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
+          GetInputList: () => ({ inputs: [] }),
+          CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+          RemoveScene: () => ({}), CreateInput: () => ({}),
+          GetSourceScreenshot: () => ({ imageData: bigVariedB64 }),
+        }
+        const h = handlers[req]
+        if (!h) throw new Error(`unexpected request ${req}`)
+        return h(data)
+      }),
+    }
     const sidecar = { client: () => client as any, restart: vi.fn() }
     const onApproval = vi.fn()
     const p = new Provisioner({ sidecar: sidecar as any, config, platform: 'win32', approvalPollTries: 3, approvalPollDelayMs: 5 })
@@ -167,6 +193,11 @@ describe('Provisioner (Windows + repair)', () => {
     expect(sidecar.restart).not.toHaveBeenCalled()
     expect(onApproval).not.toHaveBeenCalled()
     expect(res).toEqual({ ok: true, status: 'READY' })
+    // Windows never creates SCRATCH and has no restore token — post-READY persist must NOT happen.
+    const scratchSwitchCalls = calls.filter(
+      ([req, data]) => req === 'SetCurrentSceneCollection' && data?.sceneCollectionName === 'AxiStreamScratch'
+    )
+    expect(scratchSwitchCalls.length).toBe(0)
   })
 
   it('repair() runs the provision flow again', async () => {

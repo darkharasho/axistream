@@ -64,6 +64,12 @@ export class Provisioner {
     // Poll for a real (non-black) frame.
     const ok = await this.waitForFrame(() => this.deps.sidecar.client())
     if (ok) {
+      if (isWayland) {
+        // Force-persist the AxiStream collection (which now holds the runtime restore token)
+        // by switching to SCRATCH — this triggers OBS to flush the collection to disk before
+        // the sidecar is killed, so the token survives a SIGKILL teardown.
+        await callReady(() => c().call('SetCurrentSceneCollection', { sceneCollectionName: SCRATCH }))
+      }
       this.deps.config.save({ provisioned: true, platform: this.deps.platform, collection: COLLECTION })
       this.state = 'READY'
       return { ok: true, status: 'READY' }
