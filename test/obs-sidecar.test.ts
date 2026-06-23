@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { ObsSidecar } from '../src/obs-sidecar.js'
+import { ObsSidecar, ObsVersionMismatchError } from '../src/obs-sidecar.js'
 import type { ObsLauncher, ObsLaunchHandle } from '../src/obs-launcher.js'
 
 function fakeLauncher(): { launcher: ObsLauncher; exit: (code: number | null) => void } {
@@ -55,5 +55,41 @@ describe('ObsSidecar', () => {
     await sidecar.start()
     await sidecar.stop()
     expect(launcher.killApp).toHaveBeenCalled()
+  })
+})
+
+describe('ObsSidecar robustness', () => {
+  function setup(overrides: any = {}) {
+    let exitCb: (c: number | null) => void = () => {}
+    const handle = { kill: vi.fn(), onExit: (cb: any) => { exitCb = cb } }
+    const launcher = { launch: vi.fn(() => handle), killApp: vi.fn() }
+    const client = {
+      connect: vi.fn().mockResolvedValue({}),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      call: vi.fn().mockResolvedValue({ obsVersion: '32.1.2' }),
+    }
+    const sidecar = new ObsSidecar({
+      launcher: launcher as any, collection: 'AxiStream',
+      _waitForPort: vi.fn().mockResolvedValue(undefined),
+      _makeClient: () => client as any,
+      ...overrides,
+    } as any)
+    return { sidecar, launcher, client, exit: (c: number | null) => exitCb(c) }
+  }
+
+  it('kills orphans before launching', async () => {
+    const { sidecar, launcher } = setup()
+    await sidecar.start()
+    expect(launcher.killApp).toHaveBeenCalled() // pre-launch cleanup
+  })
+
+  it('throws ObsVersionMismatchError when version differs', async () => {
+    const { sidecar } = setup({ expectedObsVersion: '99.9.9' })
+    await expect(sidecar.start()).rejects.toBeInstanceOf(ObsVersionMismatchError)
+  })
+
+  it('accepts the expected version', async () => {
+    const { sidecar } = setup({ expectedObsVersion: '32.1.2' })
+    await expect(sidecar.start()).resolves.toBeUndefined()
   })
 })
