@@ -1,5 +1,7 @@
-const { spawn } = require('child_process')
+const { spawn, execFileSync } = require('child_process')
 const net = require('net')
+
+const LINUX_FLATPAK_APP_ID = 'com.obsproject.Studio'
 
 // Resolve how to launch OBS on this platform.
 function findObsCommand() {
@@ -57,7 +59,15 @@ async function launchObs({ port, password }) {
   await waitForPort(port, 30000)
   return {
     proc,
-    disconnect() { try { proc.kill() } catch (_) {} },
+    disconnect() {
+      // On Linux, OBS runs in a Flatpak sandbox tree; killing the `flatpak run`
+      // child orphans the real OBS process. `flatpak kill <app-id>` is the
+      // reliable teardown. Fall back to killing our child on other platforms.
+      if (process.platform === 'linux') {
+        try { execFileSync('flatpak', ['kill', LINUX_FLATPAK_APP_ID], { stdio: 'ignore' }) } catch (_) {}
+      }
+      try { proc.kill() } catch (_) {}
+    },
   }
 }
 
