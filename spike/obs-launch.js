@@ -50,6 +50,8 @@ async function launchObs({ port, password }) {
     '--multi',                 // allow running alongside any existing OBS instance
     '--disable-shutdown-check',
   ]
+  // Optionally force OBS to load a specific scene collection on startup.
+  if (process.env.SPIKE_OBS_COLLECTION) obsArgs.push('--collection', process.env.SPIKE_OBS_COLLECTION)
   // Hidden operation is a separate finding; default to a visible window so
   // capture/screenshot rendering is reliable. Opt into tray mode explicitly.
   if (process.env.SPIKE_OBS_HIDDEN) obsArgs.push('--minimize-to-tray')

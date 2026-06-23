@@ -61,6 +61,12 @@ Every hard gate and the end-to-end stream pass on Bazzite/Wayland. The OBS-sidec
 3. **Encoder presets:** apply via OBS profiles, not ad-hoc socket settings.
 4. **Hidden operation** still to be validated (capture ran with a visible window).
 
+## Provisioning mechanism (RESOLVED — probes 07, 08)
+The Task 2 caveat is now fully characterized and solved:
+- **Runtime `CreateInput` capture sources never initialize on Wayland** — even with the real `RestoreToken` injected (probe 07: `Failed to render screenshot`). The token alone is not enough.
+- **A socket-built source that is persisted and RELOADED renders correctly** (probe 08): build the scene/source over obs-websocket → switch scene collections (forces OBS to save) → relaunch OBS with `--collection <name>` → the now config-loaded source initializes, prompts the portal once, and renders (274 KB non-black frame, visually confirmed; user approved + remembered).
+- **Provisioning model for AxiStream:** build the scene collection over the socket (no fragile hand-authoring of OBS config JSON), persist it, then (re)launch OBS pointed at that collection. First launch triggers a one-time portal approval; the restore token then persists for silent re-launches. `--collection <name>` selects which collection OBS loads.
+
 ## Open risks still to validate
 - **Fresh-source portal trigger over the socket** (Task 2 caveat) — pick the provisioning mechanism (seeded collection / token reuse / activation request).
 - Encoder control depth — profile-based vs over-socket. (Task 4)
