@@ -12,7 +12,8 @@ const WAYLAND_KIND = 'pipewire-screen-capture-source'
 const WINDOWS_KIND = 'monitor_capture'
 
 export interface ProvisionerSidecar {
-  client(): { call: (req: string, data?: any) => Promise<any> }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client(): { call: (...args: any[]) => Promise<any> }
   restart(): Promise<void>
 }
 
