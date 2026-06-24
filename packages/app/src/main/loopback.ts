@@ -24,7 +24,7 @@ export function createLoopback(): Promise<LoopbackResult> {
       resolve({
         redirectUri: `http://127.0.0.1:${port}/callback`,
         waitForCode: () => codePromise,
-        close: () => server.close(),
+        close: () => { server.closeAllConnections?.(); server.close() },
       })
     })
   })

@@ -196,6 +196,7 @@ app.whenReady().then(async () => {
         })
       } catch (e) {
         const humanMessage = e instanceof Error ? e.message : String(e)
+        pendingOAuthBump = false
         setState({ phase: 'ERROR', error: humanMessage })
         if (session) { try { await live.complete(session.broadcastId) } catch { /* best-effort */ } }
       }
