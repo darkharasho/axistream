@@ -13,7 +13,8 @@ let state: AppState = { ...INITIAL_STATE }
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 960, height: 620, frame: false, transparent: true, show: false,
+    width: 960, height: 620, frame: false, transparent: false, backgroundColor: '#0b0d12', show: false,
+    icon: join(import.meta.dirname, '../../build/icon.png'),
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   })
   win.once('ready-to-show', () => win.show())

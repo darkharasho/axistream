@@ -1,13 +1,18 @@
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-/* Transparent window background so the clipped corners of .app reveal the
-   desktop — faked rounded corners for the frameless Linux window. */
 body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+/* Corner rounding (KWin/compositor rounds the window; #root matches the radius
+   so content doesn't poke into the rounded corner). Window is opaque
+   (transparent:false + dark backgroundColor) — same technique as axibridge. */
+#root { height: 100%; overflow: hidden; border-radius: 10px; }
 
-/* App is a row: sidebar | active screen. Window controls float top-right.
-   Rounded + clipped so the transparent window corners read as rounded edges. */
-.app { position: relative; height: 100vh; display: flex; background: #0b0d12; border-radius: 12px; overflow: hidden; border: 1px solid #1d2530; }
+/* App is a row: sidebar | active screen. Window controls float top-right. */
+.app { position: relative; height: 100%; display: flex; background: #0b0d12; border-radius: 10px; overflow: hidden; border: 1px solid #1d2530; }
+
+/* Full-width top strip is draggable (a titlebar replacement). Sits below the
+   window controls (z-index 10, no-drag) so they stay clickable. */
+.dragbar { position: absolute; top: 0; left: 0; right: 0; height: 46px; -webkit-app-region: drag; z-index: 5; }
 
 /* Window controls — raised to the very top-right corner, over the preview. */
 .wctl { position: absolute; top: 9px; right: 11px; display: flex; gap: 5px; z-index: 10; -webkit-app-region: no-drag; }
@@ -17,7 +22,7 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-s
 
 /* Sidebar — brand at top, then nav, then engine pill. */
 .sidebar { width: 200px; background: #0a0c11; border-right: 1px solid #161c25; display: flex; flex-direction: column; padding: 0 10px 12px; }
-.brand { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px; font-weight: 800; color: #f0f4f8; -webkit-app-region: drag; }
+.brand { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px; font-weight: 800; color: #f0f4f8; }
 .dot.accent { width: 9px; height: 9px; border-radius: 50%; background: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
 .menu-label { color: #5b6470; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
 .navitem { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 9px; color: #8b949e; font-size: 14px; background: none; border: 0; text-align: left; cursor: pointer; margin-top: 3px; }
@@ -41,7 +46,7 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-s
 .hero.setup .btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
 .setup-icon { width: 58px; height: 58px; border-radius: 16px; background: rgba(34,211,238,.1); border: 1px solid rgba(34,211,238,.3); display: grid; place-items: center; color: #22d3ee; font-size: 26px; }
 
-.hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 2; -webkit-app-region: drag; }
+.hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 2; }
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
 .badge { color: #9fd8ff; font: 700 10px/1 ui-monospace, monospace; border: 1px solid rgba(34,211,238,.5); padding: 6px 9px; border-radius: 20px; background: rgba(0,0,0,.3); }
 .badge.live { color: #fff; background: #e23a52; border: 0; box-shadow: 0 0 16px rgba(226,58,82,.55); }
