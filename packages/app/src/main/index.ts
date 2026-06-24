@@ -21,7 +21,7 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { KeyStore } from './KeyStore.js'
@@ -159,6 +159,11 @@ app.whenReady().then(async () => {
   try {
     hideObsTray()
     await capture.start()
+    // Move onto an AxiStream-owned profile with no external YouTube auth — a
+    // profile carrying that auth makes OBS route go-live through its broadcast
+    // flow, which silently no-ops headless and never pushes RTMP. Persists across
+    // restarts, so it's a one-time switch in practice. Best-effort.
+    await ensureCleanProfile({ call: (r, p) => sidecar.client().call(r as never, p as never) })
     const provisioned = config.load().provisioned
     if (provisioned) {
       const capture_ = await applyResolution()
