@@ -151,6 +151,30 @@ GW2 title variables plug into `TitleTemplate`'s resolver map:
 
 Dream template enabled in v2: `{{gamemode}} - {{date}} - {{guild}} - {{class}}`.
 
+## Alternatives considered
+
+### OBS "Connect Account" (rejected)
+
+OBS Studio ships its own built-in YouTube OAuth ("Connect Account
+(recommended)" in Stream settings), which uses OBS's own Google-verified app to
+let OBS create the broadcast, set title/privacy, and go live.
+
+- **Pro:** sidesteps Google OAuth verification entirely (Landmine #1) — OBS's
+  app is already verified.
+- **Rejected because:**
+  1. **GUI/dialog-driven.** With an account connected, `StartStream` routes
+     through OBS's "Manage Broadcast" dialog. We run OBS headless under cage and
+     drive it via obs-websocket — nothing clicks that dialog. This is the exact
+     broadcast flow `ensureCleanProfile` removed because it silently no-op'd
+     headless.
+  2. **obs-websocket exposes no YouTube broadcast management.** Only
+     `StartStream`/`StopStream` — no create/title/privacy/transition requests.
+     The title-template feature (the point of this work) is unreachable through
+     OBS's integration.
+
+We accept the one-time verification cost (covered by the manual-key fallback
+until it clears) in exchange for full, headless-friendly programmatic control.
+
 ## Landmines (call out in implementation)
 
 1. **Google OAuth verification.** YouTube scopes (`youtube` / `youtube.force-ssl`)
