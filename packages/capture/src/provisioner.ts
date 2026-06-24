@@ -66,9 +66,12 @@ export class Provisioner {
     if (ok) {
       if (isWayland) {
         // Force-persist the AxiStream collection (which now holds the runtime restore token)
-        // by switching to SCRATCH — this triggers OBS to flush the collection to disk before
-        // the sidecar is killed, so the token survives a SIGKILL teardown.
+        // by switching to SCRATCH — this triggers OBS to flush the collection to disk so the
+        // token survives a SIGKILL teardown — then switch BACK to AxiStream. Without the switch
+        // back, OBS is left on the empty SCRATCH collection, so the program (and the virtual-cam
+        // preview) render black until the next launch reloads AxiStream.
         await callReady(() => c().call('SetCurrentSceneCollection', { sceneCollectionName: SCRATCH }))
+        await callReady(() => c().call('SetCurrentSceneCollection', { sceneCollectionName: COLLECTION }))
       }
       this.deps.config.save({ provisioned: true, platform: this.deps.platform, collection: COLLECTION })
       this.state = 'READY'
