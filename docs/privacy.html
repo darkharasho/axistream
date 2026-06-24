@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AxiStream — Privacy Policy</title>
+  <meta name="description" content="AxiStream privacy policy: local-only storage, no servers, YouTube OAuth used solely to run live broadcasts you start.">
+  <link rel="icon" type="image/png" href="./img/axistream-logo-120.png">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0e0f11;color:#d8dadd;font-family:-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.65}
+    .wrap{max-width:760px;margin:0 auto;padding:56px 28px 96px}
+    .top{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+    .top img{width:40px;height:40px}
+    .top a{color:#22d3ee;text-decoration:none;font-weight:600}
+    h1{color:#e4e3dc;font-size:34px;letter-spacing:-.5px;margin:18px 0 4px}
+    .updated{color:#6b7177;font-size:14px;margin-bottom:28px}
+    h2{color:#e4e3dc;font-size:21px;margin:34px 0 10px}
+    h3{color:#cfd4d8;font-size:17px;margin:22px 0 8px}
+    p{margin:10px 0}
+    ul{margin:10px 0 10px 22px}
+    li{margin:6px 0}
+    a{color:#22d3ee}
+    .note{background:#16171a;border:1px solid #2a2d31;border-radius:12px;padding:16px 18px;margin:18px 0;color:#cfd4d8}
+    code{background:#16171a;border:1px solid #2a2d31;border-radius:6px;padding:1px 6px;font-size:13px;color:#9fe7f4}
+    hr{border:none;border-top:1px solid #22242a;margin:34px 0}
+    .foot{color:#6b7177;font-size:13px;margin-top:36px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <img src="./img/axistream-logo-120.png" alt="AxiStream logo">
+      <a href="./index.html">← AxiStream</a>
+    </div>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: June 24, 2026</p>
+
+    <p>AxiStream (&ldquo;the app&rdquo;) is a desktop application that helps you go live on
+      YouTube from your own computer. This policy explains what data the app accesses,
+      how it is used, and how it is stored.</p>
+
+    <div class="note"><strong>In short:</strong> AxiStream has no servers and collects no
+      analytics. Everything stays on your own device. The app&rsquo;s developer never
+      receives your data.</div>
+
+    <h2>Who we are</h2>
+    <p>AxiStream is an open-source desktop application maintained by the project owner.
+      Questions about this policy can be sent to <a href="mailto:project96@gmail.com">project96@gmail.com</a>.</p>
+
+    <h2>What the app accesses</h2>
+
+    <h3>YouTube account (via Google OAuth)</h3>
+    <p>If you choose to connect your YouTube account, AxiStream uses Google OAuth 2.0 to
+      request the <code>https://www.googleapis.com/auth/youtube.force-ssl</code> scope.
+      This permission is used <strong>solely</strong> to operate the live-streaming
+      feature on your behalf, specifically to:</p>
+    <ul>
+      <li>read your channel name (to confirm which account is connected);</li>
+      <li>create, configure, and start a live broadcast (title, privacy setting);</li>
+      <li>bind that broadcast to your stream and end it when you stop streaming.</li>
+    </ul>
+    <p>AxiStream does <strong>not</strong> read, modify, or delete your videos, comments,
+      playlists, subscriptions, or any other YouTube data beyond what is required to run a
+      live broadcast you have started.</p>
+
+    <h3>Local app settings</h3>
+    <p>Your stream title template, date format, privacy preference, and session counter are
+      stored locally on your device so the app remembers them between sessions.</p>
+
+    <h2>How your data is stored and transmitted</h2>
+    <ul>
+      <li><strong>OAuth tokens</strong> (access and refresh tokens) are stored
+        <strong>locally and encrypted</strong> on your device using your operating
+        system&rsquo;s secure storage (Electron <code>safeStorage</code>). They are never
+        sent to the developer or to any third party other than Google.</li>
+      <li><strong>Video and audio</strong> you stream are sent directly from your computer
+        to <strong>YouTube&rsquo;s</strong> servers over RTMPS. They do not pass through any
+        developer-operated server — AxiStream operates none.</li>
+      <li>The app makes network requests only to <strong>Google/YouTube APIs</strong> (to
+        manage your broadcast) and to <strong>YouTube&rsquo;s ingestion servers</strong>
+        (to deliver your stream).</li>
+    </ul>
+
+    <h2>Data sharing</h2>
+    <p>We do not sell, rent, or share your information with anyone. The only third party
+      involved is Google/YouTube, and only to the extent required to provide the streaming
+      functionality you initiate. Your use of YouTube is also governed by
+      <a href="https://policies.google.com/privacy">Google&rsquo;s Privacy Policy</a>.</p>
+
+    <h2>Data retention and deletion</h2>
+    <p>Because all data is stored locally, you are in full control of it:</p>
+    <ul>
+      <li><strong>Disconnect</strong> your YouTube account in the app&rsquo;s settings to
+        immediately delete the stored OAuth tokens from your device.</li>
+      <li><strong>Uninstalling</strong> the app removes all locally stored settings and credentials.</li>
+      <li>You may also revoke AxiStream&rsquo;s access at any time from your Google Account at
+        <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+    </ul>
+
+    <h2>Google API Services User Data Policy</h2>
+    <p>AxiStream&rsquo;s use and transfer of information received from Google APIs will
+      adhere to the
+      <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
+      including the Limited Use requirements.</p>
+
+    <h2>Children&rsquo;s privacy</h2>
+    <p>AxiStream is not directed to children under 13 and does not knowingly collect
+      information from them.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If this policy changes, the updated version will be published at this same URL with a
+      revised &ldquo;Last updated&rdquo; date.</p>
+
+    <h2>Contact</h2>
+    <p>For any questions about this policy or your data, contact
+      <a href="mailto:project96@gmail.com">project96@gmail.com</a>.</p>
+
+    <hr>
+    <div class="foot">AxiStream · Open source · <a href="https://github.com/darkharasho/axistream">github.com/darkharasho/axistream</a></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AxiStream</title>
+  <meta name="description" content="AxiStream — go live on YouTube from your desktop in about three clicks. An opinionated, cross-platform streaming app for Guild Wars 2.">
+
+  <!-- ========================================================================
+       GOOGLE SEARCH CONSOLE VERIFICATION
+       To verify ownership of this site (required for Google OAuth homepage):
+       1. Go to https://search.google.com/search-console
+       2. Add a URL-prefix property: https://darkharasho.github.io/axistream/
+       3. Choose the "HTML tag" method — it gives you a content token.
+       4. Paste that token into the content="" below and re-deploy (commit + push).
+       Keep this tag live permanently.
+  ========================================================================= -->
+  <meta name="google-site-verification" content="PASTE_YOUR_SEARCH_CONSOLE_TOKEN_HERE">
+
+  <link rel="icon" type="image/png" href="./img/axistream-logo-120.png">
+  <meta property="og:title" content="AxiStream">
+  <meta property="og:description" content="Go live on YouTube from your desktop in about three clicks.">
+  <meta property="og:image" content="./img/axistream-logo-512.png">
+  <meta property="og:type" content="website">
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0e0f11;color:#e4e3dc;font-family:-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .wrap{max-width:680px;padding:64px 32px;text-align:center}
+    .logo{width:128px;height:128px;margin:0 auto 28px;display:block;filter:drop-shadow(0 12px 40px rgba(34,211,238,.25))}
+    h1{font-size:54px;letter-spacing:-1.5px;font-weight:700;margin-bottom:14px}
+    .tag{font-size:20px;line-height:1.5;color:#a9b0b6;margin-bottom:36px}
+    .pills{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
+    .pill{font-size:13px;color:#cfd4d8;border:1px solid #2a2d31;background:#16171a;border-radius:999px;padding:7px 14px}
+    .links{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+    a.btn{text-decoration:none;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;display:inline-block}
+    a.primary{background:#22d3ee;color:#06222a}
+    a.ghost{border:1px solid #2a2d31;color:#e4e3dc}
+    .foot{margin-top:44px;font-size:13px;color:#6b7177}
+    .foot a{color:#8b9197}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <svg class="logo" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AxiStream logo">
+      <defs><radialGradient id="glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.32"/><stop offset="60%" stop-color="#22d3ee" stop-opacity="0"/>
+      </radialGradient></defs>
+      <rect width="1024" height="1024" rx="208" fill="#16171a"/><rect width="1024" height="1024" rx="208" fill="url(#glow)"/>
+      <g transform="translate(512 512)" fill="none" stroke-linecap="round">
+        <path d="M-300 -300 a424 424 0 0 0 0 600 M300 -300 a424 424 0 0 1 0 600" stroke="#22d3ee" stroke-opacity="0.45" stroke-width="56"/>
+        <path d="M-150 -150 a212 212 0 0 0 0 300 M150 -150 a212 212 0 0 1 0 300" stroke="#e4e3dc" stroke-width="56"/>
+      </g><circle cx="512" cy="512" r="82" fill="#22d3ee"/>
+    </svg>
+
+    <h1><span style="color:#e4e3dc">Axi</span><span style="color:#22d3ee">Stream</span></h1>
+    <p class="tag">Go live on YouTube from your desktop in about three clicks.<br>An opinionated, cross-platform streaming app for Guild Wars 2.</p>
+
+    <div class="pills">
+      <span class="pill">YouTube go-live</span>
+      <span class="pill">Hardware encoding</span>
+      <span class="pill">Privacy masks</span>
+      <span class="pill">Windows · macOS · Linux</span>
+    </div>
+
+    <div class="links">
+      <a class="btn primary" href="https://github.com/darkharasho/axistream">View on GitHub</a>
+      <a class="btn ghost" href="./privacy.html">Privacy Policy</a>
+    </div>
+
+    <div class="foot">AxiStream · Open source · Contact: <a href="mailto:project96@gmail.com">project96@gmail.com</a></div>
+  </main>
+</body>
+</html>
