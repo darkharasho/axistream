@@ -1,6 +1,12 @@
 export type StreamPhase =
-  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'READY'
+  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
+
+export interface StreamSettingsView {
+  titleTemplate: string
+  dateFormat: string
+  privacy: 'public' | 'unlisted' | 'private'
+}
 
 export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
@@ -13,9 +19,13 @@ export interface AppState {
   keyMasked: string | null
   stats: LiveStats | null
   error: string | null
+  youtube: { connected: boolean; channel: string | null }
+  settings: StreamSettingsView
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
+  youtube: { connected: false, channel: null },
+  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
 }
 
 export const CH = {
@@ -34,6 +44,11 @@ export const CH = {
   evtStats: 'axi:evt:stats',
   evtPreview: 'axi:evt:preview',
   evtCaptureChanged: 'axi:evt:captureChanged',
+  connectYouTube: 'axi:connectYouTube',
+  disconnectYouTube: 'axi:disconnectYouTube',
+  getSettings: 'axi:getSettings',
+  saveSettings: 'axi:saveSettings',
+  previewTitle: 'axi:previewTitle',
 } as const
 
 export interface AxiApi {
