@@ -1,5 +1,22 @@
-import { app, BrowserWindow, ipcMain, safeStorage, dialog, session } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'node:path'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+
+// Disable OBS's own system-tray icon so only AxiStream's tray shows. Stopgap
+// while OBS shares the user's config; the bundled-isolated OBS will own this.
+function hideObsTray(): void {
+  if (process.platform !== 'linux') return
+  try {
+    const ini = join(homedir(), '.var/app/com.obsproject.Studio/config/obs-studio/global.ini')
+    if (!existsSync(ini)) return
+    let txt = readFileSync(ini, 'utf8')
+    if (/SysTrayEnabled\s*=/.test(txt)) txt = txt.replace(/SysTrayEnabled\s*=.*/g, 'SysTrayEnabled=false')
+    else if (/\[BasicWindow\]/.test(txt)) txt = txt.replace('[BasicWindow]', '[BasicWindow]\nSysTrayEnabled=false')
+    else txt += '\n[BasicWindow]\nSysTrayEnabled=false\n'
+    writeFileSync(ini, txt)
+  } catch { /* best-effort */ }
+}
 import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
@@ -33,6 +50,18 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
 
   const win = createWindow()
+
+  // AxiStream's own tray icon (OBS's is disabled via hideObsTray below).
+  const showWin = () => { if (win.isMinimized()) win.restore(); win.show(); win.focus() }
+  const tray = new Tray(nativeImage.createFromPath(join(import.meta.dirname, '../../build/icon.png')).resize({ width: 22, height: 22 }))
+  tray.setToolTip('AxiStream')
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Show AxiStream', click: showWin },
+    { type: 'separator' },
+    { label: 'Quit', click: () => app.quit() },
+  ]))
+  tray.on('click', showWin)
+
   const push = (channel: string, payload: unknown) => { if (!win.isDestroyed()) win.webContents.send(channel, payload) }
   const setState = (p: Partial<AppState>) => { state = { ...state, ...p }; push(CH.evtState, p) }
 
@@ -97,6 +126,7 @@ app.whenReady().then(async () => {
 
   // Boot the engine, then derive the initial phase.
   try {
+    hideObsTray()
     await capture.start()
     const provisioned = config.load().provisioned
     if (provisioned) {

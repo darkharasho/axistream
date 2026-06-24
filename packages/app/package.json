@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@axistream/capture": "*",
+    "@fontsource/inter": "^5.2.8",
     "lucide-react": "^1.21.0"
   },
   "devDependencies": {

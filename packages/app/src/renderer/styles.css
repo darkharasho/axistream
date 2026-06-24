@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 html, body { overflow: hidden; }
-body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 /* Corner rounding (KWin/compositor rounds the window; #root matches the radius
    so content doesn't poke into the rounded corner). Window is opaque
    (transparent:false + dark backgroundColor) — same technique as axibridge. */
