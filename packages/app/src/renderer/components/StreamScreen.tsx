@@ -45,7 +45,7 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
         <div className="statusrow">
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
           {!live && phase !== 'GOING_LIVE' ? (
-            <button className="btn ghost xs" onClick={() => axi.repairCapture()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>
+            <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>
           ) : null}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />

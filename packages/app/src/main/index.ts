@@ -135,6 +135,18 @@ app.whenReady().then(async () => {
     goLive: async () => { const key = keyStore.load(); if (!key) { setState({ phase: 'NEEDS_KEY' }); return } await stream.goLive(key) },
     stopStream: async () => { await stream.stop() },
     repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
+    switchSource: async () => {
+      // Re-pick the captured screen/window. Under headless cage the desktop
+      // portal picker only surfaces via a full capture rebuild (same flow as
+      // first-time setup) — pressing the source's in-place "Reload" tears the
+      // stream down to black without ever showing the picker. We drive the
+      // rebuild but stay on the AWAITING_APPROVAL overlay (set by onApprovalNeeded
+      // inside repair), so the user sees "approve the dialog" rather than the
+      // first-run setup screen. The preview survives the OBS restart because
+      // PreviewVideo re-acquires the virtual cam when it drops.
+      const ok = await capture.repair()
+      if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() }
+    },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },

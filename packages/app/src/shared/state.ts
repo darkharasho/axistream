@@ -26,6 +26,7 @@ export const CH = {
   goLive: 'axi:goLive',
   stopStream: 'axi:stopStream',
   repairCapture: 'axi:repairCapture',
+  switchSource: 'axi:switchSource',
   windowMinimize: 'axi:win:minimize',
   windowToggleMaximize: 'axi:win:maximize',
   windowClose: 'axi:win:close',
@@ -42,6 +43,7 @@ export interface AxiApi {
   goLive(): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
+  switchSource(): Promise<void>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>

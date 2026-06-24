@@ -15,6 +15,7 @@ const api: AxiApi = {
   goLive: () => ipcRenderer.invoke(CH.goLive) as Promise<void>,
   stopStream: () => ipcRenderer.invoke(CH.stopStream) as Promise<void>,
   repairCapture: () => ipcRenderer.invoke(CH.repairCapture) as Promise<void>,
+  switchSource: () => ipcRenderer.invoke(CH.switchSource) as Promise<void>,
   windowMinimize: () => ipcRenderer.invoke(CH.windowMinimize) as Promise<void>,
   windowToggleMaximize: () => ipcRenderer.invoke(CH.windowToggleMaximize) as Promise<void>,
   windowClose: () => ipcRenderer.invoke(CH.windowClose) as Promise<void>,
