@@ -16,7 +16,6 @@ export class StreamController {
   private timer: ReturnType<typeof setInterval> | null = null
   private live = false
   private lastBytes = 0
-  private startedAt = 0
   constructor(private readonly d: StreamDeps) {}
 
   isLive(): boolean { return this.live }
@@ -30,7 +29,6 @@ export class StreamController {
     await callReady(() => c.call('StartStream'))
     this.d.onPhase('GOING_LIVE')
     this.lastBytes = 0
-    this.startedAt = 0
     const pollMs = this.d.pollMs ?? 1000
     const deadline = (this.d.goLiveTimeoutMs ?? 15000) / pollMs
     let ticks = 0
