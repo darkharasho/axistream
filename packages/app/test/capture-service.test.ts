@@ -9,7 +9,7 @@ function deps(provisionResult = { ok: true, status: 'READY' }) {
     stop: vi.fn().mockResolvedValue(undefined),
     on: vi.fn(),
   }
-  const provisioner = { status: vi.fn(() => 'UNPROVISIONED'), provision: vi.fn(async (cb?: () => void) => { cb?.(); return provisionResult }) }
+  const provisioner = { status: vi.fn(() => 'UNPROVISIONED'), provision: vi.fn(async (cb?: () => void) => { cb?.(); return provisionResult }), repair: vi.fn(async (cb?: () => void) => { cb?.(); return provisionResult }) }
   const phases: any[] = []
   const svc = new CaptureService({
     sidecar: sidecar as any,
@@ -42,5 +42,13 @@ describe('CaptureService', () => {
     const ok = await svc.provision()
     expect(ok).toBe(false)
     expect(phases).toContain('SETTING_UP')
+  })
+  it('repair() fires approval-needed then READY on success', async () => {
+    const { svc, phases } = deps({ ok: true, status: 'READY' })
+    await svc.start()
+    const ok = await svc.repair()
+    expect(ok).toBe(true)
+    expect(phases).toContain('AWAITING_APPROVAL')
+    expect(phases).toContain('READY')
   })
 })

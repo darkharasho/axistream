@@ -4,7 +4,7 @@ export interface CaptureServiceDeps {
     start(): Promise<void>; client(): any; restart(): Promise<void>; stop(): Promise<void>
     on(e: 'crashed', cb: () => void): void
   }
-  makeProvisioner(): { status(): string; provision(cb?: () => void): Promise<{ ok: boolean; status: string }> }
+  makeProvisioner(): { status(): string; provision(cb?: () => void): Promise<{ ok: boolean; status: string }>; repair(cb?: () => void): Promise<{ ok: boolean; status: string }> }
   onApprovalNeeded(): void
   onPhase(p: Phase, error?: string): void
   onCrashed(): void
@@ -26,6 +26,13 @@ export class CaptureService {
 
   async provision(): Promise<boolean> {
     const res = await this.provisioner.provision(() => this.d.onApprovalNeeded())
+    if (res.ok) { this.d.onPhase('READY'); return true }
+    this.d.onPhase('SETTING_UP')
+    return false
+  }
+
+  async repair(): Promise<boolean> {
+    const res = await this.provisioner.repair(() => this.d.onApprovalNeeded())
     if (res.ok) { this.d.onPhase('READY'); return true }
     this.d.onPhase('SETTING_UP')
     return false

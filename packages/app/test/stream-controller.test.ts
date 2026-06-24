@@ -38,6 +38,21 @@ describe('StreamController', () => {
     expect(sc.isLive()).toBe(false) // stopped
   })
 
+  it('goLive re-entrancy guard: second call is a no-op when already live', async () => {
+    const c = clientFrom([
+      { outputActive: true, outputReconnecting: false, outputDuration: 1000, outputBytes: 100000, outputSkippedFrames: 0, outputTotalFrames: 60 },
+    ])
+    const sc = new StreamController({ client: c.client, onPhase: () => {}, onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 500 })
+    await sc.goLive('key-first')
+    await new Promise((r) => setTimeout(r, 30))
+    const callsBefore = [...c.calls]
+    await sc.goLive('key-second')
+    // No new StartStream or SetStreamServiceSettings after the first goLive
+    expect(c.calls.slice(callsBefore.length)).not.toContain('StartStream')
+    expect(c.calls.slice(callsBefore.length)).not.toContain('SetStreamServiceSettings')
+    await sc.stop()
+  })
+
   it('emits ERROR and stops if the stream never goes active before timeout', async () => {
     const c = clientFrom([{ outputActive: false, outputReconnecting: false, outputBytes: 0 }])
     const phases: string[] = []

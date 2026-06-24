@@ -16,11 +16,13 @@ export class StreamController {
   private timer: ReturnType<typeof setInterval> | null = null
   private live = false
   private lastBytes = 0
+  private firstSample = true
   constructor(private readonly d: StreamDeps) {}
 
   isLive(): boolean { return this.live }
 
   async goLive(key: string): Promise<void> {
+    if (this.live || this.timer) return
     const c = this.d.client()
     await callReady(() => c.call('SetStreamServiceSettings', {
       streamServiceType: 'rtmp_custom',
@@ -29,6 +31,7 @@ export class StreamController {
     await callReady(() => c.call('StartStream'))
     this.d.onPhase('GOING_LIVE')
     this.lastBytes = 0
+    this.firstSample = true
     const pollMs = this.d.pollMs ?? 1000
     const deadline = (this.d.goLiveTimeoutMs ?? 15000) / pollMs
     let ticks = 0
@@ -56,6 +59,7 @@ export class StreamController {
 
   private mapStats(st: any, pollMs: number): LiveStats {
     const bytes = Number(st.outputBytes ?? 0)
+    if (this.firstSample) { this.firstSample = false; this.lastBytes = bytes; return { bitrateKbps: 0, droppedFrames: Number(st.outputSkippedFrames ?? 0), durationMs: Number(st.outputDuration ?? 0), encoder: 'x264', cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100), reconnecting: !!st.outputReconnecting } }
     const delta = Math.max(0, bytes - this.lastBytes)
     this.lastBytes = bytes
     const bitrateKbps = Math.round((delta * 8) / 1000 / (pollMs / 1000))

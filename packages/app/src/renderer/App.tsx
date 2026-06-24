@@ -13,6 +13,8 @@ export function App() {
   const state = useSyncExternalStore(store.subscribe, store.getState)
   const preview = useSyncExternalStore(store.subscribe, store.getPreview)
 
+  useEffect(() => { if (state.phase === 'AWAITING_APPROVAL') setNav('stream') }, [state.phase])
+
   useEffect(() => {
     const offs = [
       axi.onState((p) => store.applyState(p)),
