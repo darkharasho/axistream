@@ -35,8 +35,13 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-s
 .enginepill.onair .dot { background: #f0556b; box-shadow: 0 0 7px #f0556b; }
 
 /* Hero — the full-height, preview-forward Stream screen. */
-.hero { flex: 1; position: relative; overflow: hidden; background: linear-gradient(135deg,#13243a 0%,#1c1c40 45%,#311a35 80%,#3a1f2a 100%); background-size: cover; background-position: center; display: flex; flex-direction: column; }
+/* The hero rounds its OWN right corners (= the window's right corners). A
+   background-image (the live preview) is a composited layer that the parent's
+   border-radius can't clip, so the hero must self-clip. */
+.hero { flex: 1; position: relative; overflow: hidden; background: linear-gradient(135deg,#13243a 0%,#1c1c40 45%,#311a35 80%,#3a1f2a 100%); background-size: cover; background-position: center; display: flex; flex-direction: column; border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
 .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); pointer-events: none; }
+/* A real preview frame is the background — don't tint it with the radial glow. */
+.hero.has-preview::before { display: none; }
 /* Setup state reuses the Stream hero's cinematic gradient (+ ::before depth),
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }

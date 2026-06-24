@@ -15,7 +15,9 @@ export class PreviewPump {
 
   start(): void {
     if (this.timer) return
-    const ms = this.d.intervalMs ?? 700
+    // ~12fps target; the inFlight guard caps the real rate at the screenshot
+    // round-trip, so this never overlaps.
+    const ms = this.d.intervalMs ?? 80
     this.timer = setInterval(() => { void this.tick() }, ms)
   }
 
@@ -23,8 +25,10 @@ export class PreviewPump {
     if (!this.visible || this.inFlight) return
     this.inFlight = true
     try {
+      // JPEG is far smaller/faster to encode + ship over IPC than PNG for a
+      // photo-like game frame — the difference between choppy and smooth.
       const shot = await this.d.client().call('GetSourceScreenshot', {
-        sourceName: this.d.sourceName, imageFormat: 'png', imageWidth: 480,
+        sourceName: this.d.sourceName, imageFormat: 'jpg', imageWidth: 640, imageCompressionQuality: 72,
       })
       if (shot?.imageData) this.d.emit(shot.imageData)
     } catch { /* skip this frame */ } finally { this.inFlight = false }

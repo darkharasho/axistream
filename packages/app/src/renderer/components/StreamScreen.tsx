@@ -25,7 +25,7 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
   }
 
   return (
-    <div className="hero" style={preview ? { backgroundImage: `url(${preview})` } : undefined}>
+    <div className={`hero ${preview ? 'has-preview' : ''}`} style={preview ? { backgroundImage: `url(${preview})` } : undefined}>
       <div className="hero-top">
         <span className="hero-title">Stream</span>
         {live ? <span className="badge live"><span aria-hidden>● </span>LIVE</span> : <span className="badge">● PREVIEW</span>}
