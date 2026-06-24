@@ -44,8 +44,11 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-s
 /* Radial depth only on the setup screen (placeholder gradient). The live Stream
    view shows the real preview video instead, so no tint. */
 .hero.setup::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); pointer-events: none; z-index: 1; }
-/* Live preview video fills the hero, beneath the scrims/controls. */
-.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; }
+/* Live preview video fills the hero, beneath the scrims/controls.
+   A hardware video overlay ignores ancestor border-radius/clip-path, so the
+   video must round its OWN right corners (= the window's right corners) — that
+   forces Chromium off the zero-copy overlay onto a path that clips. */
+.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; }
 /* Setup state reuses the Stream hero's cinematic gradient (+ ::before depth),
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }
