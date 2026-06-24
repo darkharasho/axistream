@@ -56,10 +56,15 @@ export interface AxiApi {
   provision(): Promise<void>
   saveKey(key: string): Promise<void>
   forgetKey(): Promise<void>
-  goLive(): Promise<void>
+  goLive(title?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
   switchSource(): Promise<void>
+  connectYouTube(): Promise<void>
+  disconnectYouTube(): Promise<void>
+  getSettings(): Promise<StreamSettingsView>
+  saveSettings(p: Partial<StreamSettingsView>): Promise<StreamSettingsView>
+  previewTitle(template: string): Promise<string>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>

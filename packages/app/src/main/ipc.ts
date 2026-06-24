@@ -1,14 +1,19 @@
-import { CH, type AppState } from '../shared/state.js'
+import { CH, type AppState, type StreamSettingsView } from '../shared/state.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
   provision(): Promise<void>
   saveKey(key: string): Promise<void>
   forgetKey(): Promise<void>
-  goLive(): Promise<void>
+  goLive(titleOverride?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
   switchSource(): Promise<void>
+  connectYouTube(): Promise<void>
+  disconnectYouTube(): Promise<void>
+  getSettings(): Promise<StreamSettingsView>
+  saveSettings(p: Partial<StreamSettingsView>): Promise<StreamSettingsView>
+  previewTitle(template: string): Promise<string>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>
@@ -26,10 +31,15 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.provision, () => handlers.provision())
   ipcMain.handle(CH.saveKey, (_e: unknown, key: string) => handlers.saveKey(key))
   ipcMain.handle(CH.forgetKey, () => handlers.forgetKey())
-  ipcMain.handle(CH.goLive, () => handlers.goLive())
+  ipcMain.handle(CH.goLive, (_e: unknown, title?: string) => handlers.goLive(title))
   ipcMain.handle(CH.stopStream, () => handlers.stopStream())
   ipcMain.handle(CH.repairCapture, () => handlers.repairCapture())
   ipcMain.handle(CH.switchSource, () => handlers.switchSource())
+  ipcMain.handle(CH.connectYouTube, () => handlers.connectYouTube())
+  ipcMain.handle(CH.disconnectYouTube, () => handlers.disconnectYouTube())
+  ipcMain.handle(CH.getSettings, () => handlers.getSettings())
+  ipcMain.handle(CH.saveSettings, (_e: unknown, p: StreamSettingsView) => handlers.saveSettings(p))
+  ipcMain.handle(CH.previewTitle, (_e: unknown, t: string) => handlers.previewTitle(t))
   ipcMain.handle(CH.windowMinimize, () => handlers.windowMinimize())
   ipcMain.handle(CH.windowToggleMaximize, () => handlers.windowToggleMaximize())
   ipcMain.handle(CH.windowClose, () => handlers.windowClose())
