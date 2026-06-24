@@ -34,3 +34,11 @@ body { margin: 0; background: #0b0d12; color: #e6edf3; font-family: -apple-syste
 .link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
 .overlay { position: absolute; inset: auto 0 120px; text-align: center; color: #dfe7ef; text-shadow: 0 1px 3px #000; } .overlay.error { color: #ff9aa8; } .overlay.warn { color: #ffd479; }
 .brand { display: flex; align-items: center; gap: 8px; } .dot.accent { width: 9px; height: 9px; border-radius: 50%; background: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
+.settings-panel { display: block; background: #0c0f15; overflow: auto; }
+.settings-inner { max-width: 520px; padding: 26px; }
+.settings-inner h2 { margin: 0 0 18px; }
+.setting { background: #0e131a; border: 1px solid #1d2530; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }
+.keyrow.saved { display: flex; align-items: center; gap: 12px; }
+.muted { color: #768390; font-size: 13px; margin: 0 0 12px; }
+.btn { background: #1a222c; color: #c7d0d9; border: 1px solid #2a323b; }
