@@ -55,9 +55,10 @@ export class YouTubeAuth {
         code_verifier: verifier,
         redirect_uri: lb.redirectUri,
       })
+      if (!tok.refresh_token) throw new Error('OAuth response missing refresh_token')
       this.d.store.save({
         accessToken: tok.access_token,
-        refreshToken: tok.refresh_token!,
+        refreshToken: tok.refresh_token,
         expiresAt: Date.now() + tok.expires_in * 1000,
         channelTitle: null,
       })
