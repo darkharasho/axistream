@@ -1,16 +1,18 @@
 import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2 } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
+import type { Store } from '../../renderer/store.js'
 import { StatChips } from './StatChips.js'
 import { KeyInput } from './KeyInput.js'
 import { PreviewVideo } from './PreviewVideo.js'
+import { TitlePromptModal } from './TitlePromptModal.js'
 
 function fmt(ms: number): string {
   const s = Math.floor(ms / 1000); const m = Math.floor(s / 60)
   return `${m}:${String(s % 60).padStart(2, '0')}`
 }
 
-export function StreamScreen({ state, preview, axi }: { state: AppState; preview: string | null; axi: AxiApi }) {
+export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
   const { phase, capture, keyMasked, stats } = state
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
 
@@ -40,6 +42,9 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
       ) : null}
       {phase === 'ERROR' && state.error ? <div className="overlay error"><span className="overlay-pill">{state.error}</span></div> : null}
       {phase === 'RECONNECTING' ? <div className="overlay warn"><span className="overlay-pill">Reconnecting…</span></div> : null}
+      {phase === 'NEEDS_TITLE' ? (
+        <TitlePromptModal onClose={() => axi.getInitialState().then((s) => store.applyState(s))} />
+      ) : null}
 
       <div className="hero-bottom">
         <div className="statusrow">
