@@ -21,13 +21,13 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { KeyStore } from './KeyStore.js'
 import { PreviewPump } from './PreviewPump.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
-import { CH, INITIAL_STATE, type AppState } from '../shared/state.js'
+import { CH, INITIAL_STATE, type AppState, type CaptureMeta } from '../shared/state.js'
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
 let state: AppState = { ...INITIAL_STATE }
@@ -100,14 +100,24 @@ app.whenReady().then(async () => {
   // Start OBS's Virtual Camera so the renderer can show a real live preview.
   const startVirtualCam = () => { try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ } }
 
+  // Detect the captured monitor's real resolution, apply base/output canvas to
+  // OBS, and return the meta for the UI. Falls back to 1080p if dims are
+  // unreadable (capture not yet rendering) — never blocks the path to READY.
+  const applyResolution = async (): Promise<CaptureMeta> => {
+    const res = await applyCaptureResolution({ call: (r, p) => sidecar.client().call(r as never, p as never) })
+    return res
+      ? { sourceLabel: 'Guild Wars 2', width: res.baseWidth, height: res.baseHeight, fps: res.fps }
+      : { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 }
+  }
+
   const handlers: IpcHandlers = {
     getInitialState: async () => state,
-    provision: async () => { const ok = await capture.provision(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); startVirtualCam() } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async () => { const key = keyStore.load(); if (!key) { setState({ phase: 'NEEDS_KEY' }); return } await stream.goLive(key) },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); startVirtualCam() } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },
@@ -134,7 +144,8 @@ app.whenReady().then(async () => {
     await capture.start()
     const provisioned = config.load().provisioned
     if (provisioned) {
-      setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } })
+      const capture_ = await applyResolution()
+      setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: capture_ })
       startVirtualCam()
     } else {
       setState({ phase: 'SETTING_UP' })
