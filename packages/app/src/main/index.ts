@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -28,17 +28,23 @@ import { KeyStore } from './KeyStore.js'
 import { PreviewPump } from './PreviewPump.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta } from '../shared/state.js'
+import { computeWindowSize } from './window-size.js'
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
+const WINDOW_FRACTION = 0.6
+const WINDOW_MIN = { width: 820, height: 560 }
 let state: AppState = { ...INITIAL_STATE }
 
 function createWindow(): BrowserWindow {
+  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+  const { width, height } = computeWindowSize(display.workArea, WINDOW_FRACTION, WINDOW_MIN)
   const win = new BrowserWindow({
     // transparent:true cuts out the rounded corners to the desktop (KWin has no
     // window-rounding effect on this system, so transparency — not backgroundColor
     // — is what makes the corners actually round). The preview <video> carries its
     // own border-radius so a hardware overlay can't punch square corners through.
-    width: 960, height: 620, frame: false, transparent: true, backgroundColor: '#00000000', show: false,
+    width, height, minWidth: WINDOW_MIN.width, minHeight: WINDOW_MIN.height, center: true,
+    frame: false, transparent: true, backgroundColor: '#00000000', show: false,
     icon: join(import.meta.dirname, '../../build/icon.png'),
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   })
