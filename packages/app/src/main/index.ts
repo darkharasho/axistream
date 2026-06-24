@@ -7,15 +7,19 @@ import { homedir } from 'node:os'
 // while OBS shares the user's config; the bundled-isolated OBS will own this.
 function hideObsTray(): void {
   if (process.platform !== 'linux') return
-  try {
-    const ini = join(homedir(), '.var/app/com.obsproject.Studio/config/obs-studio/global.ini')
-    if (!existsSync(ini)) return
-    let txt = readFileSync(ini, 'utf8')
-    if (/SysTrayEnabled\s*=/.test(txt)) txt = txt.replace(/SysTrayEnabled\s*=.*/g, 'SysTrayEnabled=false')
-    else if (/\[BasicWindow\]/.test(txt)) txt = txt.replace('[BasicWindow]', '[BasicWindow]\nSysTrayEnabled=false')
-    else txt += '\n[BasicWindow]\nSysTrayEnabled=false\n'
-    writeFileSync(ini, txt)
-  } catch { /* best-effort */ }
+  // OBS 30+ keeps user prefs in user.ini; older OBS used global.ini. Write both.
+  const dir = join(homedir(), '.var/app/com.obsproject.Studio/config/obs-studio')
+  for (const name of ['user.ini', 'global.ini']) {
+    try {
+      const ini = join(dir, name)
+      if (!existsSync(ini)) continue
+      let txt = readFileSync(ini, 'utf8')
+      if (/^SysTrayEnabled\s*=.*$/m.test(txt)) txt = txt.replace(/^SysTrayEnabled\s*=.*$/m, 'SysTrayEnabled=false')
+      else if (/\[BasicWindow\]/.test(txt)) txt = txt.replace('[BasicWindow]', '[BasicWindow]\nSysTrayEnabled=false')
+      else txt += '\n[BasicWindow]\nSysTrayEnabled=false\n'
+      writeFileSync(ini, txt)
+    } catch { /* best-effort */ }
+  }
 }
 import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
