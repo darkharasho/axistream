@@ -25,14 +25,23 @@ import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, C
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { KeyStore } from './KeyStore.js'
+import { TokenStore } from './TokenStore.js'
+import { StreamSettings, type StreamSettingsData } from './StreamSettings.js'
+import { YouTubeAuth } from './YouTubeAuth.js'
+import { YouTubeLive } from './YouTubeLive.js'
+import { renderTitle } from './TitleTemplate.js'
+import { createLoopback } from './loopback.js'
+import { shell } from 'electron'
 import { PreviewPump } from './PreviewPump.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
-import { CH, INITIAL_STATE, type AppState, type CaptureMeta } from '../shared/state.js'
+import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize } from './window-size.js'
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
+const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
+const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy })
 let state: AppState = { ...INITIAL_STATE }
 
 function createWindow(): BrowserWindow {
@@ -75,8 +84,18 @@ app.whenReady().then(async () => {
   const push = (channel: string, payload: unknown) => { if (!win.isDestroyed()) win.webContents.send(channel, payload) }
   const setState = (p: Partial<AppState>) => { state = { ...state, ...p }; push(CH.evtState, p) }
 
-  const keyStore = new KeyStore(join(app.getPath('userData'), 'key.bin'), safeStorage)
-  const config = new CaptureConfig(join(app.getPath('userData'), 'capture.json'))
+  const userData = app.getPath('userData')
+  const keyStore = new KeyStore(join(userData, 'key.bin'), safeStorage)
+  const tokenStore = new TokenStore(join(userData, 'yt-tokens.bin'), safeStorage)
+  const settings = new StreamSettings(join(userData, 'stream.json'))
+  const auth = new YouTubeAuth({
+    store: tokenStore,
+    config: { clientId: process.env.AXI_YT_CLIENT_ID ?? '', clientSecret: process.env.AXI_YT_CLIENT_SECRET ?? '' },
+    openExternal: (u) => shell.openExternal(u),
+    listen: createLoopback,
+  })
+  const live = new YouTubeLive({ accessToken: () => auth.accessToken() })
+  const config = new CaptureConfig(join(userData, 'capture.json'))
   const visibleLauncher = new FlatpakObsLauncher()
   const useHeadless = process.platform === 'linux' && !process.env.AXISTREAM_OBS_VISIBLE
   const launcher = useHeadless ? new HeadlessCageObsLauncher(visibleLauncher) : visibleLauncher
@@ -96,9 +115,16 @@ app.whenReady().then(async () => {
     onCrashed: () => setState({ phase: 'ERROR', error: 'Stream engine crashed — restart AxiStream.' }),
   })
 
+  let pendingOAuthBump = false
   const stream = new StreamController({
     client: () => sidecar.client(),
-    onPhase: (p, error) => setState({ phase: p, error: error ?? null }),
+    onPhase: (p, error) => {
+      if (p === 'LIVE' && pendingOAuthBump) {
+        pendingOAuthBump = false
+        settings.bumpCounter()
+      }
+      setState({ phase: p, error: error ?? null })
+    },
     onStats: (s) => push(CH.evtStats, s),
   })
 
@@ -134,11 +160,46 @@ app.whenReady().then(async () => {
   }
 
   const handlers: IpcHandlers = {
-    getInitialState: async () => state,
+    getInitialState: async () => ({
+      ...state,
+      youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
+      settings: viewOf(settings.load()),
+    }),
     provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
-    goLive: async () => { const key = keyStore.load(); if (!key) { setState({ phase: 'NEEDS_KEY' }); return } await stream.goLive(key) },
+    goLive: async (titleOverride?: string) => {
+      if (!auth.isConnected()) {
+        // Manual-key mode: use the saved stream key
+        const key = keyStore.load()
+        if (!key) { setState({ phase: 'NEEDS_KEY' }); return }
+        await stream.goLive({ server: YT_RTMPS, key })
+        return
+      }
+      // OAuth mode
+      let session: import('./YouTubeLive.js').LiveSession | null = null
+      try {
+        const s = settings.load()
+        const tpl = s.titleTemplate.trim()
+        const title = (titleOverride && titleOverride.trim()) ||
+          (tpl && renderTitle(tpl, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat }))
+        if (!title) { setState({ phase: 'NEEDS_TITLE' }); return }
+        setState({ phase: 'GOING_LIVE' })
+        session = await live.startSession({ title, privacy: s.privacy, reuseStreamId: s.streamId, now: new Date() })
+        settings.patch({ streamId: session.streamId })
+        pendingOAuthBump = true
+        await stream.goLive(session.ingest, {
+          onIngestActive: async () => {
+            try { await live.confirmLive(session!.broadcastId) } catch { /* best-effort */ }
+          },
+          onStop: () => live.complete(session!.broadcastId),
+        })
+      } catch (e) {
+        const humanMessage = e instanceof Error ? e.message : String(e)
+        setState({ phase: 'ERROR', error: humanMessage })
+        if (session) { try { await live.complete(session.broadcastId) } catch { /* best-effort */ } }
+      }
+    },
     stopStream: async () => { await stream.stop() },
     repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
     switchSource: async () => {
@@ -153,6 +214,27 @@ app.whenReady().then(async () => {
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
       if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() }
+    },
+    connectYouTube: async () => {
+      await auth.connect()
+      const title = await live.channelTitle().catch(() => null)
+      auth.setChannelTitle(title)
+      setState({ youtube: { connected: true, channel: title } })
+    },
+    disconnectYouTube: async () => {
+      auth.disconnect()
+      setState({ youtube: { connected: false, channel: null } })
+    },
+    getSettings: async () => viewOf(settings.load()),
+    saveSettings: async (p) => {
+      const next = settings.patch(p)
+      const view = viewOf(next)
+      setState({ settings: view })
+      return view
+    },
+    previewTitle: async (template) => {
+      const s = settings.load()
+      return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat })
     },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },

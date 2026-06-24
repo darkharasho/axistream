@@ -38,7 +38,7 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.connectYouTube, () => handlers.connectYouTube())
   ipcMain.handle(CH.disconnectYouTube, () => handlers.disconnectYouTube())
   ipcMain.handle(CH.getSettings, () => handlers.getSettings())
-  ipcMain.handle(CH.saveSettings, (_e: unknown, p: StreamSettingsView) => handlers.saveSettings(p))
+  ipcMain.handle(CH.saveSettings, (_e: unknown, p: Partial<StreamSettingsView>) => handlers.saveSettings(p))
   ipcMain.handle(CH.previewTitle, (_e: unknown, t: string) => handlers.previewTitle(t))
   ipcMain.handle(CH.windowMinimize, () => handlers.windowMinimize())
   ipcMain.handle(CH.windowToggleMaximize, () => handlers.windowToggleMaximize())
