@@ -1,10 +1,13 @@
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; background: #0b0d12; color: #e6edf3; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+/* Transparent window background so the clipped corners of .app reveal the
+   desktop — faked rounded corners for the frameless Linux window. */
+body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
 
-/* App is a row: sidebar | active screen. Window controls float top-right. */
-.app { position: relative; height: 100vh; display: flex; }
+/* App is a row: sidebar | active screen. Window controls float top-right.
+   Rounded + clipped so the transparent window corners read as rounded edges. */
+.app { position: relative; height: 100vh; display: flex; background: #0b0d12; border-radius: 12px; overflow: hidden; border: 1px solid #1d2530; }
 
 /* Window controls — raised to the very top-right corner, over the preview. */
 .wctl { position: absolute; top: 9px; right: 11px; display: flex; gap: 5px; z-index: 10; -webkit-app-region: no-drag; }
@@ -42,7 +45,7 @@ body { margin: 0; background: #0b0d12; color: #e6edf3; font-family: -apple-syste
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
 .badge { color: #9fd8ff; font: 700 10px/1 ui-monospace, monospace; border: 1px solid rgba(34,211,238,.5); padding: 6px 9px; border-radius: 20px; background: rgba(0,0,0,.3); }
 .badge.live { color: #fff; background: #e23a52; border: 0; box-shadow: 0 0 16px rgba(226,58,82,.55); }
-.pill { color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
 .overlay { position: absolute; inset: auto 0 130px; text-align: center; color: #dfe7ef; text-shadow: 0 1px 3px #000; z-index: 2; }
@@ -58,7 +61,7 @@ body { margin: 0; background: #0b0d12; color: #e6edf3; font-family: -apple-syste
 .link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
 
 /* Buttons */
-.btn { border: 0; border-radius: 12px; padding: 14px 20px; font-weight: 800; cursor: pointer; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; padding: 14px 20px; font-weight: 800; cursor: pointer; }
 .btn.lg { width: 100%; padding: 17px; font-size: 17px; }
 .btn.primary { background: linear-gradient(180deg,#26d3ee,#0bb6d6); color: #06222a; box-shadow: 0 10px 26px rgba(34,211,238,.3); }
 .btn.primary:disabled { opacity: .55; cursor: default; box-shadow: none; }

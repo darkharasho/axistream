@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
+import { Minus, Square, X } from 'lucide-react'
 import { createStore } from './store.js'
 import { Sidebar } from './components/Sidebar.js'
 import { StreamScreen } from './components/StreamScreen.js'
@@ -32,9 +33,9 @@ export function App() {
         ? <StreamScreen state={state} preview={preview} axi={axi} />
         : <SettingsScreen state={state} axi={axi} />}
       <div className="wctl">
-        <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}>—</button>
-        <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}>▢</button>
-        <button className="wbtn close" aria-label="Close" onClick={() => axi.windowClose()}>✕</button>
+        <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}><Minus size={15} /></button>
+        <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}><Square size={13} /></button>
+        <button className="wbtn close" aria-label="Close" onClick={() => axi.windowClose()}><X size={15} /></button>
       </div>
     </div>
   )

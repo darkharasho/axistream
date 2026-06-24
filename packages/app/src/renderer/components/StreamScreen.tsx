@@ -1,3 +1,4 @@
+import { MonitorPlay, Key, Radio, Square } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import { StatChips } from './StatChips.js'
@@ -15,7 +16,7 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
   if (phase === 'SETTING_UP') {
     return (
       <div className="hero setup">
-        <div className="setup-icon">▦</div>
+        <div className="setup-icon"><MonitorPlay size={26} /></div>
         <h2>Set up your capture</h2>
         <p>AxiStream will ask you to pick the screen showing your game. You'll only do this once.</p>
         <button className="btn primary lg" onClick={() => axi.provision()}>Set up capture →</button>
@@ -41,7 +42,7 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
       <div className="hero-bottom">
         <div className="statusrow">
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
-          {keyMasked ? <span className="pill mono">🔑 {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
+          {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
           <StatChips stats={stats} />
         </div>
@@ -49,10 +50,10 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
         {phase === 'NEEDS_KEY' ? (
           <KeyInput onSave={(k) => axi.saveKey(k)} />
         ) : live ? (
-          <button className="btn danger lg" onClick={() => axi.stopStream()}>■ End Stream</button>
+          <button className="btn danger lg" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
         ) : (
           <button className="btn primary lg" disabled={phase === 'GOING_LIVE'} onClick={() => axi.goLive()}>
-            {phase === 'GOING_LIVE' ? 'Starting…' : '● Go Live'}
+            {phase === 'GOING_LIVE' ? 'Starting…' : <><Radio size={16} /> Go Live</>}
           </button>
         )}
       </div>

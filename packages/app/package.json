@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@axistream/capture": "*"
+    "@axistream/capture": "*",
+    "lucide-react": "^1.21.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
