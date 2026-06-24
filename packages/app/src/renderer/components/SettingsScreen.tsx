@@ -1,5 +1,6 @@
 import type { AppState, AxiApi } from '../../shared/state.js'
 import { KeyInput } from './KeyInput.js'
+import { YouTubeSettings } from './YouTubeSettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -8,7 +9,11 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
         <h2>Settings</h2>
 
         <section className="setting">
-          <h3>YouTube stream key</h3>
+          <YouTubeSettings youtube={state.youtube} />
+        </section>
+
+        <section className="setting">
+          <h3>Stream key (advanced fallback)</h3>
           {state.keyMasked ? (
             <div className="keyrow saved">
               <span className="pill mono">🔑 {state.keyMasked}</span>
