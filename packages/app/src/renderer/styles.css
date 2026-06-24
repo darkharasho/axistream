@@ -52,7 +52,14 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
    A hardware video overlay ignores ancestor border-radius/clip-path, so the
    video must round its OWN right corners (= the window's right corners) — that
    forces Chromium off the zero-copy overlay onto a path that clips. */
-.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; }
+.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; opacity: 1; transition: opacity .35s ease; }
+/* Not actively showing frames (startup / source switch / OBS restart): fade out
+   so the hero's colored gradient backsplash shows through instead of black. */
+.preview-video.loading { opacity: 0; }
+/* Cinematic depth on the gradient while the preview is hidden — matches setup. */
+.hero::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .35s ease;
+  background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); }
+.hero:has(.preview-video.loading)::after { opacity: 1; }
 /* Setup state reuses the Stream hero's cinematic gradient (+ ::before depth),
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }

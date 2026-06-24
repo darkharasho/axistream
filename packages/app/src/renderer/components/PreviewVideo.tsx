@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AxiApi } from '../../shared/state.js'
 
 const axi = (globalThis as unknown as { axi?: AxiApi }).axi
@@ -12,6 +12,10 @@ const axi = (globalThis as unknown as { axi?: AxiApi }).axi
 // changes, which keeps the preview from going black until an app restart.
 export function PreviewVideo() {
   const ref = useRef<HTMLVideoElement>(null)
+  // Fade the video out whenever it isn't actively showing frames (startup, a
+  // source switch, an OBS restart) so the hero's colored gradient shows through
+  // instead of a black rectangle.
+  const [playing, setPlaying] = useState(false)
   useEffect(() => {
     const md = navigator.mediaDevices
     if (!md?.enumerateDevices || !md.getUserMedia) return // jsdom / unsupported
@@ -19,7 +23,7 @@ export function PreviewVideo() {
     let cancelled = false
     let retimer: ReturnType<typeof setTimeout> | null = null
 
-    const stop = () => { stream?.getTracks().forEach((t) => t.stop()); stream = null }
+    const stop = () => { stream?.getTracks().forEach((t) => t.stop()); stream = null; setPlaying(false) }
     const findCam = async (): Promise<MediaDeviceInfo | null> => {
       const devices = await md.enumerateDevices()
       return devices.find((d) => d.kind === 'videoinput' && /obs|virtual/i.test(d.label)) ?? null
@@ -46,7 +50,7 @@ export function PreviewVideo() {
             if (cancelled) { stop(); return }
             if (ref.current) { ref.current.srcObject = stream; void ref.current.play().catch(() => {}) }
             // When OBS restarts, this track ends — re-acquire the new device.
-            stream.getVideoTracks()[0]?.addEventListener('ended', () => schedule())
+            stream.getVideoTracks()[0]?.addEventListener('ended', () => { setPlaying(false); schedule() })
             return
           } catch { /* device may be mid-restart; fall through to retry */ }
         }
@@ -61,7 +65,7 @@ export function PreviewVideo() {
     // The main process signals when it (re)starts the virtual cam after an OBS
     // restart. Give the cam a beat to start producing frames, then re-acquire —
     // this is the reliable recovery path when the v4l2 device freezes black.
-    const offCaptureChanged = axi?.onCaptureChanged(() => schedule(900))
+    const offCaptureChanged = axi?.onCaptureChanged(() => { setPlaying(false); schedule(900) })
     void acquire()
     return () => {
       cancelled = true
@@ -71,5 +75,5 @@ export function PreviewVideo() {
       stop()
     }
   }, [])
-  return <video ref={ref} className="preview-video" autoPlay muted playsInline />
+  return <video ref={ref} className={`preview-video${playing ? '' : ' loading'}`} autoPlay muted playsInline onPlaying={() => setPlaying(true)} />
 }
