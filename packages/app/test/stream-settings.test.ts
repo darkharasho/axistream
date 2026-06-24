@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { StreamSettings, DEFAULT_SETTINGS } from '../src/main/StreamSettings.js'
@@ -31,7 +31,7 @@ describe('StreamSettings', () => {
     const s = new StreamSettings(file)
     s.save({ ...DEFAULT_SETTINGS, privacy: 'private' })
     // simulate corruption
-    require('node:fs').writeFileSync(file, '{not json')
+    writeFileSync(file, '{not json')
     expect(new StreamSettings(file).load()).toEqual(DEFAULT_SETTINGS)
   })
 })
