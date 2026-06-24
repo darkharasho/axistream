@@ -1,16 +1,18 @@
-import { MonitorPlay, Key, Radio, Square } from 'lucide-react'
+import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2 } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
+import type { Store } from '../../renderer/store.js'
 import { StatChips } from './StatChips.js'
 import { KeyInput } from './KeyInput.js'
 import { PreviewVideo } from './PreviewVideo.js'
+import { TitlePromptModal } from './TitlePromptModal.js'
 
 function fmt(ms: number): string {
   const s = Math.floor(ms / 1000); const m = Math.floor(s / 60)
   return `${m}:${String(s % 60).padStart(2, '0')}`
 }
 
-export function StreamScreen({ state, preview, axi }: { state: AppState; preview: string | null; axi: AxiApi }) {
+export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
   const { phase, capture, keyMasked, stats } = state
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
 
@@ -36,26 +38,33 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
       </div>
 
       {phase === 'AWAITING_APPROVAL' ? (
-        <div className="overlay">Approve the screen-share dialog to finish setup…</div>
+        <div className="overlay"><span className="overlay-pill">Approve the screen-share dialog to finish setup…</span></div>
       ) : null}
-      {phase === 'ERROR' && state.error ? <div className="overlay error">{state.error}</div> : null}
-      {phase === 'RECONNECTING' ? <div className="overlay warn">Reconnecting…</div> : null}
+      {phase === 'ERROR' && state.error ? <div className="overlay error"><span className="overlay-pill">{state.error}</span></div> : null}
+      {phase === 'RECONNECTING' ? <div className="overlay warn"><span className="overlay-pill">Reconnecting…</span></div> : null}
+      {phase === 'NEEDS_TITLE' ? (
+        <TitlePromptModal onClose={() => axi.getInitialState().then((s) => store.applyState(s))} />
+      ) : null}
 
       <div className="hero-bottom">
         <div className="statusrow">
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
+          {live || phase === 'GOING_LIVE' ? null
+            : phase === 'AWAITING_APPROVAL'
+            ? <button className="btn ghost xs" disabled><Loader2 size={12} className="spin" /> Switching…</button>
+            : <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
-          <StatChips stats={stats} />
+          <StatChips stats={stats} capture={capture} />
         </div>
 
         {phase === 'NEEDS_KEY' ? (
           <KeyInput onSave={(k) => axi.saveKey(k)} />
         ) : live ? (
-          <button className="btn danger lg" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
+          <button className="btn danger action" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
         ) : (
-          <button className="btn primary lg" disabled={phase === 'GOING_LIVE'} onClick={() => axi.goLive()}>
-            {phase === 'GOING_LIVE' ? 'Starting…' : <><Radio size={16} /> Go Live</>}
+          <button className="btn primary action" disabled={phase === 'GOING_LIVE'} onClick={() => axi.goLive()}>
+            {phase === 'GOING_LIVE' ? 'Starting…' : <><Radio size={15} /> Go Live</>}
           </button>
         )}
       </div>

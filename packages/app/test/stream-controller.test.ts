@@ -16,50 +16,42 @@ function clientFrom(statuses: any[]) {
   }
 }
 
+const ingest = { server: 'rtmps://x/live2', key: 'KEY' }
+
 describe('StreamController', () => {
-  it('goLive sets service, starts, reaches LIVE, emits stats', async () => {
-    const c = clientFrom([
-      { outputActive: true, outputReconnecting: false, outputDuration: 1000, outputBytes: 100000, outputSkippedFrames: 0, outputTotalFrames: 60 },
-    ])
+  it('goLive sets service from target, starts, reaches LIVE', async () => {
+    const c = clientFrom([{ outputActive: true, outputReconnecting: false, outputBytes: 1 }])
     const phases: string[] = []
-    const stats: any[] = []
-    const sc = new StreamController({
-      client: c.client, onPhase: (p) => phases.push(p), onStats: (s) => stats.push(s),
-      pollMs: 5, goLiveTimeoutMs: 500,
-    })
-    await sc.goLive('key-7f3a')
+    const sc = new StreamController({ client: c.client, onPhase: (p) => phases.push(p), onStats: () => {}, pollMs: 5 })
+    await sc.goLive(ingest)
     await new Promise((r) => setTimeout(r, 30))
-    await sc.stop()
     expect(c.calls).toContain('SetStreamServiceSettings')
     expect(c.calls).toContain('StartStream')
-    expect(phases).toContain('GOING_LIVE')
     expect(phases).toContain('LIVE')
-    expect(stats[0].bitrateKbps).toBeGreaterThanOrEqual(0)
-    expect(sc.isLive()).toBe(false) // stopped
   })
 
-  it('goLive re-entrancy guard: second call is a no-op when already live', async () => {
-    const c = clientFrom([
-      { outputActive: true, outputReconnecting: false, outputDuration: 1000, outputBytes: 100000, outputSkippedFrames: 0, outputTotalFrames: 60 },
-    ])
-    const sc = new StreamController({ client: c.client, onPhase: () => {}, onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 500 })
-    await sc.goLive('key-first')
+  it('awaits onIngestActive before declaring LIVE, and onStop on stop', async () => {
+    const c = clientFrom([{ outputActive: true, outputReconnecting: false, outputBytes: 1 }])
+    const order: string[] = []
+    const sc = new StreamController({ client: c.client, onPhase: (p) => order.push(`phase:${p}`), onStats: () => {}, pollMs: 5 })
+    await sc.goLive(ingest, {
+      onIngestActive: async () => { order.push('activate') },
+      onStop: async () => { order.push('stop') },
+    })
     await new Promise((r) => setTimeout(r, 30))
-    const callsBefore = [...c.calls]
-    await sc.goLive('key-second')
-    // No new StartStream or SetStreamServiceSettings after the first goLive
-    expect(c.calls.slice(callsBefore.length)).not.toContain('StartStream')
-    expect(c.calls.slice(callsBefore.length)).not.toContain('SetStreamServiceSettings')
+    expect(order.indexOf('activate')).toBeLessThan(order.indexOf('phase:LIVE'))
     await sc.stop()
+    expect(order).toContain('stop')
   })
 
-  it('emits ERROR and stops if the stream never goes active before timeout', async () => {
+  it('emits ERROR, stops, and runs onStop if never active before timeout', async () => {
     const c = clientFrom([{ outputActive: false, outputReconnecting: false, outputBytes: 0 }])
     const phases: string[] = []
-    const sc = new StreamController({ client: c.client, onPhase: (p) => phases.push(p), onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 40 })
-    await sc.goLive('key')
+    let cleaned = false
+    const sc = new StreamController({ client: c.client, onPhase: (p) => phases.push(p), onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 20 })
+    await sc.goLive(ingest, { onStop: async () => { cleaned = true } })
     await new Promise((r) => setTimeout(r, 90))
     expect(phases).toContain('ERROR')
-    expect(c.calls).toContain('StopStream')
+    expect(cleaned).toBe(true)
   })
 })

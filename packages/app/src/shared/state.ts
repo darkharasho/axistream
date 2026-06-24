@@ -1,8 +1,14 @@
 export type StreamPhase =
-  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'READY'
+  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
 
-export interface CaptureMeta { sourceLabel: string; width: number; height: number; fps: number }
+export interface StreamSettingsView {
+  titleTemplate: string
+  dateFormat: string
+  privacy: 'public' | 'unlisted' | 'private'
+}
+
+export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
   bitrateKbps: number; droppedFrames: number; durationMs: number;
   encoder: string; cpuPct: number; reconnecting: boolean
@@ -13,9 +19,13 @@ export interface AppState {
   keyMasked: string | null
   stats: LiveStats | null
   error: string | null
+  youtube: { connected: boolean; channel: string | null }
+  settings: StreamSettingsView
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
+  youtube: { connected: false, channel: null },
+  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
 }
 
 export const CH = {
@@ -26,12 +36,19 @@ export const CH = {
   goLive: 'axi:goLive',
   stopStream: 'axi:stopStream',
   repairCapture: 'axi:repairCapture',
+  switchSource: 'axi:switchSource',
   windowMinimize: 'axi:win:minimize',
   windowToggleMaximize: 'axi:win:maximize',
   windowClose: 'axi:win:close',
   evtState: 'axi:evt:state',
   evtStats: 'axi:evt:stats',
   evtPreview: 'axi:evt:preview',
+  evtCaptureChanged: 'axi:evt:captureChanged',
+  connectYouTube: 'axi:connectYouTube',
+  disconnectYouTube: 'axi:disconnectYouTube',
+  getSettings: 'axi:getSettings',
+  saveSettings: 'axi:saveSettings',
+  previewTitle: 'axi:previewTitle',
 } as const
 
 export interface AxiApi {
@@ -39,13 +56,20 @@ export interface AxiApi {
   provision(): Promise<void>
   saveKey(key: string): Promise<void>
   forgetKey(): Promise<void>
-  goLive(): Promise<void>
+  goLive(title?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
+  switchSource(): Promise<void>
+  connectYouTube(): Promise<void>
+  disconnectYouTube(): Promise<void>
+  getSettings(): Promise<StreamSettingsView>
+  saveSettings(p: Partial<StreamSettingsView>): Promise<StreamSettingsView>
+  previewTitle(template: string): Promise<string>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void
+  onCaptureChanged(cb: () => void): () => void
 }

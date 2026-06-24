@@ -31,7 +31,7 @@ export function App() {
       <div className="dragbar" />
       <Sidebar active={nav} phase={state.phase} onNav={setNav} />
       {nav === 'stream'
-        ? <StreamScreen state={state} preview={preview} axi={axi} />
+        ? <StreamScreen state={state} preview={preview} axi={axi} store={store} />
         : <SettingsScreen state={state} axi={axi} />}
       <div className="wctl">
         <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}><Minus size={15} /></button>

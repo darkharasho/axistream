@@ -1,10 +1,29 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SettingsScreen } from '../src/renderer/components/SettingsScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
-const axi = { forgetKey: vi.fn(), saveKey: vi.fn(), repairCapture: vi.fn() }
-const base: AppState = { phase: 'READY', capture: null, keyMasked: '····7f3a', stats: null, error: null }
+const axi = {
+  forgetKey: vi.fn(),
+  saveKey: vi.fn(),
+  repairCapture: vi.fn(),
+  connectYouTube: vi.fn(async () => {}),
+  disconnectYouTube: vi.fn(async () => {}),
+  getSettings: vi.fn(async () => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const })),
+  saveSettings: vi.fn(async (p: any) => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const, ...p })),
+  previewTitle: vi.fn(async () => ''),
+}
+beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
+
+const base: AppState = {
+  phase: 'READY',
+  capture: null,
+  keyMasked: '····7f3a',
+  stats: null,
+  error: null,
+  youtube: { connected: false, channel: null },
+  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
+}
 
 describe('SettingsScreen', () => {
   it('shows the saved key with a Forget action', () => {

@@ -52,7 +52,14 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
    A hardware video overlay ignores ancestor border-radius/clip-path, so the
    video must round its OWN right corners (= the window's right corners) — that
    forces Chromium off the zero-copy overlay onto a path that clips. */
-.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; }
+.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; opacity: 1; transition: opacity .35s ease; }
+/* Not actively showing frames (startup / source switch / OBS restart): fade out
+   so the hero's colored gradient backsplash shows through instead of black. */
+.preview-video.loading { opacity: 0; }
+/* Cinematic depth on the gradient while the preview is hidden — matches setup. */
+.hero::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .35s ease;
+  background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); }
+.hero:has(.preview-video.loading)::after { opacity: 1; }
 /* Setup state reuses the Stream hero's cinematic gradient (+ ::before depth),
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }
@@ -69,8 +76,11 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
-.overlay { position: absolute; inset: auto 0 130px; text-align: center; color: #dfe7ef; text-shadow: 0 1px 3px #000; z-index: 3; }
-.overlay.error { color: #ff9aa8; } .overlay.warn { color: #ffd479; }
+.overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: #dfe7ef; z-index: 3; }
+/* Translucent, blurred pill so overlay messages stay readable over any preview. */
+.overlay-pill { display: inline-block; max-width: 460px; padding: 10px 16px; border-radius: 14px; background: rgba(12,15,20,.62); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 13px; line-height: 1.4; }
+.overlay.error .overlay-pill { color: #ffb3bf; border-color: rgba(240,85,107,.4); }
+.overlay.warn .overlay-pill { color: #ffd479; border-color: rgba(255,212,121,.35); }
 
 .hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px; background: linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 55%,transparent); z-index: 3; }
 .statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: #e6edf3; font-size: 13px; text-shadow: 0 1px 2px #000; }
@@ -89,6 +99,15 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .btn.danger { background: rgba(226,58,82,.18); color: #ff8b9c; border: 1px solid #f0556b; }
 .btn.ghost { background: #1a222c; color: #c7d0d9; border: 1px solid #2a323b; font-weight: 700; }
 .btn.ghost:hover { background: #222c38; }
+/* Compact bottom-bar action (Go Live / End Stream) — sits inline, content-width,
+   so it reads as a control rather than a full-width banner. */
+.btn.action { align-self: flex-start; padding: 12px 22px; font-size: 15px; border-radius: 10px; }
+.btn.primary.action { box-shadow: 0 4px 14px rgba(34,211,238,.22); }
+.btn.primary.action:hover { box-shadow: 0 6px 18px rgba(34,211,238,.32); }
+/* Extra-small ghost button for inline actions like "Switch source". */
+.btn.xs { padding: 5px 9px; font-size: 11px; border-radius: 8px; font-weight: 600; gap: 5px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Key input row (NEEDS_KEY + Settings) */
 .keyrow { display: flex; gap: 10px; }
@@ -103,3 +122,20 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }
 .keyrow.saved { display: flex; align-items: center; gap: 12px; }
 .muted { color: #768390; font-size: 13px; margin: 0 0 12px; }
+
+/* YouTube settings */
+.yt-settings { display: flex; flex-direction: column; gap: 10px; }
+.yt-settings h3 { margin: 0 0 6px; font-size: 14px; color: #c7d0d9; }
+.yt-settings label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #8b949e; }
+.yt-settings input, .yt-settings select { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; }
+.yt-account { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.yt-vars { font-size: 12px; color: #5b6470; font-family: ui-monospace, monospace; }
+.yt-preview { font-size: 13px; color: #9fd8ff; }
+.yt-hint { font-size: 12px; color: #5b6470; }
+
+/* Title prompt modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: #1c2128; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 24px; min-width: 340px; display: flex; flex-direction: column; gap: 14px; }
+.modal h3 { margin: 0; font-size: 15px; color: #e6edf3; }
+.modal input[type="text"] { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; width: 100%; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }

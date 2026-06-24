@@ -1,7 +1,11 @@
 import { callReady } from '@axistream/capture'
 import type { LiveStats } from '../shared/state.js'
 
-const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
+export interface Ingest { server: string; key: string }
+export interface GoLiveHooks {
+  onIngestActive?: () => Promise<void>
+  onStop?: () => Promise<void>
+}
 
 type Phase = 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'READY' | 'ERROR'
 export interface StreamDeps {
@@ -17,16 +21,18 @@ export class StreamController {
   private live = false
   private lastBytes = 0
   private firstSample = true
+  private hooks: GoLiveHooks = {}
   constructor(private readonly d: StreamDeps) {}
 
   isLive(): boolean { return this.live }
 
-  async goLive(key: string): Promise<void> {
+  async goLive(target: Ingest, hooks: GoLiveHooks = {}): Promise<void> {
     if (this.live || this.timer) return
+    this.hooks = hooks
     const c = this.d.client()
     await callReady(() => c.call('SetStreamServiceSettings', {
       streamServiceType: 'rtmp_custom',
-      streamServiceSettings: { server: YT_RTMPS, key },
+      streamServiceSettings: { server: target.server, key: target.key },
     }))
     await callReady(() => c.call('StartStream'))
     this.d.onPhase('GOING_LIVE')
@@ -41,10 +47,16 @@ export class StreamController {
       let st: any
       try { st = await c.call('GetStreamStatus') } catch { return }
       if (!st.outputActive && !becameLive) {
-        if (ticks >= deadline) { await this.failStart(c) }
+        if (ticks >= deadline) await this.failStart(c)
         return
       }
-      if (st.outputActive && !becameLive) { becameLive = true; this.live = true; this.d.onPhase('LIVE') }
+      if (st.outputActive && !becameLive) {
+        becameLive = true
+        try { await this.hooks.onIngestActive?.() }
+        catch { await this.failStart(c); return }
+        this.live = true
+        this.d.onPhase('LIVE')
+      }
       this.d.onPhase(st.outputReconnecting ? 'RECONNECTING' : 'LIVE')
       this.d.onStats(this.mapStats(st, pollMs))
     }, pollMs)
@@ -53,6 +65,7 @@ export class StreamController {
   private async failStart(c: { call(r: string): Promise<any> }): Promise<void> {
     this.clear()
     try { await c.call('StopStream') } catch { /* ignore */ }
+    try { await this.hooks.onStop?.() } catch { /* ignore */ }
     this.live = false
     this.d.onPhase('ERROR', "Couldn't start stream — check your key and connection.")
   }
@@ -76,6 +89,7 @@ export class StreamController {
   async stop(): Promise<void> {
     this.clear()
     try { await this.d.client().call('StopStream') } catch { /* ignore */ }
+    try { await this.hooks.onStop?.() } catch { /* ignore */ }
     this.live = false
     this.d.onPhase('READY')
   }
