@@ -106,14 +106,25 @@ app.whenReady().then(async () => {
   // Start OBS's Virtual Camera so the renderer can show a real live preview.
   const startVirtualCam = () => { try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ } }
 
-  // Detect the captured monitor's real resolution, apply base/output canvas to
-  // OBS, and return the meta for the UI. Falls back to 1080p if dims are
-  // unreadable (capture not yet rendering) — never blocks the path to READY.
+  // Size OBS's canvas/output to the captured monitor (best-effort), then read
+  // back what OBS *actually* has and report that to the UI. We read GetVideoSettings
+  // rather than the value applyCaptureResolution computed because, on an
+  // already-provisioned boot, the canvas-sizing step races the capture's first
+  // frame (the scene-item transform reads 0 until the source renders) — which is
+  // why the UI used to show the 1080p fallback even on a 3440×1440 monitor.
+  // GetVideoSettings is always populated and persisted, so it never races.
   const applyResolution = async (): Promise<CaptureMeta> => {
-    const res = await applyCaptureResolution({ call: (r, p) => sidecar.client().call(r as never, p as never) })
-    return res
-      ? { sourceLabel: 'Guild Wars 2', width: res.baseWidth, height: res.baseHeight, fps: res.fps }
-      : { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 }
+    await applyCaptureResolution({ call: (r, p) => sidecar.client().call(r as never, p as never) })
+    try {
+      const v = await sidecar.client().call('GetVideoSettings') as {
+        baseWidth: number; baseHeight: number; outputWidth: number; outputHeight: number
+        fpsNumerator: number; fpsDenominator: number
+      }
+      const fps = v.fpsDenominator ? Math.round(v.fpsNumerator / v.fpsDenominator) : 60
+      return { sourceLabel: 'Guild Wars 2', width: v.baseWidth, height: v.baseHeight, outputWidth: v.outputWidth, outputHeight: v.outputHeight, fps }
+    } catch {
+      return { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }
+    }
   }
 
   const handlers: IpcHandlers = {

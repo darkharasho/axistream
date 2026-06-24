@@ -1,4 +1,4 @@
-import { MonitorPlay, Key, Radio, Square } from 'lucide-react'
+import { MonitorPlay, Key, Radio, Square, RefreshCw } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import { StatChips } from './StatChips.js'
@@ -36,26 +36,29 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
       </div>
 
       {phase === 'AWAITING_APPROVAL' ? (
-        <div className="overlay">Approve the screen-share dialog to finish setup…</div>
+        <div className="overlay"><span className="overlay-pill">Approve the screen-share dialog to finish setup…</span></div>
       ) : null}
-      {phase === 'ERROR' && state.error ? <div className="overlay error">{state.error}</div> : null}
-      {phase === 'RECONNECTING' ? <div className="overlay warn">Reconnecting…</div> : null}
+      {phase === 'ERROR' && state.error ? <div className="overlay error"><span className="overlay-pill">{state.error}</span></div> : null}
+      {phase === 'RECONNECTING' ? <div className="overlay warn"><span className="overlay-pill">Reconnecting…</span></div> : null}
 
       <div className="hero-bottom">
         <div className="statusrow">
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
+          {!live && phase !== 'GOING_LIVE' ? (
+            <button className="btn ghost xs" onClick={() => axi.repairCapture()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>
+          ) : null}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
-          <StatChips stats={stats} />
+          <StatChips stats={stats} capture={capture} />
         </div>
 
         {phase === 'NEEDS_KEY' ? (
           <KeyInput onSave={(k) => axi.saveKey(k)} />
         ) : live ? (
-          <button className="btn danger lg" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
+          <button className="btn danger action" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
         ) : (
-          <button className="btn primary lg" disabled={phase === 'GOING_LIVE'} onClick={() => axi.goLive()}>
-            {phase === 'GOING_LIVE' ? 'Starting…' : <><Radio size={16} /> Go Live</>}
+          <button className="btn primary action" disabled={phase === 'GOING_LIVE'} onClick={() => axi.goLive()}>
+            {phase === 'GOING_LIVE' ? 'Starting…' : <><Radio size={15} /> Go Live</>}
           </button>
         )}
       </div>

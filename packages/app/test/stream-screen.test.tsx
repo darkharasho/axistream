@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
-const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 }, keyMasked: '····7f3a', stats: null, error: null }
-const axi = { provision: vi.fn(), saveKey: vi.fn(), forgetKey: vi.fn(), goLive: vi.fn(), stopStream: vi.fn() }
+const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, keyMasked: '····7f3a', stats: null, error: null }
+const axi = { provision: vi.fn(), saveKey: vi.fn(), forgetKey: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn() }
 
 describe('StreamScreen', () => {
   beforeEach(() => vi.clearAllMocks())

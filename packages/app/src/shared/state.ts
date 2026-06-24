@@ -2,7 +2,7 @@ export type StreamPhase =
   | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'READY'
   | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
 
-export interface CaptureMeta { sourceLabel: string; width: number; height: number; fps: number }
+export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
   bitrateKbps: number; droppedFrames: number; durationMs: number;
   encoder: string; cpuPct: number; reconnecting: boolean
