@@ -8,7 +8,9 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-s
 #root { height: 100%; overflow: hidden; border-radius: 10px; }
 
 /* App is a row: sidebar | active screen. Window controls float top-right. */
-.app { position: relative; height: 100%; display: flex; background: #0b0d12; border-radius: 10px; overflow: hidden; border: 1px solid #1d2530; }
+/* clip-path clips composited descendants (the preview <video>) to the rounded
+   corners — overflow:hidden + border-radius alone does not. */
+.app { position: relative; height: 100%; display: flex; background: #0b0d12; border-radius: 10px; overflow: hidden; border: 1px solid #1d2530; clip-path: inset(0 round 10px); }
 
 /* Full-width top strip is draggable (a titlebar replacement). Sits below the
    window controls (z-index 10, no-drag) so they stay clickable. */
@@ -39,29 +41,31 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: -apple-s
    background-image (the live preview) is a composited layer that the parent's
    border-radius can't clip, so the hero must self-clip. */
 .hero { flex: 1; position: relative; overflow: hidden; background: linear-gradient(135deg,#13243a 0%,#1c1c40 45%,#311a35 80%,#3a1f2a 100%); background-size: cover; background-position: center; display: flex; flex-direction: column; border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
-.hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); pointer-events: none; }
-/* A real preview frame is the background — don't tint it with the radial glow. */
-.hero.has-preview::before { display: none; }
+/* Radial depth only on the setup screen (placeholder gradient). The live Stream
+   view shows the real preview video instead, so no tint. */
+.hero.setup::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); pointer-events: none; z-index: 1; }
+/* Live preview video fills the hero, beneath the scrims/controls. */
+.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: transparent; }
 /* Setup state reuses the Stream hero's cinematic gradient (+ ::before depth),
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }
-.hero.setup > * { position: relative; z-index: 2; }
+.hero.setup > * { position: relative; z-index: 3; }
 .hero.setup p { max-width: 360px; color: #c4cedb; line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .hero.setup h2 { text-shadow: 0 1px 4px rgba(0,0,0,.5); }
 .hero.setup .btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
 .setup-icon { width: 58px; height: 58px; border-radius: 16px; background: rgba(34,211,238,.1); border: 1px solid rgba(34,211,238,.3); display: grid; place-items: center; color: #22d3ee; font-size: 26px; }
 
-.hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 2; }
+.hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
 .badge { color: #9fd8ff; font: 700 10px/1 ui-monospace, monospace; border: 1px solid rgba(34,211,238,.5); padding: 6px 9px; border-radius: 20px; background: rgba(0,0,0,.3); }
 .badge.live { color: #fff; background: #e23a52; border: 0; box-shadow: 0 0 16px rgba(226,58,82,.55); }
 .pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
-.overlay { position: absolute; inset: auto 0 130px; text-align: center; color: #dfe7ef; text-shadow: 0 1px 3px #000; z-index: 2; }
+.overlay { position: absolute; inset: auto 0 130px; text-align: center; color: #dfe7ef; text-shadow: 0 1px 3px #000; z-index: 3; }
 .overlay.error { color: #ff9aa8; } .overlay.warn { color: #ffd479; }
 
-.hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px; background: linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 55%,transparent); z-index: 2; }
+.hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px; background: linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 55%,transparent); z-index: 3; }
 .statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: #e6edf3; font-size: 13px; text-shadow: 0 1px 2px #000; }
 .statusrow .spacer { flex: 1; }
 .dot.good { color: #5fe39a; } .dot.good::before { content: '●'; }

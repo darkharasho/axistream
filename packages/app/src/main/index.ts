@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, dialog, session } from 'electron'
 import { join } from 'node:path'
 import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
@@ -24,6 +24,10 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
+  // Allow the renderer to consume the OBS Virtual Camera for the live preview.
+  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'))
+  session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
+
   const win = createWindow()
   const push = (channel: string, payload: unknown) => { if (!win.isDestroyed()) win.webContents.send(channel, payload) }
   const setState = (p: Partial<AppState>) => { state = { ...state, ...p }; push(CH.evtState, p) }
@@ -56,15 +60,17 @@ app.whenReady().then(async () => {
   })
 
   const goReadyPhase = () => keyStore.masked() ? 'READY' : 'NEEDS_KEY'
+  // Start OBS's Virtual Camera so the renderer can show a real live preview.
+  const startVirtualCam = () => { try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ } }
 
   const handlers: IpcHandlers = {
     getInitialState: async () => state,
-    provision: async () => { const ok = await capture.provision(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); preview.start() } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); startVirtualCam() } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async () => { const key = keyStore.load(); if (!key) { setState({ phase: 'NEEDS_KEY' }); return } await stream.goLive(key) },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); preview.start() } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); startVirtualCam() } },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },
@@ -79,6 +85,7 @@ app.whenReady().then(async () => {
       if (choice === 0) { e.preventDefault(); return }
     }
     preview.stop()
+    try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
     void sidecar.stop()
   })
 
@@ -90,7 +97,7 @@ app.whenReady().then(async () => {
     const provisioned = config.load().provisioned
     if (provisioned) {
       setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } })
-      preview.start()
+      startVirtualCam()
     } else {
       setState({ phase: 'SETTING_UP' })
     }

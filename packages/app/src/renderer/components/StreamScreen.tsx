@@ -3,6 +3,7 @@ import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import { StatChips } from './StatChips.js'
 import { KeyInput } from './KeyInput.js'
+import { PreviewVideo } from './PreviewVideo.js'
 
 function fmt(ms: number): string {
   const s = Math.floor(ms / 1000); const m = Math.floor(s / 60)
@@ -25,7 +26,8 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
   }
 
   return (
-    <div className={`hero ${preview ? 'has-preview' : ''}`} style={preview ? { backgroundImage: `url(${preview})` } : undefined}>
+    <div className="hero">
+      <PreviewVideo />
       <div className="hero-top">
         <span className="hero-title">Stream</span>
         {live ? <span className="badge live"><span aria-hidden>● </span>LIVE</span> : <span className="badge">● PREVIEW</span>}
