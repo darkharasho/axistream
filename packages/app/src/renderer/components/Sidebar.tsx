@@ -4,6 +4,7 @@ export function Sidebar({ active, phase, onNav }: { active: 'stream' | 'settings
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
   return (
     <div className="sidebar">
+      <div className="brand"><span className="dot accent" /> AxiStream</div>
       <div className="menu-label">MENU</div>
       <button className={`navitem ${active === 'stream' ? 'on' : ''}`} onClick={() => onNav('stream')}>▶ Stream</button>
       <button className={`navitem ${active === 'settings' ? 'on' : ''}`} onClick={() => onNav('settings')}>⚙ Settings</button>

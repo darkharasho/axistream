@@ -64,6 +64,9 @@ app.whenReady().then(async () => {
     goLive: async () => { const key = keyStore.load(); if (!key) { setState({ phase: 'NEEDS_KEY' }); return } await stream.goLive(key) },
     stopStream: async () => { await stream.stop() },
     repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, fps: 60 } }); preview.start() } },
+    windowMinimize: async () => { win.minimize() },
+    windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
+    windowClose: async () => { win.close() },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 

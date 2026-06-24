@@ -8,6 +8,9 @@ export interface IpcHandlers {
   goLive(): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
+  windowMinimize(): Promise<void>
+  windowToggleMaximize(): Promise<void>
+  windowClose(): Promise<void>
 }
 
 export interface IpcDeps {
@@ -25,5 +28,8 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.goLive, () => handlers.goLive())
   ipcMain.handle(CH.stopStream, () => handlers.stopStream())
   ipcMain.handle(CH.repairCapture, () => handlers.repairCapture())
+  ipcMain.handle(CH.windowMinimize, () => handlers.windowMinimize())
+  ipcMain.handle(CH.windowToggleMaximize, () => handlers.windowToggleMaximize())
+  ipcMain.handle(CH.windowClose, () => handlers.windowClose())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

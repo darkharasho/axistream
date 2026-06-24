@@ -1,13 +1,20 @@
 import type { LiveStats } from '../../shared/state.js'
 
 export function StatChips({ stats }: { stats: LiveStats | null }) {
-  const s = stats
+  // Idle (not streaming): just the encoder. Live: full health row.
+  if (!stats) {
+    return (
+      <div className="chips">
+        <span className="chip">x264 · 1080p60</span>
+      </div>
+    )
+  }
   return (
     <div className="chips">
-      <span className="chip">{s ? `▲ ${s.bitrateKbps} kbps` : '— kbps'}</span>
-      <span className="chip good">{s ? `${s.droppedFrames} dropped` : '0 dropped'}</span>
-      <span className="chip">{s ? `${s.encoder} · 1080p60` : 'x264 · 1080p60'}</span>
-      {s ? <span className="chip">{`CPU ${s.cpuPct}%`}</span> : null}
+      <span className="chip">{`▲ ${stats.bitrateKbps} kbps`}</span>
+      <span className="chip good">{`${stats.droppedFrames} dropped`}</span>
+      <span className="chip">{`${stats.encoder} · 1080p60`}</span>
+      <span className="chip">{`CPU ${stats.cpuPct}%`}</span>
     </div>
   )
 }

@@ -27,12 +27,14 @@ export function App() {
 
   return (
     <div className="app">
-      <div className="titlebar"><span className="brand"><span className="dot accent" /> AxiStream</span></div>
-      <div className="body">
-        <Sidebar active={nav} phase={state.phase} onNav={setNav} />
-        {nav === 'stream'
-          ? <StreamScreen state={state} preview={preview} axi={axi} />
-          : <SettingsScreen state={state} axi={axi} />}
+      <Sidebar active={nav} phase={state.phase} onNav={setNav} />
+      {nav === 'stream'
+        ? <StreamScreen state={state} preview={preview} axi={axi} />
+        : <SettingsScreen state={state} axi={axi} />}
+      <div className="wctl">
+        <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}>—</button>
+        <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}>▢</button>
+        <button className="wbtn close" aria-label="Close" onClick={() => axi.windowClose()}>✕</button>
       </div>
     </div>
   )

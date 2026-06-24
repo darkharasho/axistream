@@ -26,6 +26,9 @@ export const CH = {
   goLive: 'axi:goLive',
   stopStream: 'axi:stopStream',
   repairCapture: 'axi:repairCapture',
+  windowMinimize: 'axi:win:minimize',
+  windowToggleMaximize: 'axi:win:maximize',
+  windowClose: 'axi:win:close',
   evtState: 'axi:evt:state',
   evtStats: 'axi:evt:stats',
   evtPreview: 'axi:evt:preview',
@@ -39,6 +42,9 @@ export interface AxiApi {
   goLive(): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
+  windowMinimize(): Promise<void>
+  windowToggleMaximize(): Promise<void>
+  windowClose(): Promise<void>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void
