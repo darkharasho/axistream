@@ -33,6 +33,7 @@ export const CH = {
   evtState: 'axi:evt:state',
   evtStats: 'axi:evt:stats',
   evtPreview: 'axi:evt:preview',
+  evtCaptureChanged: 'axi:evt:captureChanged',
 } as const
 
 export interface AxiApi {
@@ -50,4 +51,5 @@ export interface AxiApi {
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void
+  onCaptureChanged(cb: () => void): () => void
 }

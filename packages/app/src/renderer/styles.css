@@ -99,6 +99,8 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .btn.primary.action:hover { box-shadow: 0 6px 18px rgba(34,211,238,.32); }
 /* Extra-small ghost button for inline actions like "Switch source". */
 .btn.xs { padding: 5px 9px; font-size: 11px; border-radius: 8px; font-weight: 600; gap: 5px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Key input row (NEEDS_KEY + Settings) */
 .keyrow { display: flex; gap: 10px; }

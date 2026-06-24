@@ -1,4 +1,7 @@
 import { useEffect, useRef } from 'react'
+import type { AxiApi } from '../../shared/state.js'
+
+const axi = (globalThis as unknown as { axi?: AxiApi }).axi
 
 // Live preview of OBS's output via its Virtual Camera (v4l2loopback). Real-time,
 // GPU-decoded, and reflects OBS's composited feed (so privacy masks show later).
@@ -55,11 +58,16 @@ export function PreviewVideo() {
 
     const onDeviceChange = () => schedule()
     md.addEventListener?.('devicechange', onDeviceChange)
+    // The main process signals when it (re)starts the virtual cam after an OBS
+    // restart. Give the cam a beat to start producing frames, then re-acquire —
+    // this is the reliable recovery path when the v4l2 device freezes black.
+    const offCaptureChanged = axi?.onCaptureChanged(() => schedule(900))
     void acquire()
     return () => {
       cancelled = true
       if (retimer) clearTimeout(retimer)
       md.removeEventListener?.('devicechange', onDeviceChange)
+      offCaptureChanged?.()
       stop()
     }
   }, [])

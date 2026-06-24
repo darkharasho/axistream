@@ -22,5 +22,6 @@ const api: AxiApi = {
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),
+  onCaptureChanged: (cb) => sub<void>(CH.evtCaptureChanged, () => cb()),
 }
 contextBridge.exposeInMainWorld('axi', api)

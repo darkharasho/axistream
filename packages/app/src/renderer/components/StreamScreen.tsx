@@ -1,4 +1,4 @@
-import { MonitorPlay, Key, Radio, Square, RefreshCw } from 'lucide-react'
+import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2 } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import { StatChips } from './StatChips.js'
@@ -44,9 +44,10 @@ export function StreamScreen({ state, preview, axi }: { state: AppState; preview
       <div className="hero-bottom">
         <div className="statusrow">
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
-          {!live && phase !== 'GOING_LIVE' ? (
-            <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>
-          ) : null}
+          {live || phase === 'GOING_LIVE' ? null
+            : phase === 'AWAITING_APPROVAL'
+            ? <button className="btn ghost xs" disabled><Loader2 size={12} className="spin" /> Switching…</button>
+            : <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} />

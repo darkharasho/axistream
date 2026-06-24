@@ -103,8 +103,14 @@ app.whenReady().then(async () => {
   })
 
   const goReadyPhase = () => keyStore.masked() ? 'READY' : 'NEEDS_KEY'
-  // Start OBS's Virtual Camera so the renderer can show a real live preview.
-  const startVirtualCam = () => { try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ } }
+  // Start OBS's Virtual Camera so the renderer can show a real live preview, and
+  // tell the renderer to (re)acquire it. After an OBS restart the v4l2 device
+  // node can persist while its feed stops, so the renderer's stream freezes black
+  // without firing 'ended'/'devicechange' — an explicit signal is what unsticks it.
+  const startVirtualCam = () => {
+    try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ }
+    push(CH.evtCaptureChanged, null)
+  }
 
   // Size OBS's canvas/output to the captured monitor (best-effort), then read
   // back what OBS *actually* has and report that to the UI. We read GetVideoSettings
@@ -144,6 +150,7 @@ app.whenReady().then(async () => {
       // inside repair), so the user sees "approve the dialog" rather than the
       // first-run setup screen. The preview survives the OBS restart because
       // PreviewVideo re-acquires the virtual cam when it drops.
+      setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
       if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() }
     },
