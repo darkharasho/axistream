@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, safeStorage, dialog } from 'electron'
 import { join } from 'node:path'
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, CaptureConfig } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { KeyStore } from './KeyStore.js'
@@ -29,7 +29,10 @@ app.whenReady().then(async () => {
 
   const keyStore = new KeyStore(join(app.getPath('userData'), 'key.bin'), safeStorage)
   const config = new CaptureConfig(join(app.getPath('userData'), 'capture.json'))
-  const sidecar = new ObsSidecar({ launcher: new FlatpakObsLauncher(), collection: 'AxiStream' })
+  const visibleLauncher = new FlatpakObsLauncher()
+  const useHeadless = process.platform === 'linux' && !process.env.AXISTREAM_OBS_VISIBLE
+  const launcher = useHeadless ? new HeadlessCageObsLauncher(visibleLauncher) : visibleLauncher
+  const sidecar = new ObsSidecar({ launcher, collection: 'AxiStream' })
 
   const preview = new PreviewPump({ client: () => sidecar.client(), sourceName: CAPTURE_SOURCE, emit: (d) => push(CH.evtPreview, d) })
   win.on('hide', () => preview.setVisible(false))
