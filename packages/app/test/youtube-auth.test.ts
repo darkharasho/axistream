@@ -38,6 +38,45 @@ describe('YouTubeAuth.connect', () => {
     expect(u.searchParams.get('code_challenge')).toBeTruthy()
   })
 
+  it('rejects with /timed out/i when waitForCode never resolves', async () => {
+    const closeFn = vi.fn()
+    const lb: any = {
+      redirectUri: 'http://127.0.0.1:9999/callback',
+      waitForCode: () => new Promise<never>(() => {}),
+      close: closeFn,
+    }
+    const auth = new YouTubeAuth({
+      store,
+      config: { clientId: 'cid', clientSecret: 'sec' },
+      fetchFn: vi.fn() as any,
+      connectTimeoutMs: 20,
+      openExternal: async () => {},
+      listen: async () => lb,
+    })
+    await expect(auth.connect()).rejects.toThrow(/timed out/i)
+    expect(closeFn).toHaveBeenCalled()
+  })
+
+  it('rejects with /already in progress/i on concurrent connect()', async () => {
+    const lb: any = {
+      redirectUri: 'http://127.0.0.1:9999/callback',
+      waitForCode: () => new Promise<never>(() => {}),
+      close: vi.fn(),
+    }
+    const auth = new YouTubeAuth({
+      store,
+      config: { clientId: 'cid', clientSecret: 'sec' },
+      fetchFn: vi.fn() as any,
+      connectTimeoutMs: 50,
+      openExternal: async () => {},
+      listen: async () => lb,
+    })
+    const first = auth.connect()
+    await expect(auth.connect()).rejects.toThrow(/already in progress/i)
+    // let first settle so we don't leak the timer
+    await first.catch(() => {})
+  })
+
   it('throws on CSRF state mismatch', async () => {
     let openedUrl = ''
     const lb: any = {

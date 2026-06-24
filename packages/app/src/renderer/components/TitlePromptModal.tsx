@@ -5,7 +5,7 @@ const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
 export function TitlePromptModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('')
-  const submit = () => { if (!title.trim()) return; axi().goLive(title.trim()); onClose() }
+  const submit = () => { if (!title.trim()) return; axi().goLive(title.trim()).catch(console.error); onClose() }
   return (
     <div className="modal-backdrop">
       <div className="modal">

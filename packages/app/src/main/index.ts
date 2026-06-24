@@ -122,6 +122,8 @@ app.whenReady().then(async () => {
       if (p === 'LIVE' && pendingOAuthBump) {
         pendingOAuthBump = false
         settings.bumpCounter()
+      } else if ((p === 'ERROR' || p === 'READY') && pendingOAuthBump) {
+        pendingOAuthBump = false
       }
       setState({ phase: p, error: error ?? null })
     },
