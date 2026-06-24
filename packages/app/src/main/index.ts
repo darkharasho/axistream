@@ -13,7 +13,11 @@ let state: AppState = { ...INITIAL_STATE }
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 960, height: 620, frame: false, transparent: false, backgroundColor: '#0b0d12', show: false,
+    // transparent:true cuts out the rounded corners to the desktop (KWin has no
+    // window-rounding effect on this system, so transparency — not backgroundColor
+    // — is what makes the corners actually round). The preview <video> carries its
+    // own border-radius so a hardware overlay can't punch square corners through.
+    width: 960, height: 620, frame: false, transparent: true, backgroundColor: '#00000000', show: false,
     icon: join(import.meta.dirname, '../../build/icon.png'),
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   })
