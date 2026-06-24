@@ -1,0 +1,6 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #0b0d12; color: #e6edf3; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+.app { height: 100vh; display: flex; flex-direction: column; }
+.titlebar { height: 40px; display: flex; align-items: center; padding: 0 14px; font-weight: 700; border-bottom: 1px solid #161c25; -webkit-app-region: drag; }
+.placeholder { flex: 1; display: grid; place-items: center; color: #768390; }
