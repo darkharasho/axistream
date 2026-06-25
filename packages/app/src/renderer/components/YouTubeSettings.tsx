@@ -28,16 +28,16 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
       {youtube.connected ? (
         <div className="yt-account">
           <span>Connected as <strong>{youtube.channel ?? 'your channel'}</strong></span>
-          <button onClick={() => axi().disconnectYouTube()}>Disconnect</button>
+          <button className="btn ghost sm" onClick={() => axi().disconnectYouTube()}>Disconnect</button>
         </div>
       ) : (
-        <button onClick={() => axi().connectYouTube()}>Connect YouTube account (recommended)</button>
+        <button className="btn primary sm yt-connect" onClick={() => axi().connectYouTube()}>Connect YouTube account</button>
       )}
 
       {s && (
         <>
           <label>Stream title template
-            <input value={s.titleTemplate} placeholder="EWW Raid - {{date}}" onChange={(e) => update({ titleTemplate: e.target.value })} />
+            <input value={s.titleTemplate} placeholder="Raid night - {{date}}" onChange={(e) => update({ titleTemplate: e.target.value })} />
           </label>
           <div className="yt-vars">Variables: {VARS}</div>
           <div className="yt-preview">Preview: <strong>{preview || '—'}</strong></div>
