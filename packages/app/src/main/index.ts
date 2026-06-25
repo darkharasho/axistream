@@ -244,6 +244,12 @@ app.whenReady().then(async () => {
       return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat })
     },
     getAudioDevices: () => audio.listMicDevices(),
+    getDesktopDevices: () => audio.listDesktopDevices(),
+    setDesktopDevice: async (deviceId: string) => {
+      settings.patch({ desktopDevice: deviceId })
+      await audio.setDesktopDevice(deviceId)
+      setState({ audio: { ...state.audio, desktopDevice: deviceId } })
+    },
     setDesktopEnabled: async (enabled: boolean) => {
       settings.patch({ desktopEnabled: enabled })
       await audio.setDesktopEnabled(enabled)
@@ -298,8 +304,8 @@ app.whenReady().then(async () => {
       // missing. ensureAudioInputs is idempotent and best-effort.
       await ensureAudioInputs(sidecar.client())
       const a = settings.load()
-      setState({ audio: { desktopEnabled: a.desktopEnabled, micEnabled: a.micEnabled, micDevice: a.micDevice } })
-      await audio.applySettings({ desktopEnabled: a.desktopEnabled, micEnabled: a.micEnabled, micDevice: a.micDevice })
+      setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice } })
+      await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
     } else {
       setState({ phase: 'SETTING_UP' })
     }
