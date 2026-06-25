@@ -12,6 +12,10 @@ const axi = {
   getSettings: vi.fn(async () => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const })),
   saveSettings: vi.fn(async (p: any) => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const, ...p })),
   previewTitle: vi.fn(async () => ''),
+  getAudioDevices: vi.fn(async () => []),
+  setDesktopEnabled: vi.fn(async () => {}),
+  setMicEnabled: vi.fn(async () => {}),
+  setMicDevice: vi.fn(async () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 

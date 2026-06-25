@@ -1,6 +1,7 @@
 import type { AppState, AxiApi } from '../../shared/state.js'
 import { KeyInput } from './KeyInput.js'
 import { YouTubeSettings } from './YouTubeSettings.js'
+import { AudioSettings } from './AudioSettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -10,6 +11,10 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
 
         <section className="setting">
           <YouTubeSettings youtube={state.youtube} />
+        </section>
+
+        <section className="setting">
+          <AudioSettings audio={state.audio} />
         </section>
 
         <section className="setting">

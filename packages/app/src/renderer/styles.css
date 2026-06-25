@@ -129,6 +129,8 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .yt-settings label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #8b949e; }
 .yt-settings input, .yt-settings select { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; }
 .yt-account { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.audio-row { flex-direction: row !important; align-items: center; gap: 8px; cursor: pointer; }
+.audio-row input { width: auto; }
 .yt-account button { margin-left: auto; }
 .yt-connect { align-self: flex-start; }
 .btn.sm { width: auto; padding: 9px 14px; font-size: 13px; font-weight: 700; border-radius: 10px; }
