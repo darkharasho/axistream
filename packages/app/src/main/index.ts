@@ -25,6 +25,7 @@ function hideObsTray(): void {
 import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
+import { AudioController } from './AudioController.js'
 import { KeyStore } from './KeyStore.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, type StreamSettingsData } from './StreamSettings.js'
@@ -115,6 +116,8 @@ app.whenReady().then(async () => {
     onPhase: (p, error) => setState({ phase: p, error: error ?? null }),
     onCrashed: () => setState({ phase: 'ERROR', error: 'Stream engine crashed — restart AxiStream.' }),
   })
+
+  const audio = new AudioController({ client: () => sidecar.client() })
 
   let pendingOAuthBump = false
   const stream = new StreamController({
@@ -240,6 +243,22 @@ app.whenReady().then(async () => {
       const s = settings.load()
       return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat })
     },
+    getAudioDevices: () => audio.listMicDevices(),
+    setDesktopEnabled: async (enabled: boolean) => {
+      settings.patch({ desktopEnabled: enabled })
+      await audio.setDesktopEnabled(enabled)
+      setState({ audio: { ...state.audio, desktopEnabled: enabled } })
+    },
+    setMicEnabled: async (enabled: boolean) => {
+      settings.patch({ micEnabled: enabled })
+      await audio.setMicEnabled(enabled)
+      setState({ audio: { ...state.audio, micEnabled: enabled } })
+    },
+    setMicDevice: async (deviceId: string) => {
+      settings.patch({ micDevice: deviceId })
+      await audio.setMicDevice(deviceId)
+      setState({ audio: { ...state.audio, micDevice: deviceId } })
+    },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },
@@ -274,6 +293,9 @@ app.whenReady().then(async () => {
       const capture_ = await applyResolution()
       setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: capture_ })
       startVirtualCam()
+      const a = settings.load()
+      setState({ audio: { desktopEnabled: a.desktopEnabled, micEnabled: a.micEnabled, micDevice: a.micDevice } })
+      await audio.applySettings({ desktopEnabled: a.desktopEnabled, micEnabled: a.micEnabled, micDevice: a.micDevice })
     } else {
       setState({ phase: 'SETTING_UP' })
     }

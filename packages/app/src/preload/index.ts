@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type LiveStats, type AxiApi, type StreamSettingsView } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView } from '../shared/state.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -21,6 +21,10 @@ const api: AxiApi = {
   getSettings: () => ipcRenderer.invoke(CH.getSettings) as Promise<StreamSettingsView>,
   saveSettings: (p) => ipcRenderer.invoke(CH.saveSettings, p) as Promise<StreamSettingsView>,
   previewTitle: (t) => ipcRenderer.invoke(CH.previewTitle, t) as Promise<string>,
+  getAudioDevices: () => ipcRenderer.invoke(CH.getAudioDevices) as Promise<AudioDevice[]>,
+  setDesktopEnabled: (enabled) => ipcRenderer.invoke(CH.setDesktopEnabled, enabled) as Promise<void>,
+  setMicEnabled: (enabled) => ipcRenderer.invoke(CH.setMicEnabled, enabled) as Promise<void>,
+  setMicDevice: (deviceId) => ipcRenderer.invoke(CH.setMicDevice, deviceId) as Promise<void>,
   windowMinimize: () => ipcRenderer.invoke(CH.windowMinimize) as Promise<void>,
   windowToggleMaximize: () => ipcRenderer.invoke(CH.windowToggleMaximize) as Promise<void>,
   windowClose: () => ipcRenderer.invoke(CH.windowClose) as Promise<void>,

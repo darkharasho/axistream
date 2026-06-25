@@ -12,6 +12,10 @@ const axi = {
   getSettings: vi.fn(async () => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const })),
   saveSettings: vi.fn(async (p: any) => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const, ...p })),
   previewTitle: vi.fn(async () => ''),
+  getAudioDevices: vi.fn(async () => []),
+  setDesktopEnabled: vi.fn(async () => {}),
+  setMicEnabled: vi.fn(async () => {}),
+  setMicDevice: vi.fn(async () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
@@ -23,6 +27,7 @@ const base: AppState = {
   error: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
+  audio: { desktopEnabled: true, micEnabled: false, micDevice: null },
 }
 
 describe('SettingsScreen', () => {

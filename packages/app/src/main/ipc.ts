@@ -1,4 +1,4 @@
-import { CH, type AppState, type StreamSettingsView } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView } from '../shared/state.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
@@ -14,6 +14,10 @@ export interface IpcHandlers {
   getSettings(): Promise<StreamSettingsView>
   saveSettings(p: Partial<StreamSettingsView>): Promise<StreamSettingsView>
   previewTitle(template: string): Promise<string>
+  getAudioDevices(): Promise<AudioDevice[]>
+  setDesktopEnabled(enabled: boolean): Promise<void>
+  setMicEnabled(enabled: boolean): Promise<void>
+  setMicDevice(deviceId: string): Promise<void>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>
@@ -40,6 +44,10 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.getSettings, () => handlers.getSettings())
   ipcMain.handle(CH.saveSettings, (_e: unknown, p: Partial<StreamSettingsView>) => handlers.saveSettings(p))
   ipcMain.handle(CH.previewTitle, (_e: unknown, t: string) => handlers.previewTitle(t))
+  ipcMain.handle(CH.getAudioDevices, () => handlers.getAudioDevices())
+  ipcMain.handle(CH.setDesktopEnabled, (_e: unknown, enabled: boolean) => handlers.setDesktopEnabled(enabled))
+  ipcMain.handle(CH.setMicEnabled, (_e: unknown, enabled: boolean) => handlers.setMicEnabled(enabled))
+  ipcMain.handle(CH.setMicDevice, (_e: unknown, deviceId: string) => handlers.setMicDevice(deviceId))
   ipcMain.handle(CH.windowMinimize, () => handlers.windowMinimize())
   ipcMain.handle(CH.windowToggleMaximize, () => handlers.windowToggleMaximize())
   ipcMain.handle(CH.windowClose, () => handlers.windowClose())
