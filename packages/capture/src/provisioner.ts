@@ -1,6 +1,7 @@
 import { callReady } from './call-ready.js'
 import { isNonBlackPng } from './frame-check.js'
 import { CaptureConfig, type ProvisionStatus } from './capture-config.js'
+import { ensureAudioInputs } from './audio-inputs.js'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -10,10 +11,6 @@ const SCENE = 'Main'
 const CAPTURE = 'AxiStream Capture'
 const WAYLAND_KIND = 'pipewire-screen-capture-source'
 const WINDOWS_KIND = 'monitor_capture'
-const DESKTOP_AUDIO = 'AxiStream Desktop Audio'
-const MIC = 'AxiStream Mic'
-const DESKTOP_KIND = 'pulse_output_capture'
-const MIC_KIND = 'pulse_input_capture'
 
 export interface ProvisionerSidecar {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,28 +105,7 @@ export class Provisioner {
     await callReady(() => client.call('CreateInput', {
       sceneName: SCENE, inputName: CAPTURE, inputKind: kind, inputSettings: {},
     }))
-    await this.provisionAudio(client)
-  }
-
-  // Best-effort: create desktop + mic audio inputs and set the AAC encoder.
-  // Never throws — audio failure must not abort video provisioning.
-  private async provisionAudio(client: { call(req: string, data?: any): Promise<any> }): Promise<void> {
-    try {
-      const { inputs } = await client.call('GetInputList')
-      const have = new Set((inputs ?? []).map((i: { inputName: string }) => i.inputName))
-      if (!have.has(DESKTOP_AUDIO)) {
-        await client.call('CreateInput', { sceneName: SCENE, inputName: DESKTOP_AUDIO, inputKind: DESKTOP_KIND, inputSettings: {} })
-      }
-      if (!have.has(MIC)) {
-        await client.call('CreateInput', { sceneName: SCENE, inputName: MIC, inputKind: MIC_KIND, inputSettings: { device_id: 'default' } })
-        await client.call('SetInputMute', { inputName: MIC, inputMuted: true })
-      }
-      await client.call('SetProfileParameter', { parameterCategory: 'SimpleOutput', parameterName: 'ABitrate', parameterValue: '160' })
-      await client.call('SetProfileParameter', { parameterCategory: 'Audio', parameterName: 'SampleRate', parameterValue: '48000' })
-      await client.call('SetProfileParameter', { parameterCategory: 'Audio', parameterName: 'ChannelSetup', parameterValue: 'Stereo' })
-    } catch (e) {
-      console.warn('[provision] audio setup failed', e)
-    }
+    await ensureAudioInputs(client)
   }
 
   private async waitForFrame(client: () => ReturnType<ProvisionerSidecar['client']>): Promise<boolean> {

@@ -22,7 +22,7 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -293,6 +293,10 @@ app.whenReady().then(async () => {
       const capture_ = await applyResolution()
       setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: capture_ })
       startVirtualCam()
+      // Self-heal audio inputs on every boot — installs provisioned before the
+      // audio feature never ran buildCollection again, so the inputs would be
+      // missing. ensureAudioInputs is idempotent and best-effort.
+      await ensureAudioInputs(sidecar.client())
       const a = settings.load()
       setState({ audio: { desktopEnabled: a.desktopEnabled, micEnabled: a.micEnabled, micDevice: a.micDevice } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, micEnabled: a.micEnabled, micDevice: a.micDevice })
