@@ -12,6 +12,7 @@ export interface StreamSettingsData {
   desktopEnabled: boolean
   micEnabled: boolean
   micDevice: string | null
+  desktopDevice: string | null
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   desktopEnabled: true,
   micEnabled: false,
   micDevice: null,
+  desktopDevice: null,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -43,6 +45,7 @@ export class StreamSettings {
         desktopEnabled: typeof raw.desktopEnabled === 'boolean' ? raw.desktopEnabled : DEFAULT_SETTINGS.desktopEnabled,
         micEnabled: typeof raw.micEnabled === 'boolean' ? raw.micEnabled : DEFAULT_SETTINGS.micEnabled,
         micDevice: typeof raw.micDevice === 'string' ? raw.micDevice : null,
+        desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

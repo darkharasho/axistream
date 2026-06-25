@@ -49,4 +49,10 @@ describe('StreamSettings', () => {
     expect(r.micEnabled).toBe(true)
     expect(r.micDevice).toBe('alsa_input.pci-0000')
   })
+
+  it('defaults desktopDevice to null and persists it', () => {
+    expect(new StreamSettings(file).load().desktopDevice).toBe(null)
+    new StreamSettings(file).patch({ desktopDevice: 'alsa_output.hdmi.monitor' })
+    expect(new StreamSettings(file).load().desktopDevice).toBe('alsa_output.hdmi.monitor')
+  })
 })
