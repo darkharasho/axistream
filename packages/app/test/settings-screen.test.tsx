@@ -13,7 +13,9 @@ const axi = {
   saveSettings: vi.fn(async (p: any) => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const, ...p })),
   previewTitle: vi.fn(async () => ''),
   getAudioDevices: vi.fn(async () => []),
+  getDesktopDevices: vi.fn(async () => []),
   setDesktopEnabled: vi.fn(async () => {}),
+  setDesktopDevice: vi.fn(async () => {}),
   setMicEnabled: vi.fn(async () => {}),
   setMicDevice: vi.fn(async () => {}),
 }
