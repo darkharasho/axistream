@@ -8,6 +8,7 @@ export interface StreamSettingsView {
   privacy: 'public' | 'unlisted' | 'private'
 }
 
+export interface AudioDevice { id: string; name: string }
 export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
   bitrateKbps: number; droppedFrames: number; durationMs: number;
@@ -21,11 +22,13 @@ export interface AppState {
   error: string | null
   youtube: { connected: boolean; channel: string | null }
   settings: StreamSettingsView
+  audio: { desktopEnabled: boolean; micEnabled: boolean; micDevice: string | null }
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
+  audio: { desktopEnabled: true, micEnabled: false, micDevice: null },
 }
 
 export const CH = {
@@ -49,6 +52,10 @@ export const CH = {
   getSettings: 'axi:getSettings',
   saveSettings: 'axi:saveSettings',
   previewTitle: 'axi:previewTitle',
+  getAudioDevices: 'axi:getAudioDevices',
+  setDesktopEnabled: 'axi:setDesktopEnabled',
+  setMicEnabled: 'axi:setMicEnabled',
+  setMicDevice: 'axi:setMicDevice',
 } as const
 
 export interface AxiApi {
@@ -65,6 +72,10 @@ export interface AxiApi {
   getSettings(): Promise<StreamSettingsView>
   saveSettings(p: Partial<StreamSettingsView>): Promise<StreamSettingsView>
   previewTitle(template: string): Promise<string>
+  getAudioDevices(): Promise<AudioDevice[]>
+  setDesktopEnabled(enabled: boolean): Promise<void>
+  setMicEnabled(enabled: boolean): Promise<void>
+  setMicDevice(deviceId: string): Promise<void>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>

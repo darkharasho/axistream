@@ -23,6 +23,7 @@ const base: AppState = {
   error: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
+  audio: { desktopEnabled: true, micEnabled: false, micDevice: null },
 }
 
 describe('SettingsScreen', () => {
