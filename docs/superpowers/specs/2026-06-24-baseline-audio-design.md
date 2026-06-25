@@ -41,7 +41,7 @@ The existing OBS-over-websocket pipeline is extended; no new runtime dependency.
 | Unit | Responsibility | Depends on |
 |------|----------------|------------|
 | `provisioner` (modified) | Create the two audio inputs; set the AAC encoder params; idempotent | obs-websocket `CreateInput`, `SetInputMute`, `SetProfileParameter`, `GetInputList` |
-| `AudioController` (new) | Runtime mic control: enable/mute, device select, list devices, re-apply persisted state | obs-websocket client |
+| `AudioController` (new) | Runtime audio control: desktop mute, mic enable/mute, device select, list devices, re-apply persisted state | obs-websocket client |
 | `StreamSettings` (modified) | Persist `micEnabled`, `micDevice` | userData JSON |
 | IPC / preload / state (modified) | Expose audio device list + mic controls to the renderer | existing `CH`/`AxiApi` patterns |
 | `AudioSettings.tsx` (new) | Audio settings UI: desktop-on indicator, mic toggle, device dropdown | renderer store + `axi` bridge |
@@ -83,10 +83,11 @@ Interface (consumed by `index.ts` handlers):
 - `interface AudioDevice { id: string; name: string }`
 - `interface AudioDeps { client(): { call(req: string, data?: any): Promise<any> } }`
 - `class AudioController`:
+  - `setDesktopEnabled(enabled: boolean): Promise<void>` → `SetInputMute { inputName: DESKTOP_AUDIO, inputMuted: !enabled }`
   - `setMicEnabled(enabled: boolean): Promise<void>` → `SetInputMute { inputName: MIC, inputMuted: !enabled }`
   - `setMicDevice(deviceId: string): Promise<void>` → `SetInputSettings { inputName: MIC, inputSettings: { device_id: deviceId }, overlay: true }`
   - `listMicDevices(): Promise<AudioDevice[]>` → `GetInputPropertiesListPropertyItems { inputName: MIC, propertyName: 'device_id' }`, mapping each item to `{ id: itemValue, name: itemName }`
-  - `applySettings(s: { micEnabled: boolean; micDevice: string | null }): Promise<void>` → set device if present, then mute state; best-effort. Called after provisioning / OBS restart so OBS reflects persisted prefs.
+  - `applySettings(s: { desktopEnabled: boolean; micEnabled: boolean; micDevice: string | null }): Promise<void>` → set mic device if present, then apply desktop + mic mute state; best-effort. Called after provisioning / OBS restart so OBS reflects persisted prefs.
 
 All methods wrap obs-websocket calls in try/catch and never throw out (failures
 are logged; the UI degrades, not crashes).
@@ -95,6 +96,7 @@ are logged; the UI degrades, not crashes).
 
 Add to `StreamSettingsData` (and `DEFAULT_SETTINGS`, and `load()` validation):
 
+- `desktopEnabled: boolean` — default `true`
 - `micEnabled: boolean` — default `false`
 - `micDevice: string | null` — default `null` (OBS default device)
 
@@ -102,16 +104,18 @@ Validation mirrors existing fields (type-check, fall back to default).
 
 ## State / IPC / preload
 
-- `AppState.audio: { micEnabled: boolean; micDevice: string | null }`; included
-  in `INITIAL_STATE` (`{ micEnabled: false, micDevice: null }`) and
-  `getInitialState`. Device list is **not** in state — fetched on demand.
-- New `CH` channels: `getAudioDevices`, `setMicEnabled`, `setMicDevice`.
+- `AppState.audio: { desktopEnabled: boolean; micEnabled: boolean; micDevice: string | null }`;
+  included in `INITIAL_STATE` (`{ desktopEnabled: true, micEnabled: false,
+  micDevice: null }`) and `getInitialState`. Device list is **not** in state —
+  fetched on demand.
+- New `CH` channels: `getAudioDevices`, `setDesktopEnabled`, `setMicEnabled`, `setMicDevice`.
 - `IpcHandlers` / `AxiApi`:
   - `getAudioDevices(): Promise<AudioDevice[]>`
+  - `setDesktopEnabled(enabled: boolean): Promise<void>`
   - `setMicEnabled(enabled: boolean): Promise<void>`
   - `setMicDevice(deviceId: string): Promise<void>`
 - `index.ts` handlers: call `AudioController`, persist via `StreamSettings.patch`,
-  and `setState({ audio: { micEnabled, micDevice } })`.
+  and `setState({ audio: { desktopEnabled, micEnabled, micDevice } })`.
 - On startup (after provision + clean profile), call
   `audio.applySettings(settings.load())`.
 
@@ -121,8 +125,9 @@ Mounted in `SettingsScreen` (near `YouTubeSettings`), themed consistently
 (`.btn`, existing form styles):
 
 - Heading "Audio".
-- **Desktop audio:** a static line — "Desktop audio: On" (always captured in
-  baseline; no toggle for v1).
+- **Desktop audio:** a toggle bound to `state.audio.desktopEnabled` (default on);
+  toggling calls `setDesktopEnabled`. The source is always provisioned; the toggle
+  mutes/unmutes it.
 - **Microphone:** a toggle bound to `state.audio.micEnabled` (default off). When
   on, reveal a `<select>` populated from `axi.getAudioDevices()` bound to
   `state.audio.micDevice`; changing it calls `setMicDevice`. Toggling calls
@@ -136,8 +141,9 @@ Mounted in `SettingsScreen` (near `YouTubeSettings`), themed consistently
 2. **Startup:** `applySettings` re-asserts persisted mic enable/device.
 3. **Go live:** track-1 audio (desktop always; mic per mute) encodes as AAC and
    streams — desktop audio audible immediately.
-4. **Toggle mic on:** `setMicEnabled(true)` → unmute MIC + persist + `setState`.
-5. **Pick device:** `setMicDevice(id)` → `SetInputSettings` + persist + `setState`.
+4. **Toggle desktop:** `setDesktopEnabled(bool)` → mute/unmute DESKTOP_AUDIO + persist + `setState`.
+5. **Toggle mic on:** `setMicEnabled(true)` → unmute MIC + persist + `setState`.
+6. **Pick device:** `setMicDevice(id)` → `SetInputSettings` + persist + `setState`.
 
 ## Error handling
 
@@ -149,18 +155,19 @@ Mounted in `SettingsScreen` (near `YouTubeSettings`), themed consistently
 
 ## Testing
 
-- **`AudioController`** (mock client): `setMicEnabled(true/false)` issues
-  `SetInputMute` with the correct `inputMuted`; `setMicDevice` issues
-  `SetInputSettings` with `device_id`; `listMicDevices` maps property items to
-  `{id,name}`; `applySettings` applies device then mute; a throwing client is
-  swallowed (no throw out).
-- **`StreamSettings`**: `micEnabled`/`micDevice` defaults + persist + corrupt-file
-  fallback (extend existing suite).
+- **`AudioController`** (mock client): `setDesktopEnabled(true/false)` and
+  `setMicEnabled(true/false)` issue `SetInputMute` on the correct input with the
+  correct `inputMuted`; `setMicDevice` issues `SetInputSettings` with `device_id`;
+  `listMicDevices` maps property items to `{id,name}`; `applySettings` applies mic
+  device then desktop + mic mute; a throwing client is swallowed (no throw out).
+- **`StreamSettings`**: `desktopEnabled`/`micEnabled`/`micDevice` defaults + persist
+  + corrupt-file fallback (extend existing suite).
 - **`provisioner`**: asserts both audio `CreateInput`s, the mic `SetInputMute`,
   and the three `SetProfileParameter`s are issued; idempotent skip when inputs
   already exist; audio-failure path doesn't abort video provisioning.
-- **`AudioSettings`** (render): mic toggle calls `setMicEnabled`; when enabled,
-  dropdown populates from `getAudioDevices` and selection calls `setMicDevice`.
+- **`AudioSettings`** (render): desktop toggle calls `setDesktopEnabled`; mic
+  toggle calls `setMicEnabled`; when mic enabled, dropdown populates from
+  `getAudioDevices` and selection calls `setMicDevice`.
 - **Manual smoke (the headless-audio risk):** run a real stream and confirm
   desktop audio is audible on YouTube, then enable mic and confirm it mixes in.
 
