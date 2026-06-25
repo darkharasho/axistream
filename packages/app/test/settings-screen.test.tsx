@@ -13,7 +13,9 @@ const axi = {
   saveSettings: vi.fn(async (p: any) => ({ titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' as const, ...p })),
   previewTitle: vi.fn(async () => ''),
   getAudioDevices: vi.fn(async () => []),
+  getDesktopDevices: vi.fn(async () => []),
   setDesktopEnabled: vi.fn(async () => {}),
+  setDesktopDevice: vi.fn(async () => {}),
   setMicEnabled: vi.fn(async () => {}),
   setMicDevice: vi.fn(async () => {}),
 }
@@ -27,7 +29,7 @@ const base: AppState = {
   error: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
-  audio: { desktopEnabled: true, micEnabled: false, micDevice: null },
+  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null },
 }
 
 describe('SettingsScreen', () => {
