@@ -34,4 +34,19 @@ describe('StreamSettings', () => {
     writeFileSync(file, '{not json')
     expect(new StreamSettings(file).load()).toEqual(DEFAULT_SETTINGS)
   })
+
+  it('defaults audio fields', () => {
+    const s = new StreamSettings(file).load()
+    expect(s.desktopEnabled).toBe(true)
+    expect(s.micEnabled).toBe(false)
+    expect(s.micDevice).toBe(null)
+  })
+
+  it('persists audio fields', () => {
+    new StreamSettings(file).patch({ desktopEnabled: false, micEnabled: true, micDevice: 'alsa_input.pci-0000' })
+    const r = new StreamSettings(file).load()
+    expect(r.desktopEnabled).toBe(false)
+    expect(r.micEnabled).toBe(true)
+    expect(r.micDevice).toBe('alsa_input.pci-0000')
+  })
 })

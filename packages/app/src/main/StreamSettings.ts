@@ -9,6 +9,9 @@ export interface StreamSettingsData {
   privacy: Privacy
   counter: number
   streamId: string | null
+  desktopEnabled: boolean
+  micEnabled: boolean
+  micDevice: string | null
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -17,6 +20,9 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   privacy: 'public',
   counter: 0,
   streamId: null,
+  desktopEnabled: true,
+  micEnabled: false,
+  micDevice: null,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -34,6 +40,9 @@ export class StreamSettings {
         privacy: PRIVACIES.includes(raw.privacy as Privacy) ? (raw.privacy as Privacy) : DEFAULT_SETTINGS.privacy,
         counter: Number.isInteger(raw.counter) ? (raw.counter as number) : DEFAULT_SETTINGS.counter,
         streamId: typeof raw.streamId === 'string' ? raw.streamId : null,
+        desktopEnabled: typeof raw.desktopEnabled === 'boolean' ? raw.desktopEnabled : DEFAULT_SETTINGS.desktopEnabled,
+        micEnabled: typeof raw.micEnabled === 'boolean' ? raw.micEnabled : DEFAULT_SETTINGS.micEnabled,
+        micDevice: typeof raw.micDevice === 'string' ? raw.micDevice : null,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }
