@@ -45,15 +45,31 @@ describe('AudioController', () => {
     ])
   })
 
-  it('applySettings sets mic device then desktop+mic mute', async () => {
+  it('setDesktopDevice sets device_id on the desktop input', async () => {
     const r = recorder()
     const a = new AudioController({ client: r.client })
-    await a.applySettings({ desktopEnabled: false, micEnabled: true, micDevice: 'dev-9' })
-    const reqs = r.calls.map((c) => c.req)
-    expect(reqs).toEqual(['SetInputSettings', 'SetInputMute', 'SetInputMute'])
-    expect(r.calls[0].data.inputSettings.device_id).toBe('dev-9')
-    expect(r.calls[1].data).toEqual({ inputName: DESKTOP_AUDIO, inputMuted: true })
-    expect(r.calls[2].data).toEqual({ inputName: MIC, inputMuted: false })
+    await a.setDesktopDevice('out-2')
+    expect(r.calls[0]).toEqual({ req: 'SetInputSettings', data: { inputName: DESKTOP_AUDIO, inputSettings: { device_id: 'out-2' }, overlay: true } })
+  })
+
+  it('listDesktopDevices maps property items from the desktop input', async () => {
+    const r = recorder({ GetInputPropertiesListPropertyItems: { propertyItems: [
+      { itemName: 'HDMI', itemValue: 'hdmi.monitor' },
+    ] } })
+    const a = new AudioController({ client: r.client })
+    expect(await a.listDesktopDevices()).toEqual([{ id: 'hdmi.monitor', name: 'HDMI' }])
+    expect(r.calls[0].data).toEqual({ inputName: DESKTOP_AUDIO, propertyName: 'device_id' })
+  })
+
+  it('applySettings applies desktop device, mic device, then desktop+mic mute', async () => {
+    const r = recorder()
+    const a = new AudioController({ client: r.client })
+    await a.applySettings({ desktopEnabled: false, desktopDevice: 'out-9', micEnabled: true, micDevice: 'mic-9' })
+    expect(r.calls.map((c) => c.req)).toEqual(['SetInputSettings', 'SetInputSettings', 'SetInputMute', 'SetInputMute'])
+    expect(r.calls[0].data).toEqual({ inputName: DESKTOP_AUDIO, inputSettings: { device_id: 'out-9' }, overlay: true })
+    expect(r.calls[1].data).toEqual({ inputName: MIC, inputSettings: { device_id: 'mic-9' }, overlay: true })
+    expect(r.calls[2].data).toEqual({ inputName: DESKTOP_AUDIO, inputMuted: true })
+    expect(r.calls[3].data).toEqual({ inputName: MIC, inputMuted: false })
   })
 
   it('swallows client errors (never throws out)', async () => {
