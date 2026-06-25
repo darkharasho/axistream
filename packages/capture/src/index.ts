@@ -1,3 +1,4 @@
+export * from './audio-inputs.js'
 export * from './capture-config.js'
 export * from './capture-resolution.js'
 export * from './call-ready.js'
