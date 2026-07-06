@@ -63,7 +63,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
             : <button className="btn ghost xs" onClick={() => setEditingMasks((v) => !v)} title="Black out chat or other areas on the stream"><Shield size={12} /> Masks</button>}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
-          <StatChips stats={stats} capture={capture} />
+          <StatChips stats={stats} capture={capture} encoder={state.encoder} />
         </div>
 
         {phase === 'NEEDS_KEY' ? (

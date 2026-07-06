@@ -44,4 +44,11 @@ describe('AudioSettings', () => {
     render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null }} />)
     expect(axi.getDesktopDevices).not.toHaveBeenCalled()
   })
+
+  it('renders an unavailable placeholder when the saved output device is not enumerated', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'unplugged-dac', micEnabled: false, micDevice: null }} />)
+    expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
+    const select = screen.getByLabelText(/output device/i) as HTMLSelectElement
+    expect(select.value).toBe('unplugged-dac')
+  })
 })

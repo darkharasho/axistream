@@ -183,4 +183,24 @@ describe('StreamController', () => {
     expect(startStreamCount).toBe(startStreamBeforeResolve) // no new StartStream issued
     expect(phases).not.toContain('ERROR') // aborted failStart must not emit ERROR
   })
+
+  it('computes droppedPct from skipped/total frames', async () => {
+    const c = clientFrom([{ outputActive: true, outputReconnecting: false, outputBytes: 1, outputSkippedFrames: 23, outputTotalFrames: 1000 }])
+    const stats: any[] = []
+    const sc = new StreamController({ client: c.client, onPhase: () => {}, onStats: (s) => stats.push(s), pollMs: 5 })
+    await sc.goLive(ingest)
+    await new Promise((r) => setTimeout(r, 30))
+    await sc.stop()
+    expect(stats[0].droppedPct).toBe(2.3)
+  })
+
+  it('droppedPct is 0 when total frames is absent', async () => {
+    const c = clientFrom([{ outputActive: true, outputReconnecting: false, outputBytes: 1, outputSkippedFrames: 5 }])
+    const stats: any[] = []
+    const sc = new StreamController({ client: c.client, onPhase: () => {}, onStats: (s) => stats.push(s), pollMs: 5 })
+    await sc.goLive(ingest)
+    await new Promise((r) => setTimeout(r, 30))
+    await sc.stop()
+    expect(stats[0].droppedPct).toBe(0)
+  })
 })

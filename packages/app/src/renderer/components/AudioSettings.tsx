@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AxiApi, AudioDevice, AppState } from '../../shared/state.js'
+import { staleOption } from '../device-options.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
@@ -27,14 +28,18 @@ export function AudioSettings({ audio }: { audio: AppState['audio'] }) {
         <span>Desktop audio</span>
       </label>
 
-      {audio.desktopEnabled && (
-        <label>Output device
-          <select value={audio.desktopDevice ?? ''} onChange={(e) => axi().setDesktopDevice(e.target.value)}>
-            {outputDevices.length === 0 && <option value="">No output devices found</option>}
-            {outputDevices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </label>
-      )}
+      {audio.desktopEnabled && (() => {
+        const stale = staleOption(audio.desktopDevice, outputDevices)
+        return (
+          <label>Output device
+            <select value={audio.desktopDevice ?? ''} onChange={(e) => axi().setDesktopDevice(e.target.value)}>
+              {stale && <option value={stale.id}>{stale.name}</option>}
+              {outputDevices.length === 0 && !stale && <option value="">No output devices found</option>}
+              {outputDevices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </label>
+        )
+      })()}
 
       <label className="audio-row">
         <input type="checkbox" checked={audio.micEnabled} aria-label="Microphone"
@@ -42,14 +47,18 @@ export function AudioSettings({ audio }: { audio: AppState['audio'] }) {
         <span>Microphone</span>
       </label>
 
-      {audio.micEnabled && (
-        <label>Microphone device
-          <select value={audio.micDevice ?? ''} onChange={(e) => axi().setMicDevice(e.target.value)}>
-            {micDevices.length === 0 && <option value="">No input devices found</option>}
-            {micDevices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </label>
-      )}
+      {audio.micEnabled && (() => {
+        const stale = staleOption(audio.micDevice, micDevices)
+        return (
+          <label>Microphone device
+            <select value={audio.micDevice ?? ''} onChange={(e) => axi().setMicDevice(e.target.value)}>
+              {stale && <option value={stale.id}>{stale.name}</option>}
+              {micDevices.length === 0 && !stale && <option value="">No input devices found</option>}
+              {micDevices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </label>
+        )
+      })()}
     </section>
   )
 }

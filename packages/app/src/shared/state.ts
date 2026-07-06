@@ -14,7 +14,7 @@ export interface StreamSettingsView {
 export interface AudioDevice { id: string; name: string }
 export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
-  bitrateKbps: number; droppedFrames: number; durationMs: number;
+  bitrateKbps: number; droppedFrames: number; droppedPct: number; durationMs: number;
   encoder: string; cpuPct: number; reconnecting: boolean
 }
 export interface AppState {
@@ -23,6 +23,7 @@ export interface AppState {
   keyMasked: string | null
   stats: LiveStats | null
   error: string | null
+  encoder: string
   youtube: { connected: boolean; channel: string | null }
   settings: StreamSettingsView
   audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null }
@@ -30,6 +31,7 @@ export interface AppState {
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
+  encoder: 'x264',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null },

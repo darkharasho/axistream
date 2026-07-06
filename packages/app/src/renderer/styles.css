@@ -89,6 +89,8 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .chips { display: flex; gap: 8px; }
 .chip { color: #cdd6e0; background: rgba(0,0,0,.42); border: 1px solid rgba(255,255,255,.12); padding: 7px 11px; border-radius: 9px; font: 600 11px/1 ui-monospace, monospace; white-space: nowrap; }
 .chip.good { color: #7be3a0; }
+.chip.warn { color: #fbbf24; }
+.chip.bad { color: #f87171; }
 .link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
 
 /* Buttons */

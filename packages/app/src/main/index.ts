@@ -39,6 +39,7 @@ import { MaskController } from './MaskController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize } from './window-size.js'
+import { enforceSingleInstance } from './single-instance.js'
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
@@ -66,7 +67,16 @@ function createWindow(): BrowserWindow {
   return win
 }
 
-app.whenReady().then(async () => {
+// A second AxiStream would spawn a second OBS against the same profile and
+// collection — both break. Second launches just focus the first window.
+let focusMain: () => void = () => {}
+const primary = enforceSingleInstance({
+  requestSingleInstanceLock: () => app.requestSingleInstanceLock(),
+  quit: () => app.quit(),
+  on: (e, cb) => { app.on(e, cb) },
+}, () => focusMain())
+
+if (primary) app.whenReady().then(async () => {
   // Allow the renderer to consume the OBS Virtual Camera for the live preview.
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'))
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
@@ -75,6 +85,7 @@ app.whenReady().then(async () => {
 
   // AxiStream's own tray icon (OBS's is disabled via hideObsTray below).
   const showWin = () => { if (win.isMinimized()) win.restore(); win.show(); win.focus() }
+  focusMain = showWin
   const tray = new Tray(nativeImage.createFromPath(join(import.meta.dirname, '../../build/icon.png')).resize({ width: 22, height: 22 }))
   tray.setToolTip('AxiStream')
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -127,6 +138,7 @@ app.whenReady().then(async () => {
   let currentPreset: EncoderPreset | null = null
   const applyEncoderPreset = async (outputHeight: number, fps: number, opts?: { tries?: number }): Promise<boolean> => {
     currentPreset = choosePreset(encoderKind, outputHeight, fps)
+    setState({ encoder: currentPreset.label })
     return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never), tries: opts?.tries }, currentPreset)
   }
 

@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
-const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, keyMasked: '····7f3a', stats: null, error: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null }, masks: [] }
+const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, keyMasked: '····7f3a', stats: null, error: null, encoder: 'x264', youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null }, masks: [] }
 const axi = { provision: vi.fn(), saveKey: vi.fn(), forgetKey: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn() }
 const store = { applyState: vi.fn() }
 
@@ -35,7 +35,7 @@ describe('StreamScreen', () => {
   })
 
   it('LIVE shows End Stream and the LIVE badge', () => {
-    render(<StreamScreen state={{ ...base, phase: 'LIVE', stats: { bitrateKbps: 5980, droppedFrames: 0, durationMs: 767000, encoder: 'x264', cpuPct: 11, reconnecting: false } }} preview={null} axi={axi as any} store={store as any} />)
+    render(<StreamScreen state={{ ...base, phase: 'LIVE', stats: { bitrateKbps: 5980, droppedFrames: 0, droppedPct: 0, durationMs: 767000, encoder: 'x264', cpuPct: 11, reconnecting: false } }} preview={null} axi={axi as any} store={store as any} />)
     expect(screen.getByRole('button', { name: /end stream/i })).toBeInTheDocument()
     expect(screen.getByText('LIVE')).toBeInTheDocument()
   })

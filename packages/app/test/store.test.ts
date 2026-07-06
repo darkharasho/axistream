@@ -17,7 +17,7 @@ describe('store', () => {
   })
   it('applyStats updates stats slice', () => {
     const s = createStore()
-    s.applyStats({ bitrateKbps: 6000, droppedFrames: 0, durationMs: 1000, encoder: 'x264', cpuPct: 10, reconnecting: false })
+    s.applyStats({ bitrateKbps: 6000, droppedFrames: 0, droppedPct: 0, durationMs: 1000, encoder: 'x264', cpuPct: 10, reconnecting: false })
     expect(s.getState().stats?.bitrateKbps).toBe(6000)
   })
   it('applyPreview stores the latest frame without touching AppState', () => {
