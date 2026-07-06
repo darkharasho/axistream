@@ -1,4 +1,4 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect } from '../shared/state.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
@@ -20,6 +20,7 @@ export interface IpcHandlers {
   setMicDevice(deviceId: string): Promise<void>
   getDesktopDevices(): Promise<AudioDevice[]>
   setDesktopDevice(deviceId: string): Promise<void>
+  setMasks(masks: MaskRect[]): Promise<void>
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>
@@ -52,6 +53,7 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.setMicDevice, (_e: unknown, deviceId: string) => handlers.setMicDevice(deviceId))
   ipcMain.handle(CH.getDesktopDevices, () => handlers.getDesktopDevices())
   ipcMain.handle(CH.setDesktopDevice, (_e: unknown, deviceId: string) => handlers.setDesktopDevice(deviceId))
+  ipcMain.handle(CH.setMasks, (_e: unknown, masks: MaskRect[]) => handlers.setMasks(masks))
   ipcMain.handle(CH.windowMinimize, () => handlers.windowMinimize())
   ipcMain.handle(CH.windowToggleMaximize, () => handlers.windowToggleMaximize())
   ipcMain.handle(CH.windowClose, () => handlers.windowClose())

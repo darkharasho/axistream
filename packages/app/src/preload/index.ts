@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect } from '../shared/state.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -27,6 +27,7 @@ const api: AxiApi = {
   setMicDevice: (deviceId) => ipcRenderer.invoke(CH.setMicDevice, deviceId) as Promise<void>,
   getDesktopDevices: () => ipcRenderer.invoke(CH.getDesktopDevices) as Promise<AudioDevice[]>,
   setDesktopDevice: (deviceId) => ipcRenderer.invoke(CH.setDesktopDevice, deviceId) as Promise<void>,
+  setMasks: (masks) => ipcRenderer.invoke(CH.setMasks, masks) as Promise<void>,
   windowMinimize: () => ipcRenderer.invoke(CH.windowMinimize) as Promise<void>,
   windowToggleMaximize: () => ipcRenderer.invoke(CH.windowToggleMaximize) as Promise<void>,
   windowClose: () => ipcRenderer.invoke(CH.windowClose) as Promise<void>,
