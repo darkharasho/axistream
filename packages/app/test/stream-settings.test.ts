@@ -98,6 +98,23 @@ describe('StreamSettings', () => {
       expect(s.load().preferSoftware).toBe(false)
     })
   })
+
+  describe('game audio settings', () => {
+    it('defaults: disabled, no target; round-trips', () => {
+      const s = new StreamSettings(file)
+      expect(s.load().gameAudioEnabled).toBe(false)
+      expect(s.load().gameAudioTarget).toBeNull()
+      s.patch({ gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' })
+      expect(s.load()).toMatchObject({ gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' })
+    })
+
+    it('invalid types fall back to defaults', () => {
+      writeFileSync(file, JSON.stringify({ gameAudioEnabled: 'yes', gameAudioTarget: 42 }))
+      const s = new StreamSettings(file)
+      expect(s.load().gameAudioEnabled).toBe(false)
+      expect(s.load().gameAudioTarget).toBeNull()
+    })
+  })
 })
 
 describe('sanitizeMasks', () => {
