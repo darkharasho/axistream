@@ -1,4 +1,4 @@
-import { Radio, Settings, EyeOff, SlidersHorizontal } from 'lucide-react'
+import { Radio, Settings } from 'lucide-react'
 import { AxiMark } from './AxiMark.js'
 import type { StreamPhase } from '../../shared/state.js'
 
@@ -12,8 +12,6 @@ export function Sidebar({ active, phase, onNav }: { active: 'stream' | 'settings
       <div className="menu-label">MENU</div>
       <button className={`navitem ${active === 'stream' ? 'on' : ''}`} onClick={() => onNav('stream')}><Radio size={ICON} /> Stream</button>
       <button className={`navitem ${active === 'settings' ? 'on' : ''}`} onClick={() => onNav('settings')}><Settings size={ICON} /> Settings</button>
-      <div className="navitem dim"><EyeOff size={ICON} /> Privacy Masks <span className="soon">SOON</span></div>
-      <div className="navitem dim"><SlidersHorizontal size={ICON} /> Presets <span className="soon">SOON</span></div>
       <div className={`enginepill ${live ? 'onair' : ''}`}>
         <span className="dot" /> {live ? 'On air' : 'Engine ready'}
       </div>
