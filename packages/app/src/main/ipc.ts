@@ -27,6 +27,9 @@ export interface IpcHandlers {
   getGameAudioPluginStatus(): Promise<GameAudioPluginView>
   installGameAudioPlugin(): Promise<void>
   relaunchApp(): Promise<void>
+  setGameAudioEnabled(enabled: boolean): Promise<void>
+  setGameAudioTarget(target: string): Promise<void>
+  getGameAudioApps(): Promise<AudioDevice[]>
 }
 
 export interface IpcDeps {
@@ -63,5 +66,8 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.getGameAudioPluginStatus, () => handlers.getGameAudioPluginStatus())
   ipcMain.handle(CH.installGameAudioPlugin, () => handlers.installGameAudioPlugin())
   ipcMain.handle(CH.relaunchApp, () => handlers.relaunchApp())
+  ipcMain.handle(CH.setGameAudioEnabled, (_e: unknown, enabled: boolean) => handlers.setGameAudioEnabled(enabled))
+  ipcMain.handle(CH.setGameAudioTarget, (_e: unknown, target: string) => handlers.setGameAudioTarget(target))
+  ipcMain.handle(CH.getGameAudioApps, () => handlers.getGameAudioApps())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }
