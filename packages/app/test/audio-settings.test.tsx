@@ -133,3 +133,22 @@ describe('AudioSettings', () => {
     await screen.findByRole('option', { name: 'Default' })
   })
 })
+
+describe('AudioSettings app search', () => {
+  const ready = { status: 'ready' as const, error: null }
+  const base = { desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }
+
+  it('filters app rows by substring, case-insensitive', async () => {
+    axi.getGameAudioApps.mockResolvedValueOnce([
+      { id: 'gw2-64.exe', name: 'Guild Wars 2' },
+      { id: 'Discord', name: 'Discord' },
+    ])
+    render(<AudioSettings audio={base} gameAudioPlugin={ready} phase="READY" />)
+    await screen.findByLabelText('Guild Wars 2')
+    fireEvent.change(screen.getByLabelText('Search apps'), { target: { value: 'guild' } })
+    expect(screen.getByLabelText('Guild Wars 2')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Discord')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Search apps'), { target: { value: '' } })
+    expect(await screen.findByLabelText('Discord')).toBeInTheDocument()
+  })
+})

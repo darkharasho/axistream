@@ -165,7 +165,12 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 
 /* "What viewers hear" checkbox list (Audio settings). */
 .hear-list { border: 1px solid #1d2530; border-radius: 10px; overflow: hidden; }
-.hear-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: #c7d0d9; cursor: pointer; }
+/* row !important: .yt-settings label sets flex-direction column for the
+   device-picker labels; these rows must stay inline (same fix as .audio-row). */
+.hear-row { display: flex; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: #c7d0d9; cursor: pointer; }
+.hear-apps { max-height: 220px; overflow-y: auto; }
+.hear-search { margin: 8px 12px 4px; padding: 6px 10px; width: calc(100% - 24px); background: #10161f; color: #c7d0d9; border: 1px solid #2a323b; border-radius: 8px; font-size: 13px; }
+.hear-search::placeholder { color: #566070; }
 .hear-row:hover { background: #131a24; }
 .hear-row input { accent-color: #22d3ee; width: 15px; height: 15px; cursor: pointer; }
 .hear-row.all span:first-of-type { font-weight: 600; }

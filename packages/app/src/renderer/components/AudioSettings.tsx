@@ -10,6 +10,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
   const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
   const [outputDevices, setOutputDevices] = useState<AudioDevice[] | null>(null)
   const [runningApps, setRunningApps] = useState<AudioDevice[] | null>(null)
+  const [appFilter, setAppFilter] = useState('')
   const appsRef = useRef(audio.gameAudioApps)
   const pluginReady = gameAudioPlugin.status === 'ready'
 
@@ -44,6 +45,9 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
     ...(runningApps ?? []),
     ...audio.gameAudioApps.filter((id) => !(runningApps ?? []).some((r) => r.id === id)).map((id) => ({ id, name: id })),
   ]
+  const shownRows = appFilter.trim()
+    ? rows.filter((r) => r.name.toLowerCase().includes(appFilter.trim().toLowerCase()))
+    : rows
   const isRunning = (id: string) => (runningApps ?? []).some((r) => r.id === id)
 
   return (
@@ -79,14 +83,22 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
           )}
         </div>
 
-        {pluginReady ? rows.map((app) => (
-          <label key={app.id} className="hear-row">
-            <input type="checkbox" checked={audio.gameAudioApps.includes(app.id)} aria-label={app.name}
-              onChange={() => toggleApp(app.id)} />
-            <span>{app.name}</span>
-            {!isRunning(app.id) && <span className="hear-pill">not running</span>}
-          </label>
-        )) : (
+        {pluginReady ? (
+          <>
+            <input className="hear-search" type="search" placeholder="Search apps…" aria-label="Search apps"
+              value={appFilter} onChange={(e) => setAppFilter(e.target.value)} />
+            <div className="hear-apps">
+              {shownRows.map((app) => (
+                <label key={app.id} className="hear-row">
+                  <input type="checkbox" checked={audio.gameAudioApps.includes(app.id)} aria-label={app.name}
+                    onChange={() => toggleApp(app.id)} />
+                  <span>{app.name}</span>
+                  {!isRunning(app.id) && <span className="hear-pill">not running</span>}
+                </label>
+              ))}
+            </div>
+          </>
+        ) : (
           <div className="hear-install"><GameAudioSettings plugin={gameAudioPlugin} phase={phase} /></div>
         )}
       </div>
