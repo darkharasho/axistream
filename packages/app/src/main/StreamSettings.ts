@@ -34,7 +34,7 @@ const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
-function sanitizeMasks(raw: unknown): MaskRect[] {
+export function sanitizeMasks(raw: unknown): MaskRect[] {
   if (!Array.isArray(raw)) return []
   const out: MaskRect[] = []
   for (const m of raw) {
