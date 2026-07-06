@@ -11,7 +11,7 @@ export interface GameAudioDeps {
 // Reconciles the per-app game-audio input (PipeWire app capture plugin)
 // against the persisted settings. No input exists until the feature is
 // first enabled; disabled thereafter means muted, mirroring desktop/mic.
-// Settings keys (CaptureMode/TargetName/MatchPriorty — the plugin's own
+// Settings keys (CaptureMode/apps/MatchPriorty — the plugin's own
 // spelling) are live-probed ground truth; see the spec's ground-truth
 // section. Best-effort throughout — never blocks boot or go-live.
 export class GameAudioController {

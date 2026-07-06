@@ -16,8 +16,7 @@ export interface StreamSettingsData {
   desktopDevice: string | null
   masks: MaskRect[]
   preferSoftware: boolean
-  gameAudioEnabled: boolean
-  gameAudioTarget: string | null
+  gameAudioApps: string[]
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -32,8 +31,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   desktopDevice: null,
   masks: [],
   preferSoftware: false,
-  gameAudioEnabled: false,
-  gameAudioTarget: null,
+  gameAudioApps: [],
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -50,6 +48,19 @@ export function sanitizeMasks(raw: unknown): MaskRect[] {
     if (typeof id !== 'string' || !id) continue
     if (![x, y, w, h].every((n) => typeof n === 'number' && Number.isFinite(n))) continue
     out.push({ id, x: clamp(x as number, 0, 1), y: clamp(y as number, 0, 1), w: clamp(w as number, 0.01, 1), h: clamp(h as number, 0.01, 1) })
+  }
+  return out
+}
+
+export function sanitizeGameAudioApps(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  for (const v of raw) {
+    if (out.length >= 16) break
+    if (typeof v !== 'string') continue
+    const name = v.trim()
+    if (!name || out.includes(name)) continue
+    out.push(name)
   }
   return out
 }
@@ -73,8 +84,11 @@ export class StreamSettings {
         desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
         masks: sanitizeMasks(raw.masks),
         preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
-        gameAudioEnabled: typeof raw.gameAudioEnabled === 'boolean' ? raw.gameAudioEnabled : DEFAULT_SETTINGS.gameAudioEnabled,
-        gameAudioTarget: typeof raw.gameAudioTarget === 'string' ? raw.gameAudioTarget : null,
+        gameAudioApps: 'gameAudioApps' in raw
+          ? sanitizeGameAudioApps(raw.gameAudioApps)
+          : ((raw as Record<string, unknown>).gameAudioEnabled === true && typeof (raw as Record<string, unknown>).gameAudioTarget === 'string' && ((raw as Record<string, unknown>).gameAudioTarget as string).trim()
+              ? [((raw as Record<string, unknown>).gameAudioTarget as string).trim()]
+              : []),
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

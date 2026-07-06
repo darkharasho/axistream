@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { StreamSettings, DEFAULT_SETTINGS, sanitizeMasks } from '../src/main/StreamSettings.js'
+import { StreamSettings, DEFAULT_SETTINGS, sanitizeMasks, sanitizeGameAudioApps } from '../src/main/StreamSettings.js'
 
 let file: string
 beforeEach(() => { file = join(mkdtempSync(join(tmpdir(), 'axi-')), 'stream.json') })
@@ -99,20 +99,37 @@ describe('StreamSettings', () => {
     })
   })
 
-  describe('game audio settings', () => {
-    it('defaults: disabled, no target; round-trips', () => {
+  describe('gameAudioApps', () => {
+    it('defaults to [] and round-trips', () => {
       const s = new StreamSettings(file)
-      expect(s.load().gameAudioEnabled).toBe(false)
-      expect(s.load().gameAudioTarget).toBeNull()
-      s.patch({ gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' })
-      expect(s.load()).toMatchObject({ gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' })
+      expect(s.load().gameAudioApps).toEqual([])
+      s.patch({ gameAudioApps: ['gw2-64.exe', 'Discord'] })
+      expect(s.load().gameAudioApps).toEqual(['gw2-64.exe', 'Discord'])
     })
 
-    it('invalid types fall back to defaults', () => {
-      writeFileSync(file, JSON.stringify({ gameAudioEnabled: 'yes', gameAudioTarget: 42 }))
-      const s = new StreamSettings(file)
-      expect(s.load().gameAudioEnabled).toBe(false)
-      expect(s.load().gameAudioTarget).toBeNull()
+    it('sanitizes: trims, drops junk, dedupes, caps at 16', () => {
+      writeFileSync(file, JSON.stringify({ gameAudioApps: [' gw2-64.exe ', '', 42, 'gw2-64.exe', ...Array.from({ length: 20 }, (_, i) => `app${i}`)] }))
+      const apps = new StreamSettings(file).load().gameAudioApps
+      expect(apps[0]).toBe('gw2-64.exe')
+      expect(apps).toHaveLength(16)
+      expect(new Set(apps).size).toBe(16)
+    })
+
+    it('migrates legacy enabled+target to a one-app list', () => {
+      writeFileSync(file, JSON.stringify({ gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' }))
+      expect(new StreamSettings(file).load().gameAudioApps).toEqual(['gw2-64.exe'])
+    })
+
+    it('legacy disabled or empty target migrates to []', () => {
+      writeFileSync(file, JSON.stringify({ gameAudioEnabled: false, gameAudioTarget: 'gw2-64.exe' }))
+      expect(new StreamSettings(file).load().gameAudioApps).toEqual([])
+      writeFileSync(file, JSON.stringify({ gameAudioEnabled: true, gameAudioTarget: '' }))
+      expect(new StreamSettings(file).load().gameAudioApps).toEqual([])
+    })
+
+    it('new key present → legacy ignored', () => {
+      writeFileSync(file, JSON.stringify({ gameAudioApps: ['Discord'], gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' }))
+      expect(new StreamSettings(file).load().gameAudioApps).toEqual(['Discord'])
     })
   })
 })
