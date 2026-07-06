@@ -1,7 +1,7 @@
 import './load-env.js' // must run before any process.env read below
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen } from 'electron'
 import { join } from 'node:path'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 
 // Disable OBS's own system-tray icon so only AxiStream's tray shows. Stopgap
@@ -22,7 +22,7 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -121,6 +121,15 @@ app.whenReady().then(async () => {
   const audio = new AudioController({ client: () => sidecar.client() })
   const maskCtl = new MaskController({ client: () => sidecar.client() })
 
+  let encoderKind: EncoderKind = settings.load().preferSoftware
+    ? 'x264'
+    : detectEncoder({ platform: process.platform, existsSync, readdirSync })
+  let currentPreset: EncoderPreset | null = null
+  const applyEncoderPreset = async (outputHeight: number, fps: number): Promise<boolean> => {
+    currentPreset = choosePreset(encoderKind, outputHeight, fps)
+    return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never) }, currentPreset)
+  }
+
   let pendingOAuthBump = false
   const stream = new StreamController({
     client: () => sidecar.client(),
@@ -134,6 +143,13 @@ app.whenReady().then(async () => {
       setState({ phase: p, error: error ?? null })
     },
     onStats: (s) => push(CH.evtStats, s),
+    encoderLabel: () => currentPreset?.label ?? 'x264',
+    onStartFailure: async () => {
+      if (encoderKind === 'x264') return false
+      encoderKind = 'x264'
+      settings.patch({ preferSoftware: true })
+      return applyEncoderPreset(state.capture?.outputHeight ?? 1080, state.capture?.fps ?? 60)
+    },
   })
 
   const goReadyPhase = () => keyStore.masked() ? 'READY' : 'NEEDS_KEY'
@@ -173,7 +189,7 @@ app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async (titleOverride?: string) => {
@@ -210,7 +226,7 @@ app.whenReady().then(async () => {
       }
     },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -222,7 +238,7 @@ app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -305,6 +321,7 @@ app.whenReady().then(async () => {
     const provisioned = config.load().provisioned
     if (provisioned) {
       const capture_ = await applyResolution()
+      await applyEncoderPreset(capture_.outputHeight, capture_.fps)
       setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: capture_ })
       startVirtualCam()
       // Self-heal audio inputs on every boot — installs provisioned before the
