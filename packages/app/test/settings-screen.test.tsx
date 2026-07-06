@@ -32,6 +32,7 @@ const base: AppState = {
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null },
   masks: [],
+  gameAudioPlugin: { status: 'missing', error: null },
 }
 
 describe('SettingsScreen', () => {

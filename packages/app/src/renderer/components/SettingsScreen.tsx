@@ -2,6 +2,7 @@ import type { AppState, AxiApi } from '../../shared/state.js'
 import { KeyInput } from './KeyInput.js'
 import { YouTubeSettings } from './YouTubeSettings.js'
 import { AudioSettings } from './AudioSettings.js'
+import { GameAudioSettings } from './GameAudioSettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -15,6 +16,10 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
 
         <section className="setting">
           <AudioSettings audio={state.audio} />
+        </section>
+
+        <section className="setting">
+          <GameAudioSettings plugin={state.gameAudioPlugin} phase={state.phase} />
         </section>
 
         <section className="setting">

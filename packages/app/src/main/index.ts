@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, 
 import { join } from 'node:path'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { execFile } from 'node:child_process'
 
 // Disable OBS's own system-tray icon so only AxiStream's tray shows. Stopgap
 // while OBS shares the user's config; the bundled-isolated OBS will own this.
@@ -36,6 +37,7 @@ import { createLoopback } from './loopback.js'
 import { shell } from 'electron'
 import { PreviewPump } from './PreviewPump.js'
 import { MaskController } from './MaskController.js'
+import { PluginInstaller, deriveGameAudioStatus } from './PluginInstaller.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize } from './window-size.js'
@@ -131,6 +133,17 @@ if (primary) app.whenReady().then(async () => {
 
   const audio = new AudioController({ client: () => sidecar.client() })
   const maskCtl = new MaskController({ client: () => sidecar.client() })
+
+  const installer = new PluginInstaller({
+    exec: (cmd, args, timeoutMs) => new Promise((resolve, reject) => {
+      execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
+        const output = `${stdout ?? ''}${stderr ?? ''}`
+        if (err && (err as NodeJS.ErrnoException).code === 'ENOENT') { reject(err); return }
+        // Non-ENOENT failures (nonzero exit, timeout kill) resolve with a nonzero code.
+        resolve({ code: err ? ((err as { code?: number }).code as number ?? 1) : 0, output })
+      })
+    }),
+  })
 
   let encoderKind: EncoderKind = settings.load().preferSoftware
     ? 'x264'
@@ -312,6 +325,18 @@ if (primary) app.whenReady().then(async () => {
       await audio.setMicDevice(deviceId)
       setState({ audio: { ...state.audio, micDevice: deviceId } })
     },
+    getGameAudioPluginStatus: async () => state.gameAudioPlugin,
+    installGameAudioPlugin: async () => {
+      if (state.gameAudioPlugin.status === 'installing') return
+      setState({ gameAudioPlugin: { status: 'installing', error: null } })
+      const r = await installer.install()
+      setState({ gameAudioPlugin: r.ok ? { status: 'installed', error: null } : { status: 'error', error: r.error ?? 'Install failed' } })
+    },
+    relaunchApp: async () => {
+      if (stream.isLive()) return
+      app.relaunch()
+      app.quit()
+    },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },
@@ -356,8 +381,14 @@ if (primary) app.whenReady().then(async () => {
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
       setState({ masks: a.masks })
       await maskCtl.applyMasks(a.masks)
+      const flatpakState = await installer.detectInstalled()
+      let kinds: string[] = []
+      try { kinds = ((await sidecar.client().call('GetInputKindList')) as { inputKinds?: string[] }).inputKinds ?? [] } catch { /* best-effort */ }
+      console.info('[game-audio] input kinds', kinds)
+      setState({ gameAudioPlugin: { status: deriveGameAudioStatus(flatpakState, kinds), error: null } })
     } else {
       setState({ phase: 'SETTING_UP' })
+      setState({ gameAudioPlugin: { status: deriveGameAudioStatus(await installer.detectInstalled(), []), error: null } })
     }
   } catch (e) {
     setState({ phase: 'ERROR', error: 'Could not start the stream engine (OBS).' })

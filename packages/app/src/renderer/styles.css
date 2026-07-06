@@ -124,6 +124,7 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }
 .keyrow.saved { display: flex; align-items: center; gap: 12px; }
 .muted { color: #768390; font-size: 13px; margin: 0 0 12px; }
+.ok { color: #7be3a0; font-size: 13px; }
 
 /* YouTube settings */
 .yt-settings { display: flex; flex-direction: column; gap: 10px; }
