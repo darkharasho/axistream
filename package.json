@@ -2,10 +2,13 @@
   "name": "axistream",
   "private": true,
   "version": "0.0.0",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "npm -ws --if-present run test",
     "dev": "npm -w @axistream/app run dev",
-    "build": "npm -ws --if-present run build"
+    "build": "npm -ws --if-present run build",
+    "dist": "npm -w @axistream/app run dist"
   }
 }

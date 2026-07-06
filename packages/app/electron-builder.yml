@@ -1,0 +1,16 @@
+appId: link.axi.axistream
+productName: AxiStream
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+asar: true
+npmRebuild: false            # everything is bundled by electron-vite; no native deps
+electronLanguages: [en-US]
+linux:
+  target: [AppImage, deb]
+  category: AudioVideo
+  icon: build/icon.png
+  synopsis: Get live on YouTube in three clicks
+  maintainer: AxiStream <project96@gmail.com>
