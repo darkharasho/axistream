@@ -2,8 +2,11 @@ export type StreamPhase =
   | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
 
+export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
+
 export interface MaskRect { id: string; x: number; y: number; w: number; h: number }
 export const MAX_MASKS = 8
+export interface GameAudioPluginView { status: GameAudioPluginStatus; error: string | null }
 
 export interface StreamSettingsView {
   titleTemplate: string
@@ -28,6 +31,7 @@ export interface AppState {
   settings: StreamSettingsView
   audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null }
   masks: MaskRect[]
+  gameAudioPlugin: GameAudioPluginView
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
@@ -36,6 +40,7 @@ export const INITIAL_STATE: AppState = {
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null },
   masks: [],
+  gameAudioPlugin: { status: 'missing', error: null },
 }
 
 export const CH = {
@@ -66,6 +71,9 @@ export const CH = {
   getDesktopDevices: 'axi:getDesktopDevices',
   setDesktopDevice: 'axi:setDesktopDevice',
   setMasks: 'axi:setMasks',
+  getGameAudioPluginStatus: 'axi:getGameAudioPluginStatus',
+  installGameAudioPlugin: 'axi:installGameAudioPlugin',
+  relaunchApp: 'axi:relaunchApp',
 } as const
 
 export interface AxiApi {
@@ -92,6 +100,9 @@ export interface AxiApi {
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>
+  getGameAudioPluginStatus(): Promise<GameAudioPluginView>
+  installGameAudioPlugin(): Promise<void>
+  relaunchApp(): Promise<void>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

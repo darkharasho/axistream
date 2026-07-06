@@ -1,8 +1,9 @@
+import type { GameAudioPluginStatus } from '../shared/state.js'
+
 export const PLUGIN_REF = 'com.obsproject.Studio.Plugin.PipeWireAudioCapture'
 
+export type { GameAudioPluginStatus }
 export type FlatpakState = 'missing' | 'installed' | 'unsupported'
-// Temporary home; Task 2 moves this to shared/state.ts and this file re-imports it.
-export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
 
 export interface ExecResult { code: number; output: string }
 export interface InstallerDeps {

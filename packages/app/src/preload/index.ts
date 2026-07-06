@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView } from '../shared/state.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -31,6 +31,9 @@ const api: AxiApi = {
   windowMinimize: () => ipcRenderer.invoke(CH.windowMinimize) as Promise<void>,
   windowToggleMaximize: () => ipcRenderer.invoke(CH.windowToggleMaximize) as Promise<void>,
   windowClose: () => ipcRenderer.invoke(CH.windowClose) as Promise<void>,
+  getGameAudioPluginStatus: () => ipcRenderer.invoke(CH.getGameAudioPluginStatus) as Promise<GameAudioPluginView>,
+  installGameAudioPlugin: () => ipcRenderer.invoke(CH.installGameAudioPlugin) as Promise<void>,
+  relaunchApp: () => ipcRenderer.invoke(CH.relaunchApp) as Promise<void>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),

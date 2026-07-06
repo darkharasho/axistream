@@ -1,4 +1,4 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView } from '../shared/state.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
@@ -24,6 +24,9 @@ export interface IpcHandlers {
   windowMinimize(): Promise<void>
   windowToggleMaximize(): Promise<void>
   windowClose(): Promise<void>
+  getGameAudioPluginStatus(): Promise<GameAudioPluginView>
+  installGameAudioPlugin(): Promise<void>
+  relaunchApp(): Promise<void>
 }
 
 export interface IpcDeps {
@@ -57,5 +60,8 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.windowMinimize, () => handlers.windowMinimize())
   ipcMain.handle(CH.windowToggleMaximize, () => handlers.windowToggleMaximize())
   ipcMain.handle(CH.windowClose, () => handlers.windowClose())
+  ipcMain.handle(CH.getGameAudioPluginStatus, () => handlers.getGameAudioPluginStatus())
+  ipcMain.handle(CH.installGameAudioPlugin, () => handlers.installGameAudioPlugin())
+  ipcMain.handle(CH.relaunchApp, () => handlers.relaunchApp())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }
