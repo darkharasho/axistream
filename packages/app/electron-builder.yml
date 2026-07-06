@@ -1,5 +1,8 @@
 appId: link.axi.axistream
 productName: AxiStream
+# npm workspaces hoist electron to the repo-root node_modules, where
+# electron-builder can't discover it — pin the version explicitly.
+electronVersion: 31.7.7
 directories:
   output: dist
   buildResources: build
@@ -10,6 +13,8 @@ npmRebuild: false            # everything is bundled by electron-vite; no native
 electronLanguages: [en-US]
 linux:
   target: [AppImage, deb]
+  executableName: axistream
+  artifactName: ${productName}-${version}-${arch}.${ext}
   category: AudioVideo
   icon: build/icon.png
   synopsis: Get live on YouTube in three clicks

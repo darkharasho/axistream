@@ -2,6 +2,9 @@
   "name": "@axistream/app",
   "private": true,
   "version": "0.1.0",
+  "description": "Get live on YouTube in three clicks",
+  "author": "AxiStream <project96@gmail.com>",
+  "homepage": "https://stream.axi.link",
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
