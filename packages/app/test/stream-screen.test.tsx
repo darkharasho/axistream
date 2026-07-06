@@ -35,7 +35,7 @@ describe('StreamScreen', () => {
   })
 
   it('LIVE shows End Stream and the LIVE badge', () => {
-    render(<StreamScreen state={{ ...base, phase: 'LIVE', stats: { bitrateKbps: 5980, droppedFrames: 0, durationMs: 767000, encoder: 'x264', cpuPct: 11, reconnecting: false } }} preview={null} axi={axi as any} store={store as any} />)
+    render(<StreamScreen state={{ ...base, phase: 'LIVE', stats: { bitrateKbps: 5980, droppedFrames: 0, droppedPct: 0, durationMs: 767000, encoder: 'x264', cpuPct: 11, reconnecting: false } }} preview={null} axi={axi as any} store={store as any} />)
     expect(screen.getByRole('button', { name: /end stream/i })).toBeInTheDocument()
     expect(screen.getByText('LIVE')).toBeInTheDocument()
   })

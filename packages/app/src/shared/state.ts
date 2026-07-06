@@ -14,7 +14,7 @@ export interface StreamSettingsView {
 export interface AudioDevice { id: string; name: string }
 export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
-  bitrateKbps: number; droppedFrames: number; durationMs: number;
+  bitrateKbps: number; droppedFrames: number; droppedPct: number; durationMs: number;
   encoder: string; cpuPct: number; reconnecting: boolean
 }
 export interface AppState {

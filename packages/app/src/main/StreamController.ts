@@ -102,13 +102,17 @@ export class StreamController {
   private mapStats(st: any, pollMs: number): LiveStats {
     const encoder = this.d.encoderLabel?.() ?? 'x264'
     const bytes = Number(st.outputBytes ?? 0)
-    if (this.firstSample) { this.firstSample = false; this.lastBytes = bytes; return { bitrateKbps: 0, droppedFrames: Number(st.outputSkippedFrames ?? 0), durationMs: Number(st.outputDuration ?? 0), encoder, cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100), reconnecting: !!st.outputReconnecting } }
+    const total = Number(st.outputTotalFrames ?? 0)
+    const skipped = Number(st.outputSkippedFrames ?? 0)
+    const droppedPct = total > 0 ? Math.round((skipped / total) * 1000) / 10 : 0
+    if (this.firstSample) { this.firstSample = false; this.lastBytes = bytes; return { bitrateKbps: 0, droppedFrames: Number(st.outputSkippedFrames ?? 0), droppedPct, durationMs: Number(st.outputDuration ?? 0), encoder, cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100), reconnecting: !!st.outputReconnecting } }
     const delta = Math.max(0, bytes - this.lastBytes)
     this.lastBytes = bytes
     const bitrateKbps = Math.round((delta * 8) / 1000 / (pollMs / 1000))
     return {
       bitrateKbps,
       droppedFrames: Number(st.outputSkippedFrames ?? 0),
+      droppedPct,
       durationMs: Number(st.outputDuration ?? 0),
       encoder,
       cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100),
