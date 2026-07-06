@@ -27,6 +27,7 @@ const base: AppState = {
   keyMasked: '····7f3a',
   stats: null,
   error: null,
+  encoder: 'x264',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null },
