@@ -131,6 +131,20 @@ describe('StreamSettings', () => {
       writeFileSync(file, JSON.stringify({ gameAudioApps: ['Discord'], gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' }))
       expect(new StreamSettings(file).load().gameAudioApps).toEqual(['Discord'])
     })
+
+    it('legacy migration with desktopEnabled:true + gameAudioTarget forces desktopEnabled to false', () => {
+      writeFileSync(file, JSON.stringify({ desktopEnabled: true, gameAudioEnabled: true, gameAudioTarget: 'gw2-64.exe' }))
+      const s = new StreamSettings(file).load()
+      expect(s.gameAudioApps).toEqual(['gw2-64.exe'])
+      expect(s.desktopEnabled).toBe(false)
+    })
+
+    it('new key present → desktopEnabled is not touched by migration', () => {
+      writeFileSync(file, JSON.stringify({ desktopEnabled: true, gameAudioApps: ['Discord'] }))
+      const s = new StreamSettings(file).load()
+      expect(s.gameAudioApps).toEqual(['Discord'])
+      expect(s.desktopEnabled).toBe(true)
+    })
   })
 })
 

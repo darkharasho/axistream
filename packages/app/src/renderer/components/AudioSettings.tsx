@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RotateCw } from 'lucide-react'
 import type { AxiApi, AudioDevice, AppState } from '../../shared/state.js'
 import { staleOption } from '../device-options.js'
@@ -10,6 +10,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
   const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
   const [outputDevices, setOutputDevices] = useState<AudioDevice[] | null>(null)
   const [runningApps, setRunningApps] = useState<AudioDevice[] | null>(null)
+  const appsRef = useRef(audio.gameAudioApps)
   const pluginReady = gameAudioPlugin.status === 'ready'
 
   useEffect(() => {
@@ -27,11 +28,15 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
     axi().getGameAudioApps().then(setRunningApps)
   }, [pluginReady])
 
+  useEffect(() => { appsRef.current = audio.gameAudioApps }, [audio.gameAudioApps])
+
   const refreshApps = () => { axi().getGameAudioApps().then(setRunningApps) }
   const toggleApp = (id: string) => {
-    const next = audio.gameAudioApps.includes(id)
-      ? audio.gameAudioApps.filter((a) => a !== id)
-      : [...audio.gameAudioApps, id]
+    const current = appsRef.current
+    const next = current.includes(id)
+      ? current.filter((a) => a !== id)
+      : [...current, id]
+    appsRef.current = next
     void axi().setGameAudioApps(next)
   }
   // Saved selections stay listed (checked) even when not currently running.

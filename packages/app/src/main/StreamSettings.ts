@@ -72,23 +72,29 @@ export class StreamSettings {
     if (!existsSync(this.filePath)) return { ...DEFAULT_SETTINGS }
     try {
       const raw = JSON.parse(readFileSync(this.filePath, 'utf8')) as Partial<StreamSettingsData>
+      const r2 = raw as Record<string, unknown>
+      const isLegacy = !('gameAudioApps' in raw)
+      const gameAudioApps = isLegacy
+        ? (r2.gameAudioEnabled === true && typeof r2.gameAudioTarget === 'string' && (r2.gameAudioTarget as string).trim()
+            ? [(r2.gameAudioTarget as string).trim()]
+            : [])
+        : sanitizeGameAudioApps(raw.gameAudioApps)
+      const rawDesktopEnabled = typeof raw.desktopEnabled === 'boolean' ? raw.desktopEnabled : DEFAULT_SETTINGS.desktopEnabled
+      // Legacy migration: old schema allowed desktopEnabled + gameAudioEnabled both true; force off desktop when migrating a non-empty app list
+      const desktopEnabled = isLegacy && gameAudioApps.length > 0 ? false : rawDesktopEnabled
       return {
         titleTemplate: typeof raw.titleTemplate === 'string' ? raw.titleTemplate : DEFAULT_SETTINGS.titleTemplate,
         dateFormat: typeof raw.dateFormat === 'string' && raw.dateFormat ? raw.dateFormat : DEFAULT_SETTINGS.dateFormat,
         privacy: PRIVACIES.includes(raw.privacy as Privacy) ? (raw.privacy as Privacy) : DEFAULT_SETTINGS.privacy,
         counter: Number.isInteger(raw.counter) ? (raw.counter as number) : DEFAULT_SETTINGS.counter,
         streamId: typeof raw.streamId === 'string' ? raw.streamId : null,
-        desktopEnabled: typeof raw.desktopEnabled === 'boolean' ? raw.desktopEnabled : DEFAULT_SETTINGS.desktopEnabled,
+        desktopEnabled,
         micEnabled: typeof raw.micEnabled === 'boolean' ? raw.micEnabled : DEFAULT_SETTINGS.micEnabled,
         micDevice: typeof raw.micDevice === 'string' ? raw.micDevice : null,
         desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
         masks: sanitizeMasks(raw.masks),
         preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
-        gameAudioApps: 'gameAudioApps' in raw
-          ? sanitizeGameAudioApps(raw.gameAudioApps)
-          : ((raw as Record<string, unknown>).gameAudioEnabled === true && typeof (raw as Record<string, unknown>).gameAudioTarget === 'string' && ((raw as Record<string, unknown>).gameAudioTarget as string).trim()
-              ? [((raw as Record<string, unknown>).gameAudioTarget as string).trim()]
-              : []),
+        gameAudioApps,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

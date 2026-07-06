@@ -22,10 +22,15 @@ function recorder(opts: { inputs?: string[]; noSceneItem?: boolean; items?: { it
 const appsArr = (...values: string[]) => values.map((value) => ({ value, hidden: false, selected: false }))
 
 describe('GameAudioController.ensure (multi-app)', () => {
-  it('does nothing when selection is empty and the input does not exist (zero footprint)', async () => {
+  it('empty selection + missing input creates the input (empty apps array) and mutes it', async () => {
     const r = recorder()
     await new GameAudioController({ client: r.client }).ensure({ gameAudioApps: [] })
-    expect(r.calls.map((c) => c.req)).toEqual(['GetInputList'])
+    const create = r.calls.find((c) => c.req === 'CreateInput')
+    expect(create?.data).toEqual({
+      sceneName: 'Main', inputName: GAME_AUDIO, inputKind: GAME_AUDIO_KIND,
+      inputSettings: { CaptureMode: 1, apps: [], MatchPriorty: 0 },
+    })
+    expect(r.calls.find((c) => c.req === 'SetInputMute')?.data).toEqual({ inputName: GAME_AUDIO, inputMuted: true })
   })
 
   it('first selection creates the input with CaptureMode 1 and the plugin apps format, then unmutes', async () => {

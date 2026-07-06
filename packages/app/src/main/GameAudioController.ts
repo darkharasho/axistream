@@ -9,8 +9,9 @@ export interface GameAudioDeps {
 }
 
 // Reconciles the per-app game-audio input (PipeWire app capture plugin)
-// against the persisted settings. No input exists until the feature is
-// first enabled; disabled thereafter means muted, mirroring desktop/mic.
+// against the persisted settings. The input is created muted with an empty
+// selection at the first plugin-ready boot — enumeration (AppToAdd) requires
+// the input to exist. Disabled thereafter means muted, mirroring desktop/mic.
 // Settings keys (CaptureMode/apps/MatchPriorty — the plugin's own
 // spelling) are live-probed ground truth; see the spec's ground-truth
 // section. Best-effort throughout — never blocks boot or go-live.
@@ -29,7 +30,6 @@ export class GameAudioController {
       const c = this.d.client()
       const { inputs } = await c.call('GetInputList') as { inputs?: { inputName: string }[] }
       const exists = (inputs ?? []).some((i) => i.inputName === GAME_AUDIO)
-      if (!exists && s.gameAudioApps.length === 0) return
       if (!exists) {
         await c.call('CreateInput', { sceneName: SCENE, inputName: GAME_AUDIO, inputKind: GAME_AUDIO_KIND, inputSettings: this.settingsFor(s.gameAudioApps) })
       } else {
