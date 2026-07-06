@@ -1,22 +1,23 @@
 {
   "name": "@axistream/app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Get live on YouTube in three clicks",
+  "author": "AxiStream <project96@gmail.com>",
+  "homepage": "https://stream.axi.link",
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
+    "dist": "electron-vite build && electron-builder --config electron-builder.yml",
     "test": "vitest run"
   },
-  "dependencies": {
+  "devDependencies": {
     "@axistream/capture": "*",
     "@fontsource/cinzel": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
-    "lucide-react": "^1.21.0"
-  },
-  "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.4.0",
     "@testing-library/react": "^16.0.0",
@@ -25,8 +26,10 @@
     "@vitejs/plugin-react": "^4.3.0",
     "dotenv": "^17.4.2",
     "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
     "jsdom": "^24.1.0",
+    "lucide-react": "^1.21.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "typescript": "^5.5.0",
