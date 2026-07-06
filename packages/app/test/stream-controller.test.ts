@@ -54,4 +54,72 @@ describe('StreamController', () => {
     expect(phases).toContain('ERROR')
     expect(cleaned).toBe(true)
   })
+
+  it('stats report the injected encoder label', async () => {
+    const c = clientFrom([{ outputActive: true, outputReconnecting: false, outputBytes: 1 }])
+    const stats: any[] = []
+    const sc = new StreamController({ client: c.client, onPhase: () => {}, onStats: (s) => stats.push(s), pollMs: 5, encoderLabel: () => 'NVENC' })
+    await sc.goLive(ingest)
+    await new Promise((r) => setTimeout(r, 30))
+    await sc.stop()
+    expect(stats.length).toBeGreaterThan(0)
+    expect(stats.every((s) => s.encoder === 'NVENC')).toBe(true)
+  })
+
+  it('retries once via onStartFailure without running onStop, then goes LIVE', async () => {
+    // Never active until after the retry's StartStream, then active.
+    let started = 0
+    const calls: string[] = []
+    const client = () => ({
+      call: vi.fn(async (req: string) => {
+        calls.push(req)
+        if (req === 'StartStream') started++
+        if (req === 'GetStreamStatus') return { outputActive: started >= 2, outputReconnecting: false, outputBytes: 1 }
+        return {}
+      }),
+    })
+    const phases: string[] = []
+    let stopped = false
+    let fallbacks = 0
+    const sc = new StreamController({
+      client, onPhase: (p) => phases.push(p), onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 15,
+      onStartFailure: async () => { fallbacks++; return true },
+    })
+    await sc.goLive(ingest, { onStop: async () => { stopped = true } })
+    await new Promise((r) => setTimeout(r, 120))
+    expect(fallbacks).toBe(1)
+    expect(started).toBe(2)
+    expect(phases).toContain('LIVE')
+    expect(phases).not.toContain('ERROR')
+    expect(stopped).toBe(false) // onStop must NOT fire on the retry path
+    await sc.stop()
+  })
+
+  it('reports ERROR (and runs onStop) when the retry also fails', async () => {
+    const c = clientFrom([{ outputActive: false, outputReconnecting: false, outputBytes: 0 }])
+    const phases: string[] = []
+    let stopped = false
+    let fallbacks = 0
+    const sc = new StreamController({
+      client: c.client, onPhase: (p) => phases.push(p), onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 15,
+      onStartFailure: async () => { fallbacks++; return true },
+    })
+    await sc.goLive(ingest, { onStop: async () => { stopped = true } })
+    await new Promise((r) => setTimeout(r, 200))
+    expect(fallbacks).toBe(1) // once per goLive, not once per failure
+    expect(phases).toContain('ERROR')
+    expect(stopped).toBe(true)
+  })
+
+  it('onStartFailure throwing falls through to ERROR', async () => {
+    const c = clientFrom([{ outputActive: false, outputReconnecting: false, outputBytes: 0 }])
+    const phases: string[] = []
+    const sc = new StreamController({
+      client: c.client, onPhase: (p) => phases.push(p), onStats: () => {}, pollMs: 5, goLiveTimeoutMs: 15,
+      onStartFailure: async () => { throw new Error('apply failed') },
+    })
+    await sc.goLive(ingest)
+    await new Promise((r) => setTimeout(r, 90))
+    expect(phases).toContain('ERROR')
+  })
 })

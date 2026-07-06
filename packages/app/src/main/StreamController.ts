@@ -14,6 +14,8 @@ export interface StreamDeps {
   onPhase(p: Phase, error?: string): void
   pollMs?: number
   goLiveTimeoutMs?: number
+  encoderLabel?: () => string
+  onStartFailure?: () => Promise<boolean>
 }
 
 export class StreamController {
@@ -22,6 +24,7 @@ export class StreamController {
   private lastBytes = 0
   private firstSample = true
   private hooks: GoLiveHooks = {}
+  private retried = false
   constructor(private readonly d: StreamDeps) {}
 
   isLive(): boolean { return this.live }
@@ -29,6 +32,11 @@ export class StreamController {
   async goLive(target: Ingest, hooks: GoLiveHooks = {}): Promise<void> {
     if (this.live || this.timer) return
     this.hooks = hooks
+    this.retried = false
+    await this.start(target)
+  }
+
+  private async start(target: Ingest): Promise<void> {
     const c = this.d.client()
     await callReady(() => c.call('SetStreamServiceSettings', {
       streamServiceType: 'rtmp_custom',
@@ -47,13 +55,13 @@ export class StreamController {
       let st: any
       try { st = await c.call('GetStreamStatus') } catch { return }
       if (!st.outputActive && !becameLive) {
-        if (ticks >= deadline) await this.failStart(c)
+        if (ticks >= deadline) await this.failStart(c, target, true)
         return
       }
       if (st.outputActive && !becameLive) {
         becameLive = true
         try { await this.hooks.onIngestActive?.() }
-        catch { await this.failStart(c); return }
+        catch { await this.failStart(c, target, false); return }
         this.live = true
         this.d.onPhase('LIVE')
       }
@@ -62,17 +70,27 @@ export class StreamController {
     }, pollMs)
   }
 
-  private async failStart(c: { call(r: string): Promise<any> }): Promise<void> {
+  private async failStart(c: { call(r: string): Promise<any> }, target: Ingest, canRetry: boolean): Promise<void> {
     this.clear()
     try { await c.call('StopStream') } catch { /* ignore */ }
+    if (canRetry && !this.retried && this.d.onStartFailure) {
+      this.retried = true
+      let retry = false
+      try { retry = await this.d.onStartFailure() } catch { /* treated as no-retry */ }
+      // Retry restarts the push without touching hooks.onStop — onStop
+      // completes the YouTube broadcast, which would kill the session the
+      // retry is trying to save.
+      if (retry) { await this.start(target); return }
+    }
     try { await this.hooks.onStop?.() } catch { /* ignore */ }
     this.live = false
     this.d.onPhase('ERROR', "Couldn't start stream — check your key and connection.")
   }
 
   private mapStats(st: any, pollMs: number): LiveStats {
+    const encoder = this.d.encoderLabel?.() ?? 'x264'
     const bytes = Number(st.outputBytes ?? 0)
-    if (this.firstSample) { this.firstSample = false; this.lastBytes = bytes; return { bitrateKbps: 0, droppedFrames: Number(st.outputSkippedFrames ?? 0), durationMs: Number(st.outputDuration ?? 0), encoder: 'x264', cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100), reconnecting: !!st.outputReconnecting } }
+    if (this.firstSample) { this.firstSample = false; this.lastBytes = bytes; return { bitrateKbps: 0, droppedFrames: Number(st.outputSkippedFrames ?? 0), durationMs: Number(st.outputDuration ?? 0), encoder, cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100), reconnecting: !!st.outputReconnecting } }
     const delta = Math.max(0, bytes - this.lastBytes)
     this.lastBytes = bytes
     const bitrateKbps = Math.round((delta * 8) / 1000 / (pollMs / 1000))
@@ -80,7 +98,7 @@ export class StreamController {
       bitrateKbps,
       droppedFrames: Number(st.outputSkippedFrames ?? 0),
       durationMs: Number(st.outputDuration ?? 0),
-      encoder: 'x264',
+      encoder,
       cpuPct: Math.round(Number(st.outputCongestion ?? 0) * 100),
       reconnecting: !!st.outputReconnecting,
     }
