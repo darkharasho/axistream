@@ -30,6 +30,15 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
         </section>
 
         <section className="setting">
+          <h3>Quality</h3>
+          <p className="muted">
+            {state.encoder}
+            {state.videoBitrateKbps ? ` · ${state.videoBitrateKbps / 1000} Mbps` : ''}
+            {state.capture ? ` — chosen automatically for ${state.capture.outputHeight}p${state.capture.fps}` : ' — chosen automatically'}
+          </p>
+        </section>
+
+        <section className="setting">
           <h3>Capture</h3>
           <p className="muted">Re-run setup if you changed monitors or the capture stopped working.</p>
           <button className="btn ghost" onClick={() => axi.repairCapture()}>Re-set up capture</button>

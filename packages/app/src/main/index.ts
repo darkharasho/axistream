@@ -153,7 +153,7 @@ if (primary) app.whenReady().then(async () => {
   let currentPreset: EncoderPreset | null = null
   const applyEncoderPreset = async (outputHeight: number, fps: number, opts?: { tries?: number }): Promise<boolean> => {
     currentPreset = choosePreset(encoderKind, outputHeight, fps)
-    setState({ encoder: currentPreset.label })
+    setState({ encoder: currentPreset.label, videoBitrateKbps: currentPreset.videoBitrateKbps })
     return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never), tries: opts?.tries }, currentPreset)
   }
 

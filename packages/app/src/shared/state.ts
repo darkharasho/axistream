@@ -27,6 +27,7 @@ export interface AppState {
   stats: LiveStats | null
   error: string | null
   encoder: string
+  videoBitrateKbps: number | null
   youtube: { connected: boolean; channel: string | null }
   settings: StreamSettingsView
   audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null; gameAudioApps: string[] }
@@ -35,7 +36,7 @@ export interface AppState {
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
-  encoder: 'x264',
+  encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },

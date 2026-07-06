@@ -28,6 +28,7 @@ const base: AppState = {
   stats: null,
   error: null,
   encoder: 'x264',
+  videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
@@ -36,6 +37,12 @@ const base: AppState = {
 }
 
 describe('SettingsScreen', () => {
+  it('shows the auto-chosen quality line', () => {
+    render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
+    expect(screen.getByText('Quality')).toBeInTheDocument()
+    expect(screen.getByText(/NVENC · 24 Mbps — chosen automatically for 1440p60/)).toBeInTheDocument()
+  })
+
   it('shows the saved key with a Forget action', async () => {
     render(<SettingsScreen state={base} axi={axi as any} />)
     expect(screen.getByText(/····7f3a/)).toBeInTheDocument()
