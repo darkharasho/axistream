@@ -143,6 +143,11 @@ if (primary) app.whenReady().then(async () => {
   }
 
   let pendingOAuthBump = false
+  // Persist preferSoftware only if the x264 retry actually reaches LIVE —
+  // a live retry proves the pipe was fine and the hardware encoder was the
+  // problem. A retry that also fails (network outage) must not permanently
+  // flip the install to software; next boot re-detects hardware.
+  let pendingSoftwareFlip = false
   const stream = new StreamController({
     client: () => sidecar.client(),
     onPhase: (p, error) => {
@@ -152,6 +157,12 @@ if (primary) app.whenReady().then(async () => {
       } else if ((p === 'ERROR' || p === 'READY') && pendingOAuthBump) {
         pendingOAuthBump = false
       }
+      if (p === 'LIVE' && pendingSoftwareFlip) {
+        pendingSoftwareFlip = false
+        settings.patch({ preferSoftware: true })
+      } else if ((p === 'ERROR' || p === 'READY') && pendingSoftwareFlip) {
+        pendingSoftwareFlip = false
+      }
       setState({ phase: p, error: error ?? null })
     },
     onStats: (s) => push(CH.evtStats, s),
@@ -159,7 +170,7 @@ if (primary) app.whenReady().then(async () => {
     onStartFailure: async () => {
       if (encoderKind === 'x264') return false
       encoderKind = 'x264'
-      settings.patch({ preferSoftware: true })
+      pendingSoftwareFlip = true
       return applyEncoderPreset(state.capture?.outputHeight ?? 1080, state.capture?.fps ?? 60, { tries: 3 })
     },
   })
