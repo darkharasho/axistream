@@ -15,6 +15,7 @@ export interface StreamSettingsData {
   micDevice: string | null
   desktopDevice: string | null
   masks: MaskRect[]
+  preferSoftware: boolean
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -28,6 +29,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   micDevice: null,
   desktopDevice: null,
   masks: [],
+  preferSoftware: false,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -66,6 +68,7 @@ export class StreamSettings {
         micDevice: typeof raw.micDevice === 'string' ? raw.micDevice : null,
         desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
         masks: sanitizeMasks(raw.masks),
+        preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

@@ -83,6 +83,21 @@ describe('StreamSettings', () => {
       expect(s.load().masks).toEqual([])
     })
   })
+
+  describe('preferSoftware', () => {
+    it('defaults to false and round-trips', () => {
+      const s = new StreamSettings(file)
+      expect(s.load().preferSoftware).toBe(false)
+      s.patch({ preferSoftware: true })
+      expect(s.load().preferSoftware).toBe(true)
+    })
+
+    it('non-boolean value falls back to false', () => {
+      writeFileSync(file, JSON.stringify({ preferSoftware: 'yes' }))
+      const s = new StreamSettings(file)
+      expect(s.load().preferSoftware).toBe(false)
+    })
+  })
 })
 
 describe('sanitizeMasks', () => {
