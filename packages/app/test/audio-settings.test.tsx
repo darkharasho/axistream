@@ -51,4 +51,23 @@ describe('AudioSettings', () => {
     const select = screen.getByLabelText(/output device/i) as HTMLSelectElement
     expect(select.value).toBe('unplugged-dac')
   })
+
+  it('renders an unavailable placeholder when the saved mic device is not enumerated', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: true, micDevice: 'unplugged-mic' }} />)
+    expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
+    const select = screen.getByLabelText(/microphone device/i) as HTMLSelectElement
+    expect(select.value).toBe('unplugged-mic')
+  })
+
+  it('never flashes the unavailable placeholder while devices are still enumerating', async () => {
+    // The saved device IS in the list, but the list resolves late — the
+    // placeholder must not appear in the pre-resolution render.
+    let resolveDevices: (d: { id: string; name: string }[]) => void = () => {}
+    axi.getDesktopDevices.mockImplementationOnce(() => new Promise((r) => { resolveDevices = r }))
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'hdmi', micEnabled: false, micDevice: null }} />)
+    expect(screen.queryByText('Saved device (unavailable)')).toBeNull()
+    resolveDevices([{ id: 'hdmi', name: 'HDMI' }])
+    await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
+    expect(screen.queryByText('Saved device (unavailable)')).toBeNull()
+  })
 })

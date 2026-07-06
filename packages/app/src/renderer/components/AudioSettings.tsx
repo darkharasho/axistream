@@ -5,8 +5,11 @@ import { staleOption } from '../device-options.js'
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
 export function AudioSettings({ audio }: { audio: AppState['audio'] }) {
-  const [micDevices, setMicDevices] = useState<AudioDevice[]>([])
-  const [outputDevices, setOutputDevices] = useState<AudioDevice[]>([])
+  // null = not enumerated yet. The stale "Saved device (unavailable)"
+  // placeholder only renders after the first enumeration resolves, so a
+  // plugged-in saved device doesn't flash as unavailable on mount.
+  const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
+  const [outputDevices, setOutputDevices] = useState<AudioDevice[] | null>(null)
 
   useEffect(() => {
     if (!audio.micEnabled) return
@@ -29,13 +32,13 @@ export function AudioSettings({ audio }: { audio: AppState['audio'] }) {
       </label>
 
       {audio.desktopEnabled && (() => {
-        const stale = staleOption(audio.desktopDevice, outputDevices)
+        const stale = outputDevices ? staleOption(audio.desktopDevice, outputDevices) : null
         return (
           <label>Output device
             <select value={audio.desktopDevice ?? ''} onChange={(e) => axi().setDesktopDevice(e.target.value)}>
               {stale && <option value={stale.id}>{stale.name}</option>}
-              {outputDevices.length === 0 && !stale && <option value="">No output devices found</option>}
-              {outputDevices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              {outputDevices?.length === 0 && !stale && <option value="">No output devices found</option>}
+              {(outputDevices ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </label>
         )
@@ -48,13 +51,13 @@ export function AudioSettings({ audio }: { audio: AppState['audio'] }) {
       </label>
 
       {audio.micEnabled && (() => {
-        const stale = staleOption(audio.micDevice, micDevices)
+        const stale = micDevices ? staleOption(audio.micDevice, micDevices) : null
         return (
           <label>Microphone device
             <select value={audio.micDevice ?? ''} onChange={(e) => axi().setMicDevice(e.target.value)}>
               {stale && <option value={stale.id}>{stale.name}</option>}
-              {micDevices.length === 0 && !stale && <option value="">No input devices found</option>}
-              {micDevices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              {micDevices?.length === 0 && !stale && <option value="">No input devices found</option>}
+              {(micDevices ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </label>
         )

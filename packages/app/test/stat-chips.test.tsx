@@ -32,3 +32,12 @@ describe('StatChips', () => {
     expect(screen.getByText('900 dropped · 7.5%').className).toContain('bad')
   })
 })
+
+describe('StatChips boundaries', () => {
+  it('exactly 5% is warn, not bad', () => {
+    render(<StatChips stats={stats({ droppedFrames: 500, droppedPct: 5 })} capture={capture} encoder="NVENC" />)
+    const chip = screen.getByText('500 dropped · 5%')
+    expect(chip.className).toContain('warn')
+    expect(chip.className).not.toContain('bad')
+  })
+})

@@ -74,3 +74,12 @@ describe('MaskController.applyMasks', () => {
     await expect(new MaskController({ client }).applyMasks([mask('a')])).resolves.toBeUndefined()
   })
 })
+
+describe('MaskController cap', () => {
+  it('creates at most MAX_MASKS inputs when given more', async () => {
+    const r = recorder()
+    const many = Array.from({ length: 10 }, (_, i) => mask(`m${i}`))
+    await new MaskController({ client: r.client }).applyMasks(many)
+    expect(r.calls.filter((c) => c.req === 'CreateInput')).toHaveLength(8)
+  })
+})
