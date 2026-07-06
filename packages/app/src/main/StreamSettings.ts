@@ -16,6 +16,8 @@ export interface StreamSettingsData {
   desktopDevice: string | null
   masks: MaskRect[]
   preferSoftware: boolean
+  gameAudioEnabled: boolean
+  gameAudioTarget: string | null
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -30,6 +32,8 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   desktopDevice: null,
   masks: [],
   preferSoftware: false,
+  gameAudioEnabled: false,
+  gameAudioTarget: null,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -69,6 +73,8 @@ export class StreamSettings {
         desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
         masks: sanitizeMasks(raw.masks),
         preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
+        gameAudioEnabled: typeof raw.gameAudioEnabled === 'boolean' ? raw.gameAudioEnabled : DEFAULT_SETTINGS.gameAudioEnabled,
+        gameAudioTarget: typeof raw.gameAudioTarget === 'string' ? raw.gameAudioTarget : null,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

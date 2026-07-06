@@ -13,4 +13,8 @@ describe('staleOption', () => {
   it('empty device list + saved → placeholder', () => {
     expect(staleOption('gone', [])).toEqual({ id: 'gone', name: 'Saved device (unavailable)' })
   })
+  it('custom label is used when provided; default unchanged', () => {
+    expect(staleOption('gone', devs, 'Saved app (not running)')).toEqual({ id: 'gone', name: 'Saved app (not running)' })
+    expect(staleOption('gone', devs)).toEqual({ id: 'gone', name: 'Saved device (unavailable)' })
+  })
 })

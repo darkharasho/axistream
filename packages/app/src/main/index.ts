@@ -38,6 +38,7 @@ import { shell } from 'electron'
 import { PreviewPump } from './PreviewPump.js'
 import { MaskController } from './MaskController.js'
 import { PluginInstaller, deriveGameAudioStatus } from './PluginInstaller.js'
+import { GameAudioController } from './GameAudioController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize } from './window-size.js'
@@ -133,6 +134,7 @@ if (primary) app.whenReady().then(async () => {
 
   const audio = new AudioController({ client: () => sidecar.client() })
   const maskCtl = new MaskController({ client: () => sidecar.client() })
+  const gameAudio = new GameAudioController({ client: () => sidecar.client() })
 
   const installer = new PluginInstaller({
     exec: (cmd, args, timeoutMs) => new Promise((resolve, reject) => {
@@ -225,7 +227,7 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async (titleOverride?: string) => {
@@ -262,7 +264,7 @@ if (primary) app.whenReady().then(async () => {
       }
     },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -274,7 +276,7 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -325,6 +327,25 @@ if (primary) app.whenReady().then(async () => {
       await audio.setMicDevice(deviceId)
       setState({ audio: { ...state.audio, micDevice: deviceId } })
     },
+    setGameAudioEnabled: async (enabled: boolean) => {
+      settings.patch({ gameAudioEnabled: enabled })
+      await gameAudio.ensure(settings.load())
+      let audioPatch: Partial<AppState['audio']> = { gameAudioEnabled: enabled }
+      // Opinionated interplay: game audio replaces desktop audio — otherwise
+      // viewers hear the game twice. One-way: disabling doesn't restore it.
+      if (enabled && state.audio.desktopEnabled) {
+        settings.patch({ desktopEnabled: false })
+        await audio.setDesktopEnabled(false)
+        audioPatch = { ...audioPatch, desktopEnabled: false }
+      }
+      setState({ audio: { ...state.audio, ...audioPatch } })
+    },
+    setGameAudioTarget: async (target: string) => {
+      settings.patch({ gameAudioTarget: target })
+      await gameAudio.setTarget(target)
+      setState({ audio: { ...state.audio, gameAudioTarget: target } })
+    },
+    getGameAudioApps: () => gameAudio.listApps(),
     getGameAudioPluginStatus: async () => state.gameAudioPlugin,
     installGameAudioPlugin: async () => {
       if (state.gameAudioPlugin.status === 'installing') return
@@ -382,7 +403,7 @@ if (primary) app.whenReady().then(async () => {
       // missing. ensureAudioInputs is idempotent and best-effort.
       await ensureAudioInputs(sidecar.client())
       const a = settings.load()
-      setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice } })
+      setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioEnabled: a.gameAudioEnabled, gameAudioTarget: a.gameAudioTarget } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
       setState({ masks: a.masks })
       await maskCtl.applyMasks(a.masks)
@@ -391,6 +412,7 @@ if (primary) app.whenReady().then(async () => {
       try { kinds = ((await sidecar.client().call('GetInputKindList')) as { inputKinds?: string[] }).inputKinds ?? [] } catch { /* best-effort */ }
       console.info('[game-audio] input kinds', kinds)
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(flatpakState, kinds), error: null } })
+      if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(a)
     } else {
       setState({ phase: 'SETTING_UP' })
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(await installer.detectInstalled(), []), error: null } })

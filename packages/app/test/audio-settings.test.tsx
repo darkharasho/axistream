@@ -14,13 +14,13 @@ beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
 describe('AudioSettings', () => {
   it('toggles desktop audio', () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     fireEvent.click(screen.getByLabelText(/desktop audio/i))
     expect(axi.setDesktopEnabled).toHaveBeenCalledWith(false)
   })
 
   it('toggles mic and shows a populated device picker', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(axi.getAudioDevices).toHaveBeenCalled()
     await waitFor(() => expect(screen.getByRole('option', { name: 'Yeti' })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/microphone device/i), { target: { value: 'yeti' } })
@@ -28,12 +28,12 @@ describe('AudioSettings', () => {
   })
 
   it('does not query devices when mic is off', () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(axi.getAudioDevices).not.toHaveBeenCalled()
   })
 
   it('populates the output dropdown when desktop audio is on and selection calls setDesktopDevice', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(axi.getDesktopDevices).toHaveBeenCalled()
     await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/output device/i), { target: { value: 'hdmi' } })
@@ -41,19 +41,19 @@ describe('AudioSettings', () => {
   })
 
   it('does not query output devices when desktop audio is off', () => {
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(axi.getDesktopDevices).not.toHaveBeenCalled()
   })
 
   it('renders an unavailable placeholder when the saved output device is not enumerated', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'unplugged-dac', micEnabled: false, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'unplugged-dac', micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
     const select = screen.getByLabelText(/output device/i) as HTMLSelectElement
     expect(select.value).toBe('unplugged-dac')
   })
 
   it('renders an unavailable placeholder when the saved mic device is not enumerated', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: true, micDevice: 'unplugged-mic' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: true, micDevice: 'unplugged-mic', gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
     const select = screen.getByLabelText(/microphone device/i) as HTMLSelectElement
     expect(select.value).toBe('unplugged-mic')
@@ -64,7 +64,7 @@ describe('AudioSettings', () => {
     // placeholder must not appear in the pre-resolution render.
     let resolveDevices: (d: { id: string; name: string }[]) => void = () => {}
     axi.getDesktopDevices.mockImplementationOnce(() => new Promise((r) => { resolveDevices = r }))
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'hdmi', micEnabled: false, micDevice: null }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'hdmi', micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null }} />)
     expect(screen.queryByText('Saved device (unavailable)')).toBeNull()
     resolveDevices([{ id: 'hdmi', name: 'HDMI' }])
     await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
