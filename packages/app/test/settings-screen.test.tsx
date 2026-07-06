@@ -30,7 +30,7 @@ const base: AppState = {
   encoder: 'x264',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
-  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null },
+  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
 }
