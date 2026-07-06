@@ -78,10 +78,15 @@ keeps its name/shape (returns running apps as `AudioDevice[]`).
 
 ### GameAudioController
 
-- `ensure(s: { gameAudioApps: string[] })` — same reconcile skeleton
-  (zero footprint until the first non-empty selection creates the input;
-  scene-item recovery; muted when `gameAudioApps.length === 0`), but
-  input settings become
+**Amendment (2026-07-06 final review):** The input is created muted with an
+empty selection at the first plugin-ready boot — enumeration (`AppToAdd`)
+requires the input to exist. The previous "zero footprint" design (early-return
+when selection is empty and input is missing) caused a deadlock where fresh
+users could never see any rows.
+
+- `ensure(s: { gameAudioApps: string[] })` — always creates the input when
+  missing (empty-apps, muted), then reconciles settings (scene-item recovery;
+  muted when `gameAudioApps.length === 0`). Input settings become
   `{ CaptureMode: 1, apps: s.gameAudioApps.map((value) => ({ value, hidden: false, selected: false })), MatchPriorty: 0 }`.
 - `setTarget` removed; selection changes go through `ensure` (the handler
   always calls it with the full settings — one code path).
@@ -125,8 +130,10 @@ saved apps all show "not running" (truthful). Migration never throws
 ## Testing
 
 - **GameAudioController:** CaptureMode 1 + exact `apps` array shape on
-  create AND update; empty selection mutes; `AppToAdd` enumeration;
-  regression of scene-item recovery / zero footprint / swallow.
+  create AND update; empty selection + missing input creates the input (empty
+  apps) and mutes it (enumeration deadlock fix); existing input + empty
+  selection mutes; `AppToAdd` enumeration; regression of scene-item
+  recovery / swallow.
 - **StreamSettings:** default, round-trip, sanitize (dedupe/cap/drop
   non-strings), and the legacy migration matrix (enabled+target → [target];
   enabled without target → []; disabled+target → []; new key present →

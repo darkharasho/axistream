@@ -29,7 +29,7 @@ export interface AppState {
   encoder: string
   youtube: { connected: boolean; channel: string | null }
   settings: StreamSettingsView
-  audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null; gameAudioEnabled: boolean; gameAudioTarget: string | null }
+  audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null; gameAudioApps: string[] }
   masks: MaskRect[]
   gameAudioPlugin: GameAudioPluginView
 }
@@ -38,7 +38,7 @@ export const INITIAL_STATE: AppState = {
   encoder: 'x264',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
-  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null },
+  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
 }
@@ -74,8 +74,7 @@ export const CH = {
   getGameAudioPluginStatus: 'axi:getGameAudioPluginStatus',
   installGameAudioPlugin: 'axi:installGameAudioPlugin',
   relaunchApp: 'axi:relaunchApp',
-  setGameAudioEnabled: 'axi:setGameAudioEnabled',
-  setGameAudioTarget: 'axi:setGameAudioTarget',
+  setGameAudioApps: 'axi:setGameAudioApps',
   getGameAudioApps: 'axi:getGameAudioApps',
 } as const
 
@@ -106,8 +105,7 @@ export interface AxiApi {
   getGameAudioPluginStatus(): Promise<GameAudioPluginView>
   installGameAudioPlugin(): Promise<void>
   relaunchApp(): Promise<void>
-  setGameAudioEnabled(enabled: boolean): Promise<void>
-  setGameAudioTarget(target: string): Promise<void>
+  setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void

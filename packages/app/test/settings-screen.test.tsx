@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsScreen } from '../src/renderer/components/SettingsScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
@@ -30,25 +30,28 @@ const base: AppState = {
   encoder: 'x264',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
-  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioEnabled: false, gameAudioTarget: null },
+  audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
 }
 
 describe('SettingsScreen', () => {
-  it('shows the saved key with a Forget action', () => {
+  it('shows the saved key with a Forget action', async () => {
     render(<SettingsScreen state={base} axi={axi as any} />)
     expect(screen.getByText(/····7f3a/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /forget/i }))
     expect(axi.forgetKey).toHaveBeenCalledOnce()
+    await waitFor(() => expect(axi.getSettings).toHaveBeenCalled())
   })
-  it('shows a key input when no key is saved', () => {
+  it('shows a key input when no key is saved', async () => {
     render(<SettingsScreen state={{ ...base, keyMasked: null }} axi={axi as any} />)
     expect(screen.getByPlaceholderText(/stream key/i)).toBeInTheDocument()
+    await waitFor(() => expect(axi.getSettings).toHaveBeenCalled())
   })
-  it('offers Re-set up capture', () => {
+  it('offers Re-set up capture', async () => {
     render(<SettingsScreen state={base} axi={axi as any} />)
     fireEvent.click(screen.getByRole('button', { name: /re-set up capture/i }))
     expect(axi.repairCapture).toHaveBeenCalledOnce()
+    await waitFor(() => expect(axi.getSettings).toHaveBeenCalled())
   })
 })

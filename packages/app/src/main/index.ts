@@ -29,7 +29,7 @@ import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
 import { KeyStore } from './KeyStore.js'
 import { TokenStore } from './TokenStore.js'
-import { StreamSettings, sanitizeMasks, type StreamSettingsData } from './StreamSettings.js'
+import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, type StreamSettingsData } from './StreamSettings.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
 import { YouTubeLive } from './YouTubeLive.js'
 import { renderTitle } from './TitleTemplate.js'
@@ -315,7 +315,15 @@ if (primary) app.whenReady().then(async () => {
     setDesktopEnabled: async (enabled: boolean) => {
       settings.patch({ desktopEnabled: enabled })
       await audio.setDesktopEnabled(enabled)
-      setState({ audio: { ...state.audio, desktopEnabled: enabled } })
+      let audioPatch: Partial<AppState['audio']> = { desktopEnabled: enabled }
+      // Exclusivity, reverse direction: turning desktop audio on clears the
+      // per-app selection (and mutes the game-audio input via ensure).
+      if (enabled && state.audio.gameAudioApps.length > 0) {
+        settings.patch({ gameAudioApps: [] })
+        await gameAudio.ensure(settings.load())
+        audioPatch = { ...audioPatch, gameAudioApps: [] }
+      }
+      setState({ audio: { ...state.audio, ...audioPatch } })
     },
     setMicEnabled: async (enabled: boolean) => {
       settings.patch({ micEnabled: enabled })
@@ -327,23 +335,18 @@ if (primary) app.whenReady().then(async () => {
       await audio.setMicDevice(deviceId)
       setState({ audio: { ...state.audio, micDevice: deviceId } })
     },
-    setGameAudioEnabled: async (enabled: boolean) => {
-      settings.patch({ gameAudioEnabled: enabled })
+    setGameAudioApps: async (apps: string[]) => {
+      const next = sanitizeGameAudioApps(apps)
+      settings.patch({ gameAudioApps: next })
       await gameAudio.ensure(settings.load())
-      let audioPatch: Partial<AppState['audio']> = { gameAudioEnabled: enabled }
-      // Opinionated interplay: game audio replaces desktop audio — otherwise
-      // viewers hear the game twice. One-way: disabling doesn't restore it.
-      if (enabled && state.audio.desktopEnabled) {
+      let audioPatch: Partial<AppState['audio']> = { gameAudioApps: next }
+      // Exclusivity: per-app selection replaces desktop audio.
+      if (next.length > 0 && state.audio.desktopEnabled) {
         settings.patch({ desktopEnabled: false })
         await audio.setDesktopEnabled(false)
         audioPatch = { ...audioPatch, desktopEnabled: false }
       }
       setState({ audio: { ...state.audio, ...audioPatch } })
-    },
-    setGameAudioTarget: async (target: string) => {
-      settings.patch({ gameAudioTarget: target })
-      await gameAudio.setTarget(target)
-      setState({ audio: { ...state.audio, gameAudioTarget: target } })
     },
     getGameAudioApps: () => gameAudio.listApps(),
     getGameAudioPluginStatus: async () => state.gameAudioPlugin,
@@ -403,7 +406,7 @@ if (primary) app.whenReady().then(async () => {
       // missing. ensureAudioInputs is idempotent and best-effort.
       await ensureAudioInputs(sidecar.client())
       const a = settings.load()
-      setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioEnabled: a.gameAudioEnabled, gameAudioTarget: a.gameAudioTarget } })
+      setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioApps: a.gameAudioApps } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
       setState({ masks: a.masks })
       await maskCtl.applyMasks(a.masks)
