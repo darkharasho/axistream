@@ -16,6 +16,8 @@ export interface StreamDeps {
   goLiveTimeoutMs?: number
   encoderLabel?: () => string
   onStartFailure?: () => Promise<boolean>
+  /** Max callReady attempts for SetStreamServiceSettings/StartStream — tests pass 1 for speed. */
+  startTries?: number
 }
 
 export class StreamController {
@@ -25,12 +27,14 @@ export class StreamController {
   private firstSample = true
   private hooks: GoLiveHooks = {}
   private retried = false
+  private generation = 0
   constructor(private readonly d: StreamDeps) {}
 
   isLive(): boolean { return this.live }
 
   async goLive(target: Ingest, hooks: GoLiveHooks = {}): Promise<void> {
     if (this.live || this.timer) return
+    this.generation++
     this.hooks = hooks
     this.retried = false
     await this.start(target)
@@ -38,11 +42,12 @@ export class StreamController {
 
   private async start(target: Ingest): Promise<void> {
     const c = this.d.client()
+    const startOpts = this.d.startTries !== undefined ? { tries: this.d.startTries } : {}
     await callReady(() => c.call('SetStreamServiceSettings', {
       streamServiceType: 'rtmp_custom',
       streamServiceSettings: { server: target.server, key: target.key },
-    }))
-    await callReady(() => c.call('StartStream'))
+    }), startOpts)
+    await callReady(() => c.call('StartStream'), startOpts)
     this.d.onPhase('GOING_LIVE')
     this.lastBytes = 0
     this.firstSample = true
@@ -73,15 +78,22 @@ export class StreamController {
   private async failStart(c: { call(r: string): Promise<any> }, target: Ingest, canRetry: boolean): Promise<void> {
     this.clear()
     try { await c.call('StopStream') } catch { /* ignore */ }
+    const gen = this.generation
     if (canRetry && !this.retried && this.d.onStartFailure) {
       this.retried = true
       let retry = false
       try { retry = await this.d.onStartFailure() } catch { /* treated as no-retry */ }
+      // An interleaved stop() or goLive() already handled teardown — abort.
+      if (gen !== this.generation) return
       // Retry restarts the push without touching hooks.onStop — onStop
       // completes the YouTube broadcast, which would kill the session the
       // retry is trying to save.
-      if (retry) { await this.start(target); return }
+      if (retry) {
+        try { await this.start(target); return } catch { /* fall through to terminal failure */ }
+      }
     }
+    // Check again: a stop()/goLive() could have fired during the retry's start().
+    if (gen !== this.generation) return
     try { await this.hooks.onStop?.() } catch { /* ignore */ }
     this.live = false
     this.d.onPhase('ERROR', "Couldn't start stream — check your key and connection.")
@@ -105,6 +117,7 @@ export class StreamController {
   }
 
   async stop(): Promise<void> {
+    this.generation++
     this.clear()
     try { await this.d.client().call('StopStream') } catch { /* ignore */ }
     try { await this.hooks.onStop?.() } catch { /* ignore */ }

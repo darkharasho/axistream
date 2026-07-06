@@ -125,9 +125,9 @@ app.whenReady().then(async () => {
     ? 'x264'
     : detectEncoder({ platform: process.platform, existsSync, readdirSync })
   let currentPreset: EncoderPreset | null = null
-  const applyEncoderPreset = async (outputHeight: number, fps: number): Promise<boolean> => {
+  const applyEncoderPreset = async (outputHeight: number, fps: number, opts?: { tries?: number }): Promise<boolean> => {
     currentPreset = choosePreset(encoderKind, outputHeight, fps)
-    return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never) }, currentPreset)
+    return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never), tries: opts?.tries }, currentPreset)
   }
 
   let pendingOAuthBump = false
@@ -148,7 +148,7 @@ app.whenReady().then(async () => {
       if (encoderKind === 'x264') return false
       encoderKind = 'x264'
       settings.patch({ preferSoftware: true })
-      return applyEncoderPreset(state.capture?.outputHeight ?? 1080, state.capture?.fps ?? 60)
+      return applyEncoderPreset(state.capture?.outputHeight ?? 1080, state.capture?.fps ?? 60, { tries: 3 })
     },
   })
 
