@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { MAX_MASKS, type MaskRect } from './MaskController.js'
+import { MAX_MASKS, type MaskRect } from '../shared/state.js'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
 

@@ -1,9 +1,9 @@
-// Temporary home; Task 3 moves this to shared/state.ts and this file re-imports it.
-export interface MaskRect { id: string; x: number; y: number; w: number; h: number }
+import { MAX_MASKS, type MaskRect } from '../shared/state.js'
+
+export { MAX_MASKS, type MaskRect }
 
 export const MASK_PREFIX = 'AxiStream Mask '
 export const MASK_COLOR = 0xff15110f // OBS ABGR: opaque #0f1115
-export const MAX_MASKS = 8
 const SCENE = 'Main'
 
 export interface MaskDeps {
