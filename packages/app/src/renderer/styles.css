@@ -144,3 +144,15 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .modal h3 { margin: 0; font-size: 15px; color: #e6edf3; }
 .modal input[type="text"] { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; width: 100%; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Privacy-mask editor: sits over the preview video, under modals. */
+.mask-editor { position: absolute; inset: 0; z-index: 4; overflow: hidden; touch-action: none; }
+.mask-toolbar { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px;
+  background: rgba(13,15,20,.82); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; backdrop-filter: blur(6px); }
+.mask-hint { font-size: 11px; color: #8b95a5; white-space: nowrap; }
+.mask-rect { position: absolute; z-index: 5; background: rgba(15,17,21,.78); border: 1.5px dashed rgba(34,211,238,.85); border-radius: 4px; cursor: move; }
+.mask-delete { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+  background: #1a1e26; color: #c4cedb; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.mask-delete:hover { color: #fff; background: #2a2f3a; }
+.mask-resize { position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; cursor: nwse-resize;
+  background: rgba(34,211,238,.9); border: 1px solid rgba(13,15,20,.8); }

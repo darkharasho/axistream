@@ -9,12 +9,14 @@ describe('ipc contract', () => {
     const handlers = {
       getInitialState: vi.fn(), provision: vi.fn(), saveKey: vi.fn(),
       forgetKey: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(),
+      setMasks: vi.fn(),
       windowMinimize: vi.fn(), windowToggleMaximize: vi.fn(), windowClose: vi.fn(),
     }
     registerIpc({ ipcMain: ipcMain as any, handlers: handlers as any, bindPush: () => {} })
     const commandChannels = [
       CH.getInitialState, CH.provision, CH.saveKey, CH.forgetKey,
       CH.goLive, CH.stopStream, CH.repairCapture,
+      CH.setMasks,
       CH.windowMinimize, CH.windowToggleMaximize, CH.windowClose,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)

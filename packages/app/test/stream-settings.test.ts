@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { StreamSettings, DEFAULT_SETTINGS } from '../src/main/StreamSettings.js'
+import { StreamSettings, DEFAULT_SETTINGS, sanitizeMasks } from '../src/main/StreamSettings.js'
 
 let file: string
 beforeEach(() => { file = join(mkdtempSync(join(tmpdir(), 'axi-')), 'stream.json') })
@@ -54,5 +54,52 @@ describe('StreamSettings', () => {
     expect(new StreamSettings(file).load().desktopDevice).toBe(null)
     new StreamSettings(file).patch({ desktopDevice: 'alsa_output.hdmi.monitor' })
     expect(new StreamSettings(file).load().desktopDevice).toBe('alsa_output.hdmi.monitor')
+  })
+
+  describe('masks', () => {
+    it('defaults to [] and round-trips', () => {
+      const s = new StreamSettings(file)
+      expect(s.load().masks).toEqual([])
+      s.patch({ masks: [{ id: 'a', x: 0.1, y: 0.2, w: 0.3, h: 0.4 }] })
+      expect(s.load().masks).toEqual([{ id: 'a', x: 0.1, y: 0.2, w: 0.3, h: 0.4 }])
+    })
+
+    it('drops invalid entries and clamps values on load', () => {
+      const s = new StreamSettings(file)
+      writeFileSync(file, '{"masks":[{"id":"ok","x":-1,"y":2,"w":0,"h":5},{"id":42,"x":0,"y":0,"w":0.1,"h":0.1},{"id":"nan","x":null,"y":0,"w":0.1,"h":0.1},"garbage"]}')
+      expect(s.load().masks).toEqual([{ id: 'ok', x: 0, y: 1, w: 0.01, h: 1 }])
+    })
+
+    it('caps at MAX_MASKS entries', () => {
+      const s = new StreamSettings(file)
+      const many = Array.from({ length: 12 }, (_, i) => ({ id: `m${i}`, x: 0, y: 0, w: 0.1, h: 0.1 }))
+      s.patch({ masks: many })
+      expect(s.load().masks).toHaveLength(8)
+    })
+
+    it('non-array masks falls back to []', () => {
+      const s = new StreamSettings(file)
+      writeFileSync(file, '{"masks":"nope"}')
+      expect(s.load().masks).toEqual([])
+    })
+  })
+})
+
+describe('sanitizeMasks', () => {
+  it('sanitizes a mixed array: valid, out-of-range, and garbage entries', () => {
+    const input = [
+      { id: 'valid', x: 0.2, y: 0.3, w: 0.4, h: 0.5 },
+      { id: 'clamped', x: -0.5, y: 1.5, w: -1, h: 99 },
+      'garbage',
+    ]
+    expect(sanitizeMasks(input)).toEqual([
+      { id: 'valid', x: 0.2, y: 0.3, w: 0.4, h: 0.5 },
+      { id: 'clamped', x: 0, y: 1, w: 0.01, h: 1 },
+    ])
+  })
+
+  it('caps at MAX_MASKS (8) entries', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ id: `m${i}`, x: 0.1, y: 0.1, w: 0.1, h: 0.1 }))
+    expect(sanitizeMasks(many)).toHaveLength(8)
   })
 })

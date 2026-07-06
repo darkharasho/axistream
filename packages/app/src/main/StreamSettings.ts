@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { MAX_MASKS, type MaskRect } from '../shared/state.js'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
 
@@ -13,6 +14,7 @@ export interface StreamSettingsData {
   micEnabled: boolean
   micDevice: string | null
   desktopDevice: string | null
+  masks: MaskRect[]
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -25,9 +27,26 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   micEnabled: false,
   micDevice: null,
   desktopDevice: null,
+  masks: [],
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
+
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
+
+export function sanitizeMasks(raw: unknown): MaskRect[] {
+  if (!Array.isArray(raw)) return []
+  const out: MaskRect[] = []
+  for (const m of raw) {
+    if (out.length >= MAX_MASKS) break
+    if (typeof m !== 'object' || m === null) continue
+    const { id, x, y, w, h } = m as Record<string, unknown>
+    if (typeof id !== 'string' || !id) continue
+    if (![x, y, w, h].every((n) => typeof n === 'number' && Number.isFinite(n))) continue
+    out.push({ id, x: clamp(x as number, 0, 1), y: clamp(y as number, 0, 1), w: clamp(w as number, 0.01, 1), h: clamp(h as number, 0.01, 1) })
+  }
+  return out
+}
 
 export class StreamSettings {
   constructor(private readonly filePath: string) {}
@@ -46,6 +65,7 @@ export class StreamSettings {
         micEnabled: typeof raw.micEnabled === 'boolean' ? raw.micEnabled : DEFAULT_SETTINGS.micEnabled,
         micDevice: typeof raw.micDevice === 'string' ? raw.micDevice : null,
         desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
+        masks: sanitizeMasks(raw.masks),
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

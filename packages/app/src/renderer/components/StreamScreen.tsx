@@ -1,4 +1,5 @@
-import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2, Shield } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
@@ -6,6 +7,7 @@ import { StatChips } from './StatChips.js'
 import { KeyInput } from './KeyInput.js'
 import { PreviewVideo } from './PreviewVideo.js'
 import { TitlePromptModal } from './TitlePromptModal.js'
+import { MaskEditor } from './MaskEditor.js'
 
 function fmt(ms: number): string {
   const s = Math.floor(ms / 1000); const m = Math.floor(s / 60)
@@ -15,6 +17,7 @@ function fmt(ms: number): string {
 export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
   const { phase, capture, keyMasked, stats } = state
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
+  const [editingMasks, setEditingMasks] = useState(false)
 
   if (phase === 'SETTING_UP') {
     return (
@@ -45,6 +48,9 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
       {phase === 'NEEDS_TITLE' ? (
         <TitlePromptModal onClose={() => axi.getInitialState().then((s) => store.applyState(s))} />
       ) : null}
+      {editingMasks ? (
+        <MaskEditor masks={state.masks} onCommit={(m) => axi.setMasks(m)} onDone={() => setEditingMasks(false)} />
+      ) : null}
 
       <div className="hero-bottom">
         <div className="statusrow">
@@ -53,6 +59,8 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
             : phase === 'AWAITING_APPROVAL'
             ? <button className="btn ghost xs" disabled><Loader2 size={12} className="spin" /> Switching…</button>
             : <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
+          {phase === 'AWAITING_APPROVAL' ? null
+            : <button className="btn ghost xs" onClick={() => setEditingMasks((v) => !v)} title="Black out chat or other areas on the stream"><Shield size={12} /> Masks</button>}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} />

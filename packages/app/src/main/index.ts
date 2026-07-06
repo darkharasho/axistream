@@ -28,15 +28,16 @@ import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
 import { KeyStore } from './KeyStore.js'
 import { TokenStore } from './TokenStore.js'
-import { StreamSettings, type StreamSettingsData } from './StreamSettings.js'
+import { StreamSettings, sanitizeMasks, type StreamSettingsData } from './StreamSettings.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
 import { YouTubeLive } from './YouTubeLive.js'
 import { renderTitle } from './TitleTemplate.js'
 import { createLoopback } from './loopback.js'
 import { shell } from 'electron'
 import { PreviewPump } from './PreviewPump.js'
+import { MaskController } from './MaskController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
-import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type StreamSettingsView } from '../shared/state.js'
+import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize } from './window-size.js'
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
@@ -118,6 +119,7 @@ app.whenReady().then(async () => {
   })
 
   const audio = new AudioController({ client: () => sidecar.client() })
+  const maskCtl = new MaskController({ client: () => sidecar.client() })
 
   let pendingOAuthBump = false
   const stream = new StreamController({
@@ -171,7 +173,7 @@ app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async (titleOverride?: string) => {
@@ -208,7 +210,7 @@ app.whenReady().then(async () => {
       }
     },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -220,7 +222,7 @@ app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_ }); startVirtualCam() }
+      if (ok) { const capture_ = await applyResolution(); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -242,6 +244,12 @@ app.whenReady().then(async () => {
     previewTitle: async (template) => {
       const s = settings.load()
       return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat })
+    },
+    setMasks: async (masks: MaskRect[]) => {
+      const next = sanitizeMasks(masks)
+      settings.patch({ masks: next })
+      await maskCtl.applyMasks(next)
+      setState({ masks: next })
     },
     getAudioDevices: () => audio.listMicDevices(),
     getDesktopDevices: () => audio.listDesktopDevices(),
@@ -306,6 +314,8 @@ app.whenReady().then(async () => {
       const a = settings.load()
       setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
+      setState({ masks: a.masks })
+      await maskCtl.applyMasks(a.masks)
     } else {
       setState({ phase: 'SETTING_UP' })
     }
