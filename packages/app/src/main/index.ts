@@ -334,7 +334,12 @@ if (primary) app.whenReady().then(async () => {
     },
     relaunchApp: async () => {
       if (stream.isLive()) return
-      app.relaunch()
+      // Under `electron-vite dev` a relaunched instance escapes the dev
+      // harness: the dev server exits with the old process, the new one
+      // loads the stale out/ renderer, and it holds the single-instance
+      // lock — blocking every subsequent `npm run dev`. In dev, just quit;
+      // the developer reruns dev. Packaged builds get the real relaunch.
+      if (!process.env.ELECTRON_RENDERER_URL) app.relaunch()
       app.quit()
     },
     windowMinimize: async () => { win.minimize() },
