@@ -176,6 +176,17 @@ describe('AudioSettings', () => {
     await waitFor(() => expect(screen.getByText(/output busy/i)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /test audio/i })).not.toBeDisabled()
   })
+
+  it('a player load failure surfaces as an error instead of a dead 0:00 player', async () => {
+    // A CSP-rejected or undecodable blob fires the audio element's error
+    // event with no other visible symptom — it must not fail silently.
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    fireEvent.click(screen.getByRole('button', { name: /test audio/i }))
+    const player = await screen.findByTestId('audio-test-player')
+    fireEvent.error(player)
+    expect(screen.getByText(/couldn't play the clip/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /test audio/i })).not.toBeDisabled()
+  })
 })
 
 describe('AudioSettings app search', () => {
