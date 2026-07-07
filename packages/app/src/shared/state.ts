@@ -97,6 +97,7 @@ export const CH = {
   evtAudioLevels: 'axi:evt:audioLevels',
   testDiscordWebhook: 'axi:testDiscordWebhook',
   recordAudioTest: 'axi:recordAudioTest',
+  setPttEnabled: 'axi:setPttEnabled',
 } as const
 
 export interface AxiApi {
@@ -133,6 +134,7 @@ export interface AxiApi {
   fitWindowToCapture(): Promise<void>
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
+  setPttEnabled(enabled: boolean): Promise<void>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

@@ -41,6 +41,8 @@ import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PL
 import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
+import { PttController } from './PttController.js'
+import { createPortalShortcuts } from './portal-shortcuts.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
@@ -169,6 +171,19 @@ if (primary) app.whenReady().then(async () => {
   const maskCtl = new MaskController({ client: () => sidecar.client() })
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
+
+  const execAsync = (cmd: string, args: string[]) => new Promise<void>((resolve, reject) => {
+    execFile(cmd, args, (err) => (err ? reject(err) : resolve()))
+  })
+  const ptt = new PttController({
+    portal: createPortalShortcuts(),
+    exec: execAsync,
+    sourceId: () => {
+      const dev = settings.load().micDevice
+      return dev && dev !== 'default' ? dev : '@DEFAULT_SOURCE@'
+    },
+    onActive: (active) => setState({ ptt: { ...state.ptt, active } }),
+  })
 
   const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
     execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
@@ -452,6 +467,16 @@ if (primary) app.whenReady().then(async () => {
         message: cfg.discordMessage,
       }, realFetch)
     },
+    setPttEnabled: async (enabled) => {
+      settings.patch({ pttEnabled: enabled })
+      if (enabled) {
+        const r = await ptt.enable()
+        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed') } })
+      } else {
+        await ptt.disable()
+        setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null } })
+      }
+    },
     recordAudioTest: async () => {
       if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture) {
         return { ok: false, error: 'not available right now' }
@@ -499,6 +524,7 @@ if (primary) app.whenReady().then(async () => {
     preview.stop()
     void meter.stop()
     try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
+    if (ptt.isEnabled()) void ptt.restore()
     void sidecar.stop()
   })
 
@@ -541,6 +567,15 @@ if (primary) app.whenReady().then(async () => {
       const a = settings.load()
       setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioApps: a.gameAudioApps } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
+      // PTT: crash recovery first (a previous run may have died source-muted),
+      // then probe the portal and re-arm if the user had it on.
+      await ptt.restore()
+      const pttAvailable = await ptt.available()
+      setState({ ptt: { ...state.ptt, available: pttAvailable } })
+      if (pttAvailable && a.pttEnabled) {
+        const r = await ptt.enable()
+        setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed') } })
+      }
       setState({ masks: a.masks })
       await maskCtl.applyMasks(a.masks, a.maskStyle)
       const flatpakState = await installer.detectInstalled()
