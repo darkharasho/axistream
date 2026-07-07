@@ -138,7 +138,7 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .settings-inner { max-width: 1120px; padding: 26px; }
 /* Ultrawide: sections flow into two columns when there's room. */
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 8px 40px; align-items: start; }
-.settings-grid > .setting { min-width: 0; }
+.settings-grid > .setting { min-width: 0; margin-bottom: 0; }
 .settings-inner h2 { margin: 0 0 18px; }
 .setting { background: #0e131a; border: 1px solid #1d2530; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
 .setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }

@@ -30,6 +30,14 @@ describe('Sidebar quick toggles', () => {
     rerender(<Sidebar active="stream" state={mkState()} onNav={() => {}} axi={axi as never} />)
     fireEvent.click(screen.getByLabelText('Quick toggle masks'))
     expect(axi.setMasksVisible).toHaveBeenCalledWith(false)
+    rerender(<Sidebar active="stream" state={mkState({ masksVisible: false })} onNav={() => {}} axi={axi as never} />)
+    fireEvent.click(screen.getByLabelText('Quick toggle masks'))
+    expect(axi.setMasksVisible).toHaveBeenCalledWith(true)
+  })
+
+  it('PTT button glows while transmitting', () => {
+    render(<Sidebar active="stream" state={mkState({ ptt: { available: true, enabled: true, active: true, error: null } })} onNav={() => {}} axi={mkAxi() as never} />)
+    expect(screen.getByLabelText('Quick toggle push to talk').className).toContain('tx')
   })
 
   it('PTT toggle hidden when the portal is unavailable, disabled without mic, arms with mic', () => {
