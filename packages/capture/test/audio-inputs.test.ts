@@ -38,4 +38,33 @@ describe('ensureAudioInputs', () => {
     const client = { call: vi.fn(async () => { throw new Error('no audio server') }) }
     await expect(ensureAudioInputs(client)).resolves.toBeUndefined()
   })
+
+  // A capture rebuild (RemoveScene+CreateScene in the provisioner) destroys the
+  // scene ITEMS while the inputs survive in the collection — an input with no
+  // item in the program scene is inactive and silent on stream. The existing
+  // inputs must get their scene items re-added, mirroring GameAudioController.
+  it('re-adds missing scene items for existing inputs after a scene rebuild', async () => {
+    const calls: { req: string; data: any }[] = []
+    const client = { call: vi.fn(async (req: string, data?: any) => {
+      calls.push({ req, data })
+      if (req === 'GetInputList') return { inputs: [{ inputName: 'AxiStream Desktop Audio' }, { inputName: 'AxiStream Mic' }] }
+      if (req === 'GetSceneItemId') throw new Error('scene item not found')
+      return {}
+    }) }
+    await ensureAudioInputs(client)
+    const readds = calls.filter((c) => c.req === 'CreateSceneItem').map((c) => c.data)
+    expect(readds).toEqual([
+      { sceneName: 'Main', sourceName: 'AxiStream Desktop Audio' },
+      { sceneName: 'Main', sourceName: 'AxiStream Mic' },
+    ])
+    expect(calls.filter((c) => c.req === 'CreateInput')).toEqual([])
+  })
+
+  it('leaves scene items alone when they still exist', async () => {
+    const r = recorder({ GetInputList: { inputs: [
+      { inputName: 'AxiStream Desktop Audio' }, { inputName: 'AxiStream Mic' },
+    ] }, GetSceneItemId: { sceneItemId: 7 } })
+    await ensureAudioInputs(r.client)
+    expect(r.calls.filter((c) => c.req === 'CreateSceneItem')).toEqual([])
+  })
 })
