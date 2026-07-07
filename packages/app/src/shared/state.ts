@@ -48,6 +48,8 @@ export const INITIAL_STATE: AppState = {
   maskStyle: 'box',
 }
 
+export interface AudioLevels { desktop: number; mic: number; game: number }
+
 export const CH = {
   getInitialState: 'axi:getInitialState',
   provision: 'axi:provision',
@@ -83,6 +85,8 @@ export const CH = {
   relaunchApp: 'axi:relaunchApp',
   setGameAudioApps: 'axi:setGameAudioApps',
   getGameAudioApps: 'axi:getGameAudioApps',
+  fitWindowToCapture: 'axi:fitWindowToCapture',
+  evtAudioLevels: 'axi:evt:audioLevels',
 } as const
 
 export interface AxiApi {
@@ -116,8 +120,10 @@ export interface AxiApi {
   relaunchApp(): Promise<void>
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
+  fitWindowToCapture(): Promise<void>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void
   onCaptureChanged(cb: () => void): () => void
+  onAudioLevels(cb: (l: AudioLevels) => void): () => void
 }

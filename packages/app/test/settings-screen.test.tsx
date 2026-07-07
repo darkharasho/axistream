@@ -18,6 +18,9 @@ const axi = {
   setDesktopDevice: vi.fn(async () => {}),
   setMicEnabled: vi.fn(async () => {}),
   setMicDevice: vi.fn(async () => {}),
+  setGameAudioApps: vi.fn(async () => {}),
+  getGameAudioApps: vi.fn(async () => []),
+  onAudioLevels: vi.fn(() => () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 

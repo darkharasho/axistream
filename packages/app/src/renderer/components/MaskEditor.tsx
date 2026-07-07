@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { MAX_MASKS, type MaskRect, type AppState } from '../../shared/state.js'
-import { coverContentRect, type CoverRect } from '../cover-transform.js'
+import { containContentRect, type CoverRect } from '../cover-transform.js'
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 const newId = () => Math.random().toString(36).slice(2, 10)
@@ -10,7 +10,7 @@ interface Drag { id: string; mode: 'move' | 'resize'; px: number; py: number; or
 
 // Edit overlay for privacy masks. Coordinates are normalized (0–1) against
 // the OBS canvas; the sibling preview <video> shows that canvas under
-// object-fit: cover, so we map through its content rect to line up on screen.
+// object-fit: contain, so we map through its content rect to line up on screen.
 // Local state is authoritative while editing; every add/delete/drag-end
 // commits the full array upward (which persists + drives OBS live).
 export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPlugin, onSetStyle, onInstallBlur, onRelaunch }: {
@@ -37,8 +37,8 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
     const measure = () => {
       const el = boxRef.current
       if (!el) return
-      const video = el.parentElement?.querySelector('video')
-      setContent(coverContentRect(video?.videoWidth ?? 0, video?.videoHeight ?? 0, el.clientWidth, el.clientHeight))
+      const video = el.parentElement?.querySelector('video.preview-video')
+      setContent(containContentRect(video?.videoWidth ?? 0, video?.videoHeight ?? 0, el.clientWidth, el.clientHeight))
     }
     measure()
     window.addEventListener('resize', measure)

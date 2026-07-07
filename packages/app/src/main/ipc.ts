@@ -31,6 +31,7 @@ export interface IpcHandlers {
   relaunchApp(): Promise<void>
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
+  fitWindowToCapture(): Promise<void>
 }
 
 export interface IpcDeps {
@@ -71,5 +72,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.relaunchApp, () => handlers.relaunchApp())
   ipcMain.handle(CH.setGameAudioApps, (_e: unknown, apps: string[]) => handlers.setGameAudioApps(apps))
   ipcMain.handle(CH.getGameAudioApps, () => handlers.getGameAudioApps())
+  ipcMain.handle(CH.fitWindowToCapture, () => handlers.fitWindowToCapture())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

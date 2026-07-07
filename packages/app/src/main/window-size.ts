@@ -11,3 +11,10 @@ export function computeWindowSize(workArea: Size, fraction: number, min: Size): 
   const width = Math.max(min.width, Math.min(Math.round(workArea.width * fraction), Math.round(height * MAX_ASPECT)))
   return { width, height }
 }
+
+/** Content width that makes the preview area (window minus sidebar) match
+ *  the capture aspect exactly at the current content height. */
+export function fitWidthForCapture(sidebarW: number, contentHeight: number, capW: number, capH: number, minW: number, maxW: number): number {
+  if (!(capW > 0) || !(capH > 0) || !(contentHeight > 0)) return minW
+  return Math.min(maxW, Math.max(minW, Math.round(sidebarW + contentHeight * (capW / capH))))
+}

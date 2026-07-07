@@ -74,6 +74,23 @@ describe('ObsSidecar', () => {
   })
 })
 
+describe('ObsSidecar wsInfo', () => {
+  it('wsInfo is null before start and carries url+password after', async () => {
+    const { launcher } = fakeLauncher()
+    const fakeClient = { connect: vi.fn().mockResolvedValue({}), disconnect: vi.fn().mockResolvedValue(undefined) }
+    const sc = new ObsSidecar({
+      launcher, collection: 'AxiStream',
+      _waitForPort: vi.fn().mockResolvedValue(undefined),
+      _makeClient: () => fakeClient as any,
+    } as any)
+    expect(sc.wsInfo()).toBeNull()
+    await sc.start()
+    const info = sc.wsInfo()!
+    expect(info.url).toBe(`ws://127.0.0.1:${sc.port}`)
+    expect(typeof info.password).toBe('string')
+  })
+})
+
 describe('ObsSidecar robustness', () => {
   function setup(overrides: any = {}) {
     let exitCb: (c: number | null) => void = () => {}

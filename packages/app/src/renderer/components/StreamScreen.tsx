@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2, Shield } from 'lucide-react'
+import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2, Shield, Scan } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
@@ -47,6 +47,9 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
       {phase === 'RECONNECTING' ? <div className="overlay warn"><span className="overlay-pill">Reconnecting…</span></div> : null}
       {phase === 'NEEDS_TITLE' ? (
         <TitlePromptModal onClose={() => axi.getInitialState().then((s) => store.applyState(s))} />
+      ) : null}
+      {capture ? (
+        <button className="fit-btn" title="Fit window to game" onClick={() => axi.fitWindowToCapture()}><Scan size={14} /></button>
       ) : null}
       {editingMasks ? (
         <MaskEditor masks={state.masks} maskStyle={state.maskStyle} blurPlugin={state.blurPlugin}

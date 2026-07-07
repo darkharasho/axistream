@@ -12,6 +12,7 @@ const axi = (globalThis as unknown as { axi?: AxiApi }).axi
 // changes, which keeps the preview from going black until an app restart.
 export function PreviewVideo() {
   const ref = useRef<HTMLVideoElement>(null)
+  const backRef = useRef<HTMLVideoElement>(null)
   // Fade the video out whenever it isn't actively showing frames (startup, a
   // source switch, an OBS restart) so the hero's colored gradient shows through
   // instead of a black rectangle.
@@ -49,6 +50,7 @@ export function PreviewVideo() {
             stream = await md.getUserMedia({ video: { deviceId: { exact: cam.deviceId } } })
             if (cancelled) { stop(); return }
             if (ref.current) { ref.current.srcObject = stream; void ref.current.play().catch(() => {}) }
+            if (backRef.current) { backRef.current.srcObject = stream; void backRef.current.play().catch(() => {}) }
             // When OBS restarts, this track ends — re-acquire the new device.
             stream.getVideoTracks()[0]?.addEventListener('ended', () => { setPlaying(false); schedule() })
             return
@@ -75,5 +77,10 @@ export function PreviewVideo() {
       stop()
     }
   }, [])
-  return <video ref={ref} className={`preview-video${playing ? '' : ' loading'}`} autoPlay muted playsInline onPlaying={() => setPlaying(true)} />
+  return (
+    <>
+      <video ref={backRef} className={`preview-backdrop${playing ? '' : ' loading'}`} autoPlay muted playsInline />
+      <video ref={ref} className={`preview-video${playing ? '' : ' loading'}`} autoPlay muted playsInline onPlaying={() => setPlaying(true)} />
+    </>
+  )
 }
