@@ -3,7 +3,7 @@ import { MaskController, MASK_PREFIX, MASK_COLOR, BLUR_PREFIX, type MaskRect } f
 
 const CANVAS = { baseWidth: 2000, baseHeight: 1000 }
 
-function recorder(opts: { inputs?: string[]; filters?: string[]; canvas?: object | null; failGetItemFor?: string[] } = {}) {
+function recorder(opts: { inputs?: string[]; filters?: string[]; canvas?: object | null; failGetItemFor?: string[]; failFilterList?: boolean } = {}) {
   const calls: { req: string; data: any }[] = []
   let itemId = 100
   const client = () => ({
@@ -14,7 +14,10 @@ function recorder(opts: { inputs?: string[]; filters?: string[]; canvas?: object
         return opts.canvas ?? CANVAS
       }
       if (req === 'GetInputList') return { inputs: (opts.inputs ?? []).map((inputName) => ({ inputName })) }
-      if (req === 'GetSourceFilterList') return { filters: (opts.filters ?? []).map((filterName) => ({ filterName })) }
+      if (req === 'GetSourceFilterList') {
+        if (opts.failFilterList) throw new Error('filter list unavailable')
+        return { filters: (opts.filters ?? []).map((filterName) => ({ filterName })) }
+      }
       if (req === 'GetSceneItemId') {
         if (opts.failGetItemFor?.includes(data?.sourceName)) throw new Error('not in scene')
         return { sceneItemId: ++itemId }
@@ -138,5 +141,12 @@ describe('MaskController blur style', () => {
   it('throwing client swallowed in blur mode', async () => {
     const client = () => ({ call: vi.fn(async () => { throw new Error('boom') }) })
     await expect(new MaskController({ client }).applyMasks([m('a')], 'blur')).resolves.toBeUndefined()
+  })
+
+  it('sweep helper swallows filter list failure so reconcile proceeds', async () => {
+    const r = recorder({ failFilterList: true })
+    await new MaskController({ client: r.client }).applyMasks([m('a')], 'box')
+    // box mode sweeps blur filters first (GetSourceFilterList throws), then should proceed with box reconcile
+    expect(r.calls.some((c) => c.req === 'CreateInput')).toBe(true)
   })
 })

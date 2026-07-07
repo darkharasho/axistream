@@ -78,7 +78,7 @@ export class MaskController {
   }
 
   private async removeAllMaskInputs(c: { call(req: string, data?: unknown): Promise<any> }): Promise<void> {
-    const { inputs } = await c.call('GetInputList') as { inputs?: { inputName: string }[] }
+    const { inputs } = await c.call('GetInputList').catch(() => ({ inputs: [] })) as { inputs?: { inputName: string }[] }
     for (const { inputName } of (inputs ?? [])) {
       if (inputName.startsWith(MASK_PREFIX)) {
         await c.call('RemoveInput', { inputName }).catch(() => {})
@@ -87,7 +87,7 @@ export class MaskController {
   }
 
   private async reconcileBlurFilters(c: { call(req: string, data?: unknown): Promise<any> }, masks: MaskRect[]): Promise<void> {
-    const { filters } = await c.call('GetSourceFilterList', { sourceName: CAPTURE }) as { filters?: { filterName: string }[] }
+    const { filters } = await c.call('GetSourceFilterList', { sourceName: CAPTURE }).catch(() => ({ filters: [] })) as { filters?: { filterName: string }[] }
     const existing = new Set((filters ?? []).map((f) => f.filterName).filter((n) => n.startsWith(BLUR_PREFIX)))
     const wanted = new Map(masks.map((m) => [BLUR_PREFIX + m.id, m]))
 
@@ -107,7 +107,7 @@ export class MaskController {
   }
 
   private async removeAllBlurFilters(c: { call(req: string, data?: unknown): Promise<any> }): Promise<void> {
-    const { filters } = await c.call('GetSourceFilterList', { sourceName: CAPTURE }) as { filters?: { filterName: string }[] }
+    const { filters } = await c.call('GetSourceFilterList', { sourceName: CAPTURE }).catch(() => ({ filters: [] })) as { filters?: { filterName: string }[] }
     for (const { filterName } of (filters ?? [])) {
       if (filterName.startsWith(BLUR_PREFIX)) {
         await c.call('RemoveSourceFilter', { sourceName: CAPTURE, filterName }).catch(() => {})
