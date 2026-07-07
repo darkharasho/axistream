@@ -16,6 +16,8 @@ const axi = {
   recordAudioTest: vi.fn(async (): Promise<AudioTestResult> => ({ ok: true, clip: new Uint8Array([0]), mime: 'video/mp4' })),
   setPttEnabled: vi.fn(async () => {}),
   unlockPassthrough: vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true })),
+  setPttKey: vi.fn(async () => {}),
+  capturePttKey: vi.fn(async (): Promise<{ code: number; name: string } | null> => ({ code: 185, name: 'F15' })),
 }
 beforeEach(() => {
   (globalThis as any).axi = axi
@@ -239,6 +241,26 @@ describe('AudioSettings', () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
     fireEvent.click(screen.getByRole('button', { name: /enable pass-through/i }))
     await waitFor(() => expect(screen.getByText(/authorization was cancelled/i)).toBeInTheDocument())
+  })
+
+  it('labels follow ptt.keyName', () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F15' }} />)
+    expect(screen.getByLabelText('Push to talk (hold F15)')).toBeInTheDocument()
+    expect(screen.getByText(/hold F15 to talk/i)).toBeInTheDocument()
+  })
+
+  it('pass-through rebind captures a key', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18' }} />)
+    fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
+    expect(screen.getByText(/press any key/i)).toBeInTheDocument()
+    await waitFor(() => expect(axi.capturePttKey).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByText(/press any key/i)).not.toBeInTheDocument())
+  })
+
+  it('exclusive rebind is a dropdown calling setPttKey', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
+    fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: '183' } })
+    expect(axi.setPttKey).toHaveBeenCalledWith({ code: 183, name: 'F13' })
   })
 })
 
