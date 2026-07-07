@@ -1,6 +1,6 @@
 import { OBSWebSocket, EventSubscription } from 'obs-websocket-js'
-
-export interface AudioLevels { desktop: number; mic: number; game: number }
+import type { AudioLevels } from '../shared/state.js'
+export type { AudioLevels }
 
 const NAME_TO_KEY: Record<string, keyof AudioLevels> = {
   'AxiStream Desktop Audio': 'desktop',

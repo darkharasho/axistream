@@ -11,6 +11,7 @@ const axi = {
   setMicDevice: vi.fn(async () => {}),
   setGameAudioApps: vi.fn(async () => {}),
   getGameAudioApps: vi.fn(async () => [{ id: 'gw2-64.exe', name: 'Guild Wars 2' }, { id: 'Discord', name: 'Discord' }]),
+  onAudioLevels: vi.fn(() => () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
@@ -124,6 +125,12 @@ describe('AudioSettings', () => {
     expect(axi.getGameAudioApps).toHaveBeenCalledTimes(2)
     // Flush the second getGameAudioApps resolution
     await screen.findByLabelText('Guild Wars 2')
+  })
+
+  it('renders pulse meters on the desktop and mic rows and the apps divider', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    await screen.findByLabelText('Guild Wars 2')
+    expect(document.querySelectorAll('.audio-pulse')).toHaveLength(3)
   })
 
   it('plugin not ready: no app rows, install flow renders instead', async () => {

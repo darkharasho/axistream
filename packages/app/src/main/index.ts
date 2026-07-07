@@ -41,12 +41,14 @@ import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PL
 import { GameAudioController } from './GameAudioController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
-import { computeWindowSize } from './window-size.js'
+import { computeWindowSize, fitWidthForCapture } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
+import { AudioLevelMeter } from './AudioLevelMeter.js'
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
+const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
 const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
 const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy })
 let state: AppState = { ...INITIAL_STATE }
@@ -119,6 +121,7 @@ if (primary) app.whenReady().then(async () => {
   const sidecar = new ObsSidecar({ launcher, collection: 'AxiStream' })
 
   const preview = new PreviewPump({ client: () => sidecar.client(), sourceName: CAPTURE_SOURCE, emit: (d) => push(CH.evtPreview, d) })
+  const meter = new AudioLevelMeter({ info: () => sidecar.wsInfo(), onLevels: (l) => push(CH.evtAudioLevels, l) })
   win.on('hide', () => preview.setVisible(false))
   win.on('show', () => preview.setVisible(true))
   win.on('minimize', () => preview.setVisible(false))
@@ -227,7 +230,7 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async (titleOverride?: string) => {
@@ -377,6 +380,13 @@ if (primary) app.whenReady().then(async () => {
       if (!process.env.ELECTRON_RENDERER_URL) app.relaunch()
       app.quit()
     },
+    fitWindowToCapture: async () => {
+      const cap = state.capture
+      if (!cap) return
+      const [, ch] = win.getContentSize()
+      const wa = screen.getDisplayMatching(win.getBounds()).workArea
+      win.setContentSize(fitWidthForCapture(SIDEBAR_W, ch, cap.width, cap.height, WINDOW_MIN.width, wa.width), ch)
+    },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },
@@ -391,6 +401,7 @@ if (primary) app.whenReady().then(async () => {
       if (choice === 0) { e.preventDefault(); return }
     }
     preview.stop()
+    void meter.stop()
     try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
     void sidecar.stop()
   })
@@ -431,6 +442,7 @@ if (primary) app.whenReady().then(async () => {
       try { filterKinds = ((await sidecar.client().call('GetSourceFilterKindList')) as { sourceFilterKinds?: string[] }).sourceFilterKinds ?? [] } catch { /* best-effort */ }
       console.info('[blur] filter kinds', filterKinds)
       setState({ blurPlugin: { status: deriveBlurStatus(await blurInstaller.detectInstalled(), filterKinds), error: null }, maskStyle: a.maskStyle })
+      meter.start()
     } else {
       setState({ phase: 'SETTING_UP' })
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(await installer.detectInstalled(), []), error: null } })

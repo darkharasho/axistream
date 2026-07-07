@@ -14,6 +14,7 @@ describe('ipc contract', () => {
       getGameAudioPluginStatus: vi.fn(), installGameAudioPlugin: vi.fn(),
       setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(),
       setGameAudioApps: vi.fn(), getGameAudioApps: vi.fn(),
+      fitWindowToCapture: vi.fn(),
     }
     registerIpc({ ipcMain: ipcMain as any, handlers: handlers as any, bindPush: () => {} })
     const commandChannels = [
@@ -24,6 +25,7 @@ describe('ipc contract', () => {
       CH.getGameAudioPluginStatus, CH.installGameAudioPlugin,
       CH.setMaskStyle, CH.installBlurPlugin, CH.relaunchApp,
       CH.setGameAudioApps, CH.getGameAudioApps,
+      CH.fitWindowToCapture,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)
   })

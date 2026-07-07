@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { RotateCw } from 'lucide-react'
-import type { AxiApi, AudioDevice, AppState } from '../../shared/state.js'
+import type { AxiApi, AudioDevice, AppState, AudioLevels } from '../../shared/state.js'
 import { staleOption } from '../device-options.js'
 import { GameAudioSettings } from './GameAudioSettings.js'
+import { AudioPulse } from './AudioPulse.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
@@ -11,6 +12,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
   const [outputDevices, setOutputDevices] = useState<AudioDevice[] | null>(null)
   const [runningApps, setRunningApps] = useState<AudioDevice[] | null>(null)
   const [appFilter, setAppFilter] = useState('')
+  const [levels, setLevels] = useState<AudioLevels>({ desktop: 0, mic: 0, game: 0 })
   const appsRef = useRef(audio.gameAudioApps)
   const pluginReady = gameAudioPlugin.status === 'ready'
 
@@ -30,6 +32,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
   }, [pluginReady])
 
   useEffect(() => { appsRef.current = audio.gameAudioApps }, [audio.gameAudioApps])
+  useEffect(() => axi().onAudioLevels(setLevels), [])
 
   const refreshApps = () => { axi().getGameAudioApps().then(setRunningApps) }
   const toggleApp = (id: string) => {
@@ -60,6 +63,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
             onChange={(e) => axi().setDesktopEnabled(e.target.checked)} />
           <span>All desktop audio</span>
           <span className="sub"> — everything your speakers play</span>
+          <AudioPulse level={levels.desktop} />
         </label>
 
         {audio.desktopEnabled && (() => {
@@ -78,6 +82,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
         <div className="hear-divider">
           <span>Only these apps</span>
           <div className="line" />
+          <AudioPulse level={levels.game} />
           {pluginReady && (
             <button className="hear-refresh" title="Refresh running apps" onClick={refreshApps}><RotateCw size={12} /></button>
           )}
@@ -110,6 +115,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
         <input type="checkbox" checked={audio.micEnabled} aria-label="Microphone"
           onChange={(e) => axi().setMicEnabled(e.target.checked)} />
         <span>Microphone</span>
+        <AudioPulse level={levels.mic} />
       </label>
 
       {audio.micEnabled && (() => {
