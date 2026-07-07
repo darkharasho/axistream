@@ -15,6 +15,7 @@ const axi = {
   onAudioLevels: vi.fn(() => () => {}),
   recordAudioTest: vi.fn(async (): Promise<AudioTestResult> => ({ ok: true, clip: new Uint8Array([0]), mime: 'video/mp4' })),
   setPttEnabled: vi.fn(async () => {}),
+  unlockPassthrough: vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true })),
 }
 beforeEach(() => {
   (globalThis as any).axi = axi
@@ -217,6 +218,27 @@ describe('AudioSettings', () => {
   it('surfaces a PTT error', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)', mode: null }} />)
     expect(screen.getByText(/portal request denied/i)).toBeInTheDocument()
+  })
+
+  it('shows the pass-through mode line when armed via evdev', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough' }} />)
+    expect(screen.getByText(/Discord's own push-to-talk works alongside/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /enable pass-through/i })).not.toBeInTheDocument()
+  })
+
+  it('exclusive mode shows the warning line and the unlock button; clicking unlocks', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive' }} />)
+    expect(screen.getByText(/Discord won't see F18/i)).toBeInTheDocument()
+    expect(screen.getByText(/read access to input devices/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /enable pass-through/i }))
+    await waitFor(() => expect(axi.unlockPassthrough).toHaveBeenCalled())
+  })
+
+  it('surfaces an unlock failure inline', async () => {
+    axi.unlockPassthrough.mockResolvedValueOnce({ ok: false, error: 'Authorization was cancelled' })
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive' }} />)
+    fireEvent.click(screen.getByRole('button', { name: /enable pass-through/i }))
+    await waitFor(() => expect(screen.getByText(/authorization was cancelled/i)).toBeInTheDocument())
   })
 })
 
