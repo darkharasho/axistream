@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { findGw2Pid, readIdentity, type MumbleDeps } from '../src/mumble-reader.js'
 
-const IDENTITY = '{"name":"Not Haro","profession":7,"spec":73,"race":4,"map_id":95,"world_id":2147483650,"commander":true}'
+const IDENTITY = '{"name":"Not Haro","profession":7,"spec":73,"race":4,"map_id":95,"world_id":2147483650,"team_color_id":376,"commander":true}'
 
 // Build a fake LinkedMem buffer with the real offsets.
 function linkedMem(tick: number, name: string, identity: string): Buffer {
@@ -59,7 +59,7 @@ describe('findGw2Pid', () => {
 describe('readIdentity', () => {
   it('decodes the identity from the ticking range', () => {
     const id = readIdentity(deps())
-    expect(id).toEqual({ character: 'Not Haro', profession: 7, spec: 73, race: 4, mapId: 95, commander: true })
+    expect(id).toEqual({ character: 'Not Haro', profession: 7, spec: 73, race: 4, mapId: 95, commander: true, teamColorId: 376 })
   })
   it('null when GW2 is not running', () => {
     expect(readIdentity(deps({ listPids: () => [10] }))).toBeNull()

@@ -2,7 +2,7 @@ export interface TemplateContext {
   now: Date
   counter: number
   dateFormat: string
-  gw2?: { character: string; class: string; map: string; race: string }
+  gw2?: { character: string; class: string; map: string; race: string; team: string }
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -50,6 +50,7 @@ export function renderTitle(template: string, ctx: TemplateContext): string {
     class: () => ctx.gw2?.class ?? '',
     map: () => ctx.gw2?.map ?? '',
     race: () => ctx.gw2?.race ?? '',
+    team: () => ctx.gw2?.team ?? '',
   }
   return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => {
     const fn = vars[name]
