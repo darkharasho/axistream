@@ -33,6 +33,8 @@ export interface AppState {
   audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null; gameAudioApps: string[] }
   masks: MaskRect[]
   gameAudioPlugin: GameAudioPluginView
+  blurPlugin: GameAudioPluginView
+  maskStyle: 'box' | 'blur'
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
@@ -42,6 +44,8 @@ export const INITIAL_STATE: AppState = {
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
+  blurPlugin: { status: 'missing', error: null },
+  maskStyle: 'box',
 }
 
 export const CH = {
@@ -74,6 +78,8 @@ export const CH = {
   setMasks: 'axi:setMasks',
   getGameAudioPluginStatus: 'axi:getGameAudioPluginStatus',
   installGameAudioPlugin: 'axi:installGameAudioPlugin',
+  setMaskStyle: 'axi:setMaskStyle',
+  installBlurPlugin: 'axi:installBlurPlugin',
   relaunchApp: 'axi:relaunchApp',
   setGameAudioApps: 'axi:setGameAudioApps',
   getGameAudioApps: 'axi:getGameAudioApps',
@@ -105,6 +111,8 @@ export interface AxiApi {
   windowClose(): Promise<void>
   getGameAudioPluginStatus(): Promise<GameAudioPluginView>
   installGameAudioPlugin(): Promise<void>
+  setMaskStyle(style: 'box' | 'blur'): Promise<void>
+  installBlurPlugin(): Promise<void>
   relaunchApp(): Promise<void>
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>

@@ -11,7 +11,8 @@ describe('ipc contract', () => {
       forgetKey: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(),
       setMasks: vi.fn(),
       windowMinimize: vi.fn(), windowToggleMaximize: vi.fn(), windowClose: vi.fn(),
-      getGameAudioPluginStatus: vi.fn(), installGameAudioPlugin: vi.fn(), relaunchApp: vi.fn(),
+      getGameAudioPluginStatus: vi.fn(), installGameAudioPlugin: vi.fn(),
+      setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(),
       setGameAudioApps: vi.fn(), getGameAudioApps: vi.fn(),
     }
     registerIpc({ ipcMain: ipcMain as any, handlers: handlers as any, bindPush: () => {} })
@@ -20,7 +21,8 @@ describe('ipc contract', () => {
       CH.goLive, CH.stopStream, CH.repairCapture,
       CH.setMasks,
       CH.windowMinimize, CH.windowToggleMaximize, CH.windowClose,
-      CH.getGameAudioPluginStatus, CH.installGameAudioPlugin, CH.relaunchApp,
+      CH.getGameAudioPluginStatus, CH.installGameAudioPlugin,
+      CH.setMaskStyle, CH.installBlurPlugin, CH.relaunchApp,
       CH.setGameAudioApps, CH.getGameAudioApps,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)

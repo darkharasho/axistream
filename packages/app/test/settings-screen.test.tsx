@@ -34,6 +34,8 @@ const base: AppState = {
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
+  blurPlugin: { status: 'missing', error: null },
+  maskStyle: 'box',
 }
 
 describe('SettingsScreen', () => {

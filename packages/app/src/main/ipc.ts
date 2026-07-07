@@ -26,6 +26,8 @@ export interface IpcHandlers {
   windowClose(): Promise<void>
   getGameAudioPluginStatus(): Promise<GameAudioPluginView>
   installGameAudioPlugin(): Promise<void>
+  setMaskStyle(style: 'box' | 'blur'): Promise<void>
+  installBlurPlugin(): Promise<void>
   relaunchApp(): Promise<void>
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
@@ -64,6 +66,8 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.windowClose, () => handlers.windowClose())
   ipcMain.handle(CH.getGameAudioPluginStatus, () => handlers.getGameAudioPluginStatus())
   ipcMain.handle(CH.installGameAudioPlugin, () => handlers.installGameAudioPlugin())
+  ipcMain.handle(CH.setMaskStyle, (_e: unknown, style: 'box' | 'blur') => handlers.setMaskStyle(style))
+  ipcMain.handle(CH.installBlurPlugin, () => handlers.installBlurPlugin())
   ipcMain.handle(CH.relaunchApp, () => handlers.relaunchApp())
   ipcMain.handle(CH.setGameAudioApps, (_e: unknown, apps: string[]) => handlers.setGameAudioApps(apps))
   ipcMain.handle(CH.getGameAudioApps, () => handlers.getGameAudioApps())
