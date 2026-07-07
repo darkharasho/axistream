@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fitOutputResolution, applyCaptureResolution } from '../src/capture-resolution.js'
+import { fitOutputResolution, applyCaptureResolution, type ResolutionDeps } from '../src/capture-resolution.js'
 
 describe('fitOutputResolution', () => {
   it('returns native dims when height is at or below the cap', () => {
@@ -44,7 +44,7 @@ describe('applyCaptureResolution', () => {
 
   it('reads source dims and applies base + fitted output via SetVideoSettings', async () => {
     const call = makeCall({ sourceWidth: 3440, sourceHeight: 1440 })
-    const res = await applyCaptureResolution({ call })
+    const res = await applyCaptureResolution({ call: call as unknown as ResolutionDeps['call'] })
     expect(res).toEqual({ baseWidth: 3440, baseHeight: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 })
     expect(call).toHaveBeenCalledWith('GetSceneItemId', { sceneName: 'Main', sourceName: 'AxiStream Capture' })
     expect(call).toHaveBeenCalledWith('SetVideoSettings', {
@@ -55,13 +55,13 @@ describe('applyCaptureResolution', () => {
 
   it('downscales a 4K source for the output but keeps base at native', async () => {
     const call = makeCall({ sourceWidth: 3840, sourceHeight: 2160 })
-    const res = await applyCaptureResolution({ call })
+    const res = await applyCaptureResolution({ call: call as unknown as ResolutionDeps['call'] })
     expect(res).toEqual({ baseWidth: 3840, baseHeight: 2160, outputWidth: 2560, outputHeight: 1440, fps: 60 })
   })
 
   it('returns null and does NOT call SetVideoSettings when dims are unreadable', async () => {
     const call = makeCall({ sourceWidth: 0, sourceHeight: 0 })
-    const res = await applyCaptureResolution({ call })
+    const res = await applyCaptureResolution({ call: call as unknown as ResolutionDeps['call'] })
     expect(res).toBeNull()
     expect(call).not.toHaveBeenCalledWith('SetVideoSettings', expect.anything())
   })

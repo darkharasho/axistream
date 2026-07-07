@@ -68,3 +68,12 @@ describe('ensureAudioInputs', () => {
     expect(r.calls.filter((c) => c.req === 'CreateSceneItem')).toEqual([])
   })
 })
+
+describe('ensureAudioInputs on win32', () => {
+  it('creates WASAPI input kinds instead of PulseAudio ones', async () => {
+    const r = recorder({ GetInputList: { inputs: [{ inputName: 'AxiStream Capture' }] } })
+    await ensureAudioInputs(r.client, 'win32')
+    const creates = r.calls.filter((c) => c.req === 'CreateInput').map((c) => c.data.inputKind)
+    expect(creates).toEqual(['wasapi_output_capture', 'wasapi_input_capture'])
+  })
+})

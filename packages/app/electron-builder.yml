@@ -20,6 +20,12 @@ files:
 asar: true
 npmRebuild: false            # everything is bundled by electron-vite; no native deps
 electronLanguages: [en-US]
+# Windows packaging groundwork — untested on a real Windows machine yet;
+# builds are not wired into CI until the first Windows smoke.
+win:
+  target: [nsis]
+  icon: build/icon.ico
+  artifactName: ${productName}-Setup-${version}.${ext}
 linux:
   target: [AppImage, deb]
   executableName: axistream
