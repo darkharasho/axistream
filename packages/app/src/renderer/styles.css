@@ -38,7 +38,15 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .navitem.on { background: rgba(34,211,238,.1); color: #bfeef7; border: 1px solid rgba(34,211,238,.22); }
 .navitem.dim { color: #586069; }
 .soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid #2a323b; padding: 3px 5px; border-radius: 5px; }
-.enginepill { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: #0d1117; border: 1px solid #161c25; color: #8b949e; font: 600 11px/1 ui-monospace, monospace; }
+/* Sidebar quick toggles */
+.quick { margin-top: auto; padding-bottom: 10px; }
+.quickrow { display: flex; gap: 6px; }
+.qt { flex: 1; display: grid; place-items: center; padding: 8px 0; border-radius: 8px; background: #0d1117; border: 1px solid #161c25; color: #55606c; cursor: pointer; }
+.qt.on { color: #22d3ee; border-color: rgba(34,211,238,.35); }
+.qt.tx { color: #f0556b; border-color: rgba(240,85,107,.45); box-shadow: 0 0 8px rgba(240,85,107,.35); }
+.qt:disabled { opacity: .4; cursor: default; }
+.qt:not(:disabled):hover { background: #131a23; }
+.enginepill { margin-top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: #0d1117; border: 1px solid #161c25; color: #8b949e; font: 600 11px/1 ui-monospace, monospace; }
 .enginepill .dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 7px #3fb950; }
 .enginepill.onair { background: rgba(240,85,107,.08); border-color: rgba(240,85,107,.25); color: #f0a3ae; }
 .enginepill.onair .dot { background: #f0556b; box-shadow: 0 0 7px #f0556b; }
@@ -127,7 +135,10 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 /* Settings screen */
 .settings-panel { display: block; background: #0c0f15; overflow: auto; }
 .settings-panel::before { display: none; }
-.settings-inner { max-width: 520px; padding: 26px; }
+.settings-inner { max-width: 1120px; padding: 26px; }
+/* Ultrawide: sections flow into two columns when there's room. */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 8px 40px; align-items: start; }
+.settings-grid > .setting { min-width: 0; margin-bottom: 0; }
 .settings-inner h2 { margin: 0 0 18px; }
 .setting { background: #0e131a; border: 1px solid #1d2530; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
 .setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }

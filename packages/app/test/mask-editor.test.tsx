@@ -5,7 +5,7 @@ import type { MaskRect } from '../src/shared/state.js'
 
 const m = (id: string): MaskRect => ({ id, x: 0.1, y: 0.1, w: 0.2, h: 0.2 })
 const ready = { status: 'ready' as const, error: null }
-const defaultStyleProps = { maskStyle: 'box' as const, blurPlugin: ready, onSetStyle: vi.fn(), onInstallBlur: vi.fn(), onRelaunch: vi.fn() }
+const defaultStyleProps = { maskStyle: 'box' as const, blurPlugin: ready, onSetStyle: vi.fn(), onInstallBlur: vi.fn(), onRelaunch: vi.fn(), masksVisible: true, onSetVisible: vi.fn() }
 
 describe('MaskEditor', () => {
   it('renders a rect per mask', () => {
@@ -112,7 +112,7 @@ describe('MaskEditor style toggle', () => {
   const ready = { status: 'ready' as const, error: null }
   const props = (over: Record<string, unknown> = {}) => ({
     masks: [], onCommit: () => {}, onDone: () => {},
-    maskStyle: 'box' as const, blurPlugin: ready,
+    maskStyle: 'box' as const, blurPlugin: ready, masksVisible: true, onSetVisible: vi.fn(),
     onSetStyle: vi.fn(), onInstallBlur: vi.fn(), onRelaunch: vi.fn(), ...over,
   })
 
@@ -152,5 +152,20 @@ describe('MaskEditor style toggle', () => {
     render(<MaskEditor {...p} />)
     fireEvent.click(screen.getByText('Solid'))
     expect(p.onSetStyle).toHaveBeenCalledWith('box')
+  })
+})
+
+
+describe('MaskEditor visibility toggle', () => {
+  it('shows On stream and flips to hidden via onSetVisible', () => {
+    const onSetVisible = vi.fn()
+    render(<MaskEditor masks={[m('a')]} onCommit={() => {}} onDone={() => {}} {...defaultStyleProps} onSetVisible={onSetVisible} />)
+    fireEvent.click(screen.getByRole('button', { name: /on stream/i }))
+    expect(onSetVisible).toHaveBeenCalledWith(false)
+  })
+
+  it('reflects the hidden state', () => {
+    render(<MaskEditor masks={[m('a')]} onCommit={() => {}} onDone={() => {}} {...defaultStyleProps} masksVisible={false} />)
+    expect(screen.getByRole('button', { name: /hidden/i })).toBeInTheDocument()
   })
 })

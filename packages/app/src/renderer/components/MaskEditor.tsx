@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Eye, EyeOff } from 'lucide-react'
 import { MAX_MASKS, type MaskRect, type AppState } from '../../shared/state.js'
 import { containContentRect, type CoverRect } from '../cover-transform.js'
 
@@ -13,7 +13,7 @@ interface Drag { id: string; mode: 'move' | 'resize'; px: number; py: number; or
 // object-fit: contain, so we map through its content rect to line up on screen.
 // Local state is authoritative while editing; every add/delete/drag-end
 // commits the full array upward (which persists + drives OBS live).
-export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPlugin, onSetStyle, onInstallBlur, onRelaunch }: {
+export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPlugin, onSetStyle, onInstallBlur, onRelaunch, masksVisible, onSetVisible }: {
   masks: MaskRect[]
   onCommit(masks: MaskRect[]): void
   onDone(): void
@@ -22,6 +22,8 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
   onSetStyle(style: 'box' | 'blur'): void
   onInstallBlur(): void
   onRelaunch(): void
+  masksVisible: boolean
+  onSetVisible(visible: boolean): void
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
   const [masks, setMasks] = useState<MaskRect[]>(initial)
@@ -88,6 +90,10 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
           <button className={`mask-style-btn${maskStyle === 'blur' ? ' on' : ''}`}
             onClick={() => { if (blurPlugin.status === 'ready') { setBlurPrompt(false); onSetStyle('blur') } else setBlurPrompt(true) }}>Blur</button>
         </div>
+        <button className="btn ghost xs" onClick={() => onSetVisible(!masksVisible)}
+          title={masksVisible ? 'Temporarily reveal these areas on stream (masks are kept)' : 'Masks are hidden from the stream — click to re-enable'}>
+          {masksVisible ? <><Eye size={12} /> On stream</> : <><EyeOff size={12} /> Hidden</>}
+        </button>
         <span className="mask-hint">Drag to move · corner to resize · masks hide these areas on stream</span>
         <button className="btn primary xs" onClick={onDone}>Done</button>
       </div>

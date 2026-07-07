@@ -22,6 +22,7 @@ export interface StreamSettingsData {
   discordWebhookUrl: string
   discordMessage: string
   pttEnabled: boolean
+  masksVisible: boolean
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   discordWebhookUrl: '',
   discordMessage: '',
   pttEnabled: false,
+  masksVisible: true,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -109,6 +111,7 @@ export class StreamSettings {
         discordWebhookUrl: typeof raw.discordWebhookUrl === 'string' ? raw.discordWebhookUrl : DEFAULT_SETTINGS.discordWebhookUrl,
         discordMessage: typeof raw.discordMessage === 'string' ? raw.discordMessage : DEFAULT_SETTINGS.discordMessage,
         pttEnabled: typeof raw.pttEnabled === 'boolean' ? raw.pttEnabled : DEFAULT_SETTINGS.pttEnabled,
+        masksVisible: typeof raw.masksVisible === 'boolean' ? raw.masksVisible : DEFAULT_SETTINGS.masksVisible,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

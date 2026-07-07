@@ -29,7 +29,7 @@ export function App() {
   return (
     <div className="app">
       <div className="dragbar" />
-      <Sidebar active={nav} phase={state.phase} onNav={setNav} />
+      <Sidebar active={nav} state={state} onNav={setNav} axi={axi} />
       {nav === 'stream'
         ? <StreamScreen state={state} preview={preview} axi={axi} store={store} />
         : <SettingsScreen state={state} axi={axi} />}

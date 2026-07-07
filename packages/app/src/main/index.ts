@@ -47,7 +47,7 @@ import { createPortalShortcuts } from './portal-shortcuts.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
-import { computeWindowSize, toggleWindowSize } from './window-size.js'
+import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
 
@@ -136,6 +136,16 @@ if (primary) app.whenReady().then(async () => {
   const push = (channel: string, payload: unknown) => { if (!win.isDestroyed()) win.webContents.send(channel, payload) }
   const setState = (p: Partial<AppState>) => { state = { ...state, ...p }; push(CH.evtState, p) }
 
+  // Fit-button label truth: recompute on every resize/toggle/capture change.
+  const pushFitted = () => {
+    const cap = state.capture
+    if (!cap) { if (state.windowFitted) setState({ windowFitted: false }); return }
+    const [cw, ch] = win.getContentSize()
+    const wa = screen.getDisplayMatching(win.getBounds()).workArea
+    setState({ windowFitted: isFittedWidth(SIDEBAR_W, cw, ch, cap.width, cap.height, WINDOW_MIN.width, wa.width) })
+  }
+  win.on('resize', () => pushFitted())
+
   const userData = app.getPath('userData')
   const keyStore = new KeyStore(join(userData, 'key.bin'), safeStorage)
   const tokenStore = new TokenStore(join(userData, 'yt-tokens.bin'), safeStorage)
@@ -170,6 +180,12 @@ if (primary) app.whenReady().then(async () => {
 
   const audio = new AudioController({ client: () => sidecar.client() })
   const maskCtl = new MaskController({ client: () => sidecar.client() })
+  // Single application point honoring the visibility toggle: hidden means OBS
+  // gets no mask items while the saved rects stay untouched in settings.
+  const applyMasksRespectingVisibility = async () => {
+    const a = settings.load()
+    await maskCtl.applyMasks(a.masksVisible ? a.masks : [], a.maskStyle)
+  }
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
 
@@ -279,7 +295,7 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async (titleOverride?: string) => {
@@ -333,7 +349,7 @@ if (primary) app.whenReady().then(async () => {
       }
     },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -345,7 +361,7 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -372,10 +388,15 @@ if (primary) app.whenReady().then(async () => {
       ])
       return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat, gw2 })
     },
+    setMasksVisible: async (visible: boolean) => {
+      settings.patch({ masksVisible: visible })
+      setState({ masksVisible: visible })
+      await applyMasksRespectingVisibility()
+    },
     setMasks: async (masks: MaskRect[]) => {
       const next = sanitizeMasks(masks)
       settings.patch({ masks: next })
-      await maskCtl.applyMasks(next, settings.load().maskStyle)
+      await applyMasksRespectingVisibility()
       setState({ masks: next })
     },
     getAudioDevices: () => audio.listMicDevices(),
@@ -441,7 +462,7 @@ if (primary) app.whenReady().then(async () => {
     },
     setMaskStyle: async (style: 'box' | 'blur') => {
       settings.patch({ maskStyle: style })
-      await maskCtl.applyMasks(settings.load().masks, style)
+      await applyMasksRespectingVisibility()
       setState({ maskStyle: style })
     },
     relaunchApp: async () => {
@@ -461,6 +482,7 @@ if (primary) app.whenReady().then(async () => {
       const wa = screen.getDisplayMatching(win.getBounds()).workArea
       const next = toggleWindowSize({ width: cw, height: ch }, wa, WINDOW_FRACTION, WINDOW_MIN, SIDEBAR_W, cap.width, cap.height)
       win.setContentSize(next.width, next.height)
+      pushFitted()
     },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
@@ -589,8 +611,9 @@ if (primary) app.whenReady().then(async () => {
         const r = await ptt.enable()
         setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed') } })
       }
-      setState({ masks: a.masks })
-      await maskCtl.applyMasks(a.masks, a.maskStyle)
+      setState({ masks: a.masks, masksVisible: a.masksVisible })
+      pushFitted()
+      await applyMasksRespectingVisibility()
       const flatpakState = await installer.detectInstalled()
       let kinds: string[] = []
       try { kinds = ((await sidecar.client().call('GetInputKindList')) as { inputKinds?: string[] }).inputKinds ?? [] } catch { /* best-effort */ }
