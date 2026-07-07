@@ -44,13 +44,16 @@ describe('createPortalShortcuts.bind', () => {
       BindShortcuts: async () => { emitted.push('BindShortcuts'); respond({}) },
       on: () => {}, removeListener: () => {},
     }
+    const registryIface = {
+      Register: async (appId: string) => { emitted.push(`Register:${appId}`) },
+    }
     const bus = {
       name: ':1.42',
       _addMatch: async (r: string) => { matches.push(r) },
       _removeMatch: async () => {},
       on: (ev: string, cb: (msg: unknown) => void) => { if (ev === 'message') messageHandler = cb },
       removeListener: () => { messageHandler = null },
-      getProxyObject: async () => ({ getInterface: () => gsIface }),
+      getProxyObject: async () => ({ getInterface: (name: string) => (name === 'org.freedesktop.host.portal.Registry' ? registryIface : gsIface) }),
       disconnect: () => {},
     }
     return { bus, matches, emitted }
@@ -60,7 +63,8 @@ describe('createPortalShortcuts.bind', () => {
     const f = fakeBus()
     const portal = createPortalShortcuts(async () => f.bus as never)
     const shortcut = await portal.bind('ptt', 'Push to talk', 'F18')
-    expect(f.emitted).toEqual(['CreateSession', 'BindShortcuts'])
+    // host app-id registration MUST precede any portal session call
+    expect(f.emitted).toEqual(['Register:link.axi.axistream', 'CreateSession', 'BindShortcuts'])
     expect(f.matches).toHaveLength(2)
     expect(f.matches[0]).toContain("member='Response'")
     expect(f.matches[0]).toContain('/org/freedesktop/portal/desktop/request/1_42/')

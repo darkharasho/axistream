@@ -94,6 +94,16 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
     async bind(id: string, description: string, preferredTrigger: string): Promise<BoundShortcut> {
       const bus = await busFactory()
       const obj = await bus.getProxyObject(PORTAL_DEST, PORTAL_PATH)
+      // Host (non-flatpak) apps have no implicit app id, and KDE's portal
+      // refuses GlobalShortcuts sessions without one ("An app id is
+      // required"). Register ours first on this connection — best-effort:
+      // older xdg-desktop-portal lacks the Registry and may not demand an id.
+      try {
+        const reg = obj.getInterface('org.freedesktop.host.portal.Registry') as ClientInterface
+        await reg.Register('link.axi.axistream', {})
+      } catch (e) {
+        console.warn('[ptt] host app-id registration unavailable', e instanceof Error ? e.message : e)
+      }
       const gs = obj.getInterface(GS_IFACE) as ClientInterface
 
       const sessionToken = nextToken()
