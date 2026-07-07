@@ -178,6 +178,15 @@ describe('StreamSettings', () => {
     expect(loaded.discordWebhookUrl).toBe('')
     expect(loaded.discordMessage).toBe('')
   })
+
+  it('defaults pttEnabled to false, round-trips it, and sanitizes non-booleans', () => {
+    const s = new StreamSettings(file)
+    expect(s.load().pttEnabled).toBe(false)
+    s.patch({ pttEnabled: true })
+    expect(new StreamSettings(file).load().pttEnabled).toBe(true)
+    s.save({ ...DEFAULT_SETTINGS, pttEnabled: 'yes' as unknown as boolean })
+    expect(new StreamSettings(file).load().pttEnabled).toBe(false)
+  })
 })
 
 describe('sanitizeMasks', () => {
