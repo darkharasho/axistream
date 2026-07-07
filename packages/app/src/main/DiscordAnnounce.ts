@@ -19,7 +19,7 @@ export async function announce(cfg: DiscordAnnounceConfig, fetchFn: FetchLike): 
   if (!url) return { ok: false, error: 'no webhook configured' }
   const message = (cfg.message ?? '').trim()
   const payload: { content?: string; embeds: DiscordEmbed[] } = {
-    embeds: [{ title: cfg.title, url: cfg.watchUrl, description: '🔴 Live now on YouTube', color: 16711680 }],
+    embeds: [{ title: cfg.title, url: cfg.watchUrl, description: '🔴 Live now on YouTube', color: 16711680 /* 0xFF0000 red */ }],
   }
   if (message) payload.content = message
   try {
