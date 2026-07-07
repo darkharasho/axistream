@@ -29,7 +29,7 @@ describe('RecordController.recordTestClip', () => {
     const params = h.calls.filter((c) => c.req === 'SetProfileParameter').map((c) => c.data)
     expect(params).toEqual([
       { parameterCategory: 'SimpleOutput', parameterName: 'FilePath', parameterValue: '/tmp/axitest' },
-      { parameterCategory: 'SimpleOutput', parameterName: 'RecFormat2', parameterValue: 'fragmented_mp4' },
+      { parameterCategory: 'SimpleOutput', parameterName: 'RecFormat2', parameterValue: 'mp4' },
       { parameterCategory: 'SimpleOutput', parameterName: 'RecQuality', parameterValue: 'Stream' },
     ])
     const order = h.calls.map((c) => c.req)
