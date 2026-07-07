@@ -48,9 +48,6 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
       {phase === 'NEEDS_TITLE' ? (
         <TitlePromptModal onClose={() => axi.getInitialState().then((s) => store.applyState(s))} />
       ) : null}
-      {capture ? (
-        <button className="fit-btn" title="Fit window to game" onClick={() => axi.fitWindowToCapture()}><Scan size={14} /></button>
-      ) : null}
       {editingMasks ? (
         <MaskEditor masks={state.masks} maskStyle={state.maskStyle} blurPlugin={state.blurPlugin}
           onSetStyle={(s) => axi.setMaskStyle(s)} onInstallBlur={() => axi.installBlurPlugin()}
@@ -67,6 +64,9 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
             : <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
           {phase === 'AWAITING_APPROVAL' ? null
             : <button className="btn ghost xs" onClick={() => setEditingMasks((v) => !v)} title="Black out chat or other areas on the stream"><Shield size={12} /> Masks</button>}
+          {capture && phase !== 'AWAITING_APPROVAL'
+            ? <button className="btn ghost xs" onClick={() => axi.fitWindowToCapture()} title="Resize the window to the game's aspect (removes letterbox bars)"><Scan size={12} /> Fit</button>
+            : null}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />

@@ -22,7 +22,7 @@ export interface StreamSettingsData {
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
-  titleTemplate: '',
+  titleTemplate: '{{date}} WvW Raid - {{team}} - {{class}} - {{map}}',
   dateFormat: 'YYYY-MM-DD',
   privacy: 'public',
   counter: 0,
