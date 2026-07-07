@@ -67,7 +67,9 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
         streams.add(stream)
         let rest: Buffer = Buffer.alloc(0)
         stream.on('data', ((chunk: Buffer) => {
-          const parsed = parseInputEvents(Buffer.concat([rest, chunk]))
+          // fast path: mice flood EV_REL frames — skip the concat allocation
+          // unless a previous read left a partial frame
+          const parsed = parseInputEvents(rest.length === 0 ? chunk : Buffer.concat([rest, chunk]))
           rest = parsed.rest
           for (const ev of parsed.events) {
             if (ev.type !== EV_KEY || ev.code !== KEY_F18) continue
