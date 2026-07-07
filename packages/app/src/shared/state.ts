@@ -120,6 +120,9 @@ export const CH = {
   updatesCheck: 'updates:check',
   updatesInstall: 'updates:install',
   evtUpdateStatus: 'updates:status',
+  appVersion: 'app:version',
+  getWhatsNew: 'app:getWhatsNew',
+  setLastSeenVersion: 'app:setLastSeenVersion',
 } as const
 
 export interface AxiApi {
@@ -163,6 +166,9 @@ export interface AxiApi {
   setMasksVisible(visible: boolean): Promise<void>
   checkForUpdates(): Promise<void>
   installUpdate(): Promise<void>
+  appVersion(): Promise<string>
+  getWhatsNew(): Promise<{ version: string; notes: string | null }>
+  setLastSeenVersion(v: string): Promise<void>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void

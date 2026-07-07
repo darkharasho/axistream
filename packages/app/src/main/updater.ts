@@ -3,6 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import electronUpdater from 'electron-updater'
 import { CH, type UpdateStatus } from '../shared/state.js'
+import { isRetryableAutoUpdateError, formatAutoUpdateErrorMessage } from '../shared/autoupdate-errors.js'
 
 /**
  * electron-updater installs an AppImage update by `unlink`ing process.env.APPIMAGE
@@ -101,7 +102,9 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   // Manual check + install are always registered so the renderer can call
   // them; in dev they simply report "none".
   ipcMain.handle(CH.updatesCheck, async () => {
-    if (!app.isPackaged) return { state: 'none' } as UpdateStatus
+    // Dev builds have no update feed — push 'none' so the Updates section
+    // shows "Up to date" instead of a dead button.
+    if (!app.isPackaged) { send({ state: 'none' }); return { state: 'none' } as UpdateStatus }
     try {
       await autoUpdater.checkForUpdates()
     } catch (err) {
@@ -125,22 +128,31 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
 
+  let retryAttempts = 0
+  let retryTimer: ReturnType<typeof setTimeout> | null = null
+  const resetRetry = () => { retryAttempts = 0; if (retryTimer) { clearTimeout(retryTimer); retryTimer = null } }
+
   autoUpdater.on('checking-for-update', () => {
+    resetRetry()
     ulog.info('checking for update')
     send({ state: 'checking' })
   })
   autoUpdater.on('update-available', (info) => {
+    resetRetry()
     ulog.info(`update available: ${info.version}`)
     send({ state: 'available', version: info.version })
   })
   autoUpdater.on('update-not-available', (info) => {
+    resetRetry()
     ulog.info(`no update available (latest seen: ${info?.version ?? 'unknown'})`)
     send({ state: 'none' })
   })
-  autoUpdater.on('download-progress', (p) =>
+  autoUpdater.on('download-progress', (p) => {
+    resetRetry()
     send({ state: 'downloading', percent: Math.round(p.percent) })
-  )
+  })
   autoUpdater.on('update-downloaded', (info) => {
+    resetRetry()
     ulog.info(`update downloaded: ${info.version} — installs on quit`)
     // Ready the install path now so autoInstallOnAppQuit also survives a missing
     // APPIMAGE, not just the explicit "Restart & update" button.
@@ -150,13 +162,20 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   autoUpdater.on('error', (err) => {
     ulog.error('updater error:', err)
     const raw = err?.message ?? String(err)
-    // The new version downloads fine; only the in-place AppImage swap can ENOENT
-    // when the running file was moved/removed externally. Say something the user
-    // can act on instead of a raw unlink stack.
-    const message = /ENOENT|APPIMAGE|unlink/i.test(raw)
-      ? 'Update downloaded, but the app could not replace its AppImage automatically — the running file may have been moved or removed. Reinstall the latest AppImage from the Releases page.'
-      : raw
-    send({ state: 'error', message })
+    // AppImage swap ENOENT is a real, non-retryable failure — keep its specific copy.
+    if (/ENOENT|APPIMAGE|unlink/i.test(raw)) {
+      send({ state: 'error', message: 'Update downloaded, but the app could not replace its AppImage automatically — the running file may have been moved or removed. Reinstall the latest AppImage from the Releases page.' })
+      return
+    }
+    if (isRetryableAutoUpdateError(err) && retryAttempts < 1) {
+      retryAttempts += 1
+      ulog.warn(`retryable update error, retrying in 2s (${retryAttempts}/1): ${raw}`)
+      send({ state: 'checking' })
+      if (retryTimer) clearTimeout(retryTimer)
+      retryTimer = setTimeout(() => void autoUpdater.checkForUpdates().catch(() => {}), 2000)
+      return
+    }
+    send({ state: 'error', message: formatAutoUpdateErrorMessage(err) })
   })
 
   // Check shortly after launch, then hourly.

@@ -21,6 +21,12 @@ const axi = {
   setGameAudioApps: vi.fn(async () => {}),
   getGameAudioApps: vi.fn(async () => []),
   onAudioLevels: vi.fn(() => () => {}),
+  appVersion: vi.fn(async () => '0.1.4'),
+  checkForUpdates: vi.fn(async () => {}),
+  installUpdate: vi.fn(async () => {}),
+  getWhatsNew: vi.fn(async () => ({ version: '0.1.4', notes: null as string | null })),
+  setLastSeenVersion: vi.fn(async () => {}),
+  onUpdateStatus: vi.fn(() => () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
