@@ -25,6 +25,7 @@ export interface StreamSettingsData {
   masksVisible: boolean
   pttKeyCode: number
   pttKeyName: string
+  lastSeenVersion: string
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -47,6 +48,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   masksVisible: true,
   pttKeyCode: 188,
   pttKeyName: 'F18',
+  lastSeenVersion: '',
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -118,6 +120,7 @@ export class StreamSettings {
         masksVisible: typeof raw.masksVisible === 'boolean' ? raw.masksVisible : DEFAULT_SETTINGS.masksVisible,
         pttKeyCode: Number.isInteger(raw.pttKeyCode) && (raw.pttKeyCode as number) >= 1 && (raw.pttKeyCode as number) <= 767 ? raw.pttKeyCode as number : DEFAULT_SETTINGS.pttKeyCode,
         pttKeyName: typeof raw.pttKeyName === 'string' && raw.pttKeyName ? raw.pttKeyName : DEFAULT_SETTINGS.pttKeyName,
+        lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

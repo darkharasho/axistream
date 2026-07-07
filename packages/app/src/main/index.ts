@@ -49,6 +49,7 @@ import { createEvdevShortcuts, captureNextKey } from './evdev-keys.js'
 import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
+import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import type { PttKey } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
@@ -616,6 +617,18 @@ if (primary) app.whenReady().then(async () => {
         return { ok: false, error: e instanceof Error ? e.message : String(e) }
       }
     },
+    appVersion: async () => app.getVersion(),
+    getWhatsNew: async () => {
+      const version = app.getVersion()
+      try {
+        const res = await fetch('https://api.github.com/repos/darkharasho/axistream/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
+        if (!res.ok) return { version, notes: null }
+        const raw = await res.json() as { tag_name?: string; body?: string }[]
+        const releases: GithubRelease[] = raw.map((r) => ({ tag: String(r.tag_name ?? ''), body: String(r.body ?? '') }))
+        return { version, notes: selectReleaseNotes(releases, version, settings.load().lastSeenVersion || null) }
+      } catch { return { version, notes: null } }
+    },
+    setLastSeenVersion: async (v) => { settings.patch({ lastSeenVersion: v }) },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 

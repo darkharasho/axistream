@@ -40,6 +40,9 @@ export interface IpcHandlers {
   capturePttKey(): Promise<PttKey | null>
   unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
+  appVersion(): Promise<string>
+  getWhatsNew(): Promise<{ version: string; notes: string | null }>
+  setLastSeenVersion(v: string): Promise<void>
 }
 
 export interface IpcDeps {
@@ -88,5 +91,8 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.capturePttKey, () => handlers.capturePttKey())
   ipcMain.handle(CH.unlockPassthrough, () => handlers.unlockPassthrough())
   ipcMain.handle(CH.setMasksVisible, (_e: unknown, visible: boolean) => handlers.setMasksVisible(visible))
+  ipcMain.handle(CH.appVersion, () => handlers.appVersion())
+  ipcMain.handle(CH.getWhatsNew, () => handlers.getWhatsNew())
+  ipcMain.handle(CH.setLastSeenVersion, (_e: unknown, v: string) => handlers.setLastSeenVersion(v))
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

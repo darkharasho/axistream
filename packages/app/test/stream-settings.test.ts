@@ -201,6 +201,13 @@ describe('StreamSettings', () => {
     expect(clean.pttKeyCode).toBe(188)
     expect(clean.pttKeyName).toBe('F18')
   })
+
+  it('defaults lastSeenVersion to empty and round-trips it', () => {
+    const s = new StreamSettings(file)
+    expect(s.load().lastSeenVersion).toBe('')
+    s.patch({ lastSeenVersion: '0.1.4' })
+    expect(new StreamSettings(file).load().lastSeenVersion).toBe('0.1.4')
+  })
 })
 
 describe('sanitizeMasks', () => {
