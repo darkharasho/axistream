@@ -187,6 +187,20 @@ describe('StreamSettings', () => {
     s.save({ ...DEFAULT_SETTINGS, pttEnabled: 'yes' as unknown as boolean })
     expect(new StreamSettings(file).load().pttEnabled).toBe(false)
   })
+
+  it('defaults the PTT key to F18/188, round-trips, and sanitizes garbage', () => {
+    const s = new StreamSettings(file)
+    expect(s.load().pttKeyCode).toBe(188)
+    expect(s.load().pttKeyName).toBe('F18')
+    s.patch({ pttKeyCode: 185, pttKeyName: 'F15' })
+    const reloaded = new StreamSettings(file).load()
+    expect(reloaded.pttKeyCode).toBe(185)
+    expect(reloaded.pttKeyName).toBe('F15')
+    s.save({ ...DEFAULT_SETTINGS, pttKeyCode: 9999 as never, pttKeyName: '' as never })
+    const clean = new StreamSettings(file).load()
+    expect(clean.pttKeyCode).toBe(188)
+    expect(clean.pttKeyName).toBe('F18')
+  })
 })
 
 describe('sanitizeMasks', () => {
