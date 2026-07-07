@@ -39,9 +39,10 @@ describe('createPortalShortcuts.bind', () => {
         body: [responseCode, results],
       }))
     }
+    const bindShortcutsArgs: unknown[][] = []
     const gsIface = {
       CreateSession: async () => { emitted.push('CreateSession'); respond({ session_handle: { value: '/session/handle/1' } }) },
-      BindShortcuts: async () => { emitted.push('BindShortcuts'); respond({}) },
+      BindShortcuts: async (...a: unknown[]) => { emitted.push('BindShortcuts'); bindShortcutsArgs.push(a); respond({}) },
       on: () => {}, removeListener: () => {},
     }
     const registryIface = {
@@ -56,24 +57,27 @@ describe('createPortalShortcuts.bind', () => {
       getProxyObject: async () => ({ getInterface: (name: string) => (name === 'org.freedesktop.host.portal.Registry' ? registryIface : gsIface) }),
       disconnect: () => {},
     }
-    return { bus, matches, emitted }
+    return { bus, matches, emitted, bindShortcutsArgs }
   }
 
   it('completes CreateSession\u2192BindShortcuts via raw match-rule Response waits', async () => {
     const f = fakeBus()
     const portal = createPortalShortcuts(async () => f.bus as never)
-    const shortcut = await portal.bind('ptt', 'Push to talk', 'F18')
+    const shortcut = await portal.bind('ptt', 'Push to talk', { code: 188, name: 'F18' })
     // host app-id registration MUST precede any portal session call
     expect(f.emitted).toEqual(['Register:link.axi.axistream', 'CreateSession', 'BindShortcuts'])
     expect(f.matches).toHaveLength(2)
     expect(f.matches[0]).toContain("member='Response'")
     expect(f.matches[0]).toContain('/org/freedesktop/portal/desktop/request/1_42/')
+    // key.name must reach the preferred_trigger Variant on the wire
+    const shortcuts = f.bindShortcutsArgs[0][1] as Array<[string, Record<string, { value: unknown }>]>
+    expect(shortcuts[0][1].preferred_trigger.value).toBe('F18')
     await shortcut.close()
   })
 
   it('rejects with the denial code when the portal says no', async () => {
     const f = fakeBus(1)
     const portal = createPortalShortcuts(async () => f.bus as never)
-    await expect(portal.bind('ptt', 'Push to talk', 'F18')).rejects.toThrow(/denied \(code 1\)/)
+    await expect(portal.bind('ptt', 'Push to talk', { code: 188, name: 'F18' })).rejects.toThrow(/denied \(code 1\)/)
   })
 })

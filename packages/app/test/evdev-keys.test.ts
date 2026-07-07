@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { parseInputEvents, createEvdevShortcuts, KEY_F18 } from '../src/main/evdev-keys.js'
+import { parseInputEvents, createEvdevShortcuts, captureNextKey } from '../src/main/evdev-keys.js'
+
+const KEY_F18 = 188
 
 function frame(type: number, code: number, value: number): Buffer {
   const b = Buffer.alloc(24)
@@ -65,7 +67,7 @@ describe('createEvdevShortcuts', () => {
 
   it('fires activated/deactivated for F18 press/release; ignores repeats and other codes', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', 'F18')
+    const sc = await h.backend.bind('ptt', 'Push to talk', { code: KEY_F18, name: 'F18' })
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -79,7 +81,7 @@ describe('createEvdevShortcuts', () => {
 
   it('reassembles frames split across reads', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', 'F18')
+    const sc = await h.backend.bind('ptt', 'Push to talk', { code: KEY_F18, name: 'F18' })
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     const f = frame(1, KEY_F18, 1)
@@ -91,7 +93,7 @@ describe('createEvdevShortcuts', () => {
 
   it('a device stream error drops that device without throwing; close destroys all streams', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', 'F18')
+    const sc = await h.backend.bind('ptt', 'Push to talk', { code: KEY_F18, name: 'F18' })
     h.devs['/dev/input/event3'].emitError(new Error('unplugged'))
     await sc.close()
     expect(h.devs['/dev/input/event7'].stream.destroy).toHaveBeenCalled()
@@ -99,6 +101,55 @@ describe('createEvdevShortcuts', () => {
 
   it('bind rejects when nothing is readable', async () => {
     const h = harness(false)
-    await expect(h.backend.bind('ptt', 'Push to talk', 'F18')).rejects.toThrow(/no readable input devices/i)
+    await expect(h.backend.bind('ptt', 'Push to talk', { code: KEY_F18, name: 'F18' })).rejects.toThrow(/no readable input devices/i)
+  })
+})
+
+describe('createEvdevShortcuts key parameter', () => {
+  it('filters on the PASSED code, not 188', async () => {
+    const devs = { '/dev/input/event3': fakeDevice(), '/dev/input/event7': fakeDevice() }
+    const backend = createEvdevShortcuts({
+      listDevices: () => Object.keys(devs),
+      canRead: () => true,
+      openStream: (p) => devs[p as keyof typeof devs].stream as never,
+    })
+    const sc = await backend.bind('ptt', 'Push to talk', { code: 185, name: 'F15' })
+    const seq: string[] = []
+    sc.onActivated(() => seq.push('down'))
+    const dev = devs['/dev/input/event3']
+    dev.emitData(frame(1, KEY_F18, 1))   // old key — must NOT fire
+    dev.emitData(frame(1, 185, 1))
+    expect(seq).toEqual(['down'])
+  })
+})
+
+describe('captureNextKey', () => {
+  function capHarness() {
+    const devs = { '/dev/input/event3': fakeDevice() }
+    return { devs, deps: {
+      listDevices: () => Object.keys(devs),
+      canRead: () => true,
+      openStream: (p: string) => devs[p as keyof typeof devs].stream as never,
+    } }
+  }
+  it('resolves with the first keydown, named from the table', async () => {
+    const h = capHarness()
+    const p = captureNextKey(h.deps, 5000)
+    h.devs['/dev/input/event3'].emitData(frame(1, 185, 1))
+    expect(await p).toEqual({ code: 185, name: 'F15' })
+    expect(h.devs['/dev/input/event3'].stream.destroy).toHaveBeenCalled()
+  })
+  it('ignores releases and non-key events; Escape cancels with null', async () => {
+    const h = capHarness()
+    const p = captureNextKey(h.deps, 5000)
+    const dev = h.devs['/dev/input/event3']
+    dev.emitData(frame(1, 185, 0))  // release — ignored
+    dev.emitData(frame(2, 0, 1))    // EV_REL — ignored
+    dev.emitData(frame(1, 1, 1))    // Escape — cancel
+    expect(await p).toBeNull()
+  })
+  it('times out to null', async () => {
+    const h = capHarness()
+    expect(await captureNextKey(h.deps, 10)).toBeNull()
   })
 })

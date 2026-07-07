@@ -221,10 +221,10 @@ if (primary) app.whenReady().then(async () => {
   const ptt = new PttController({
     portal: {
       available: async () => (await evdevBackend.available()) || (await portalBackend.available()),
-      bind: async (id, description, preferredTrigger) => {
+      bind: async (id, description, key) => {
         const sel = await selectBackend()
         pttMode = sel.mode
-        return sel.backend.bind(id, description, preferredTrigger)
+        return sel.backend.bind(id, description, key)
       },
     },
     exec: execAsync,
@@ -233,6 +233,7 @@ if (primary) app.whenReady().then(async () => {
       return dev && dev !== 'default' ? dev : '@DEFAULT_SOURCE@'
     },
     onActive: (active) => setState({ ptt: { ...state.ptt, active } }),
+    key: () => { const s = settings.load(); return { code: s.pttKeyCode, name: s.pttKeyName } },
   })
 
   const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
