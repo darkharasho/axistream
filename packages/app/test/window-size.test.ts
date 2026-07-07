@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeWindowSize } from '../src/main/window-size.js'
+import { computeWindowSize, fitWidthForCapture } from '../src/main/window-size.js'
 
 const MIN = { width: 820, height: 560 }
 
@@ -31,5 +31,21 @@ describe('computeWindowSize', () => {
   it('never returns below the floor at the exact boundary', () => {
     // 1366*0.6 = 819.6 -> round 820 (== floor); 933*0.6 = 559.8 -> round 560 (== floor)
     expect(computeWindowSize({ width: 1366, height: 933 }, 0.6, MIN)).toEqual({ width: 820, height: 560 })
+  })
+})
+
+describe('fitWidthForCapture', () => {
+  it('ultrawide capture widens the window to remove bars', () => {
+    // content height 840, capture 3440x1440 → 200 + 840*3440/1440 = 200 + 2006.66 → 2207
+    expect(fitWidthForCapture(200, 840, 3440, 1440, 820, 3400)).toBe(2207)
+  })
+  it('clamps to the work-area max', () => {
+    expect(fitWidthForCapture(200, 840, 3440, 1440, 820, 1800)).toBe(1800)
+  })
+  it('clamps to the window minimum', () => {
+    expect(fitWidthForCapture(200, 300, 400, 1440, 820, 3400)).toBe(820)
+  })
+  it('degenerate capture dims return the minimum', () => {
+    expect(fitWidthForCapture(200, 840, 0, 0, 820, 3400)).toBe(820)
   })
 })
