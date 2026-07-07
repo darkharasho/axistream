@@ -154,17 +154,15 @@ describe('captureNextKey', () => {
   })
 })
 
-describe('captureNextKey off-table clamp', () => {
-  it('ignores mouse buttons and keeps listening for a curated key', async () => {
+describe('captureNextKey accepts any key', () => {
+  it('captures an off-table key with a KEY_<n> name', async () => {
     const devs = { '/dev/input/event3': fakeDevice() }
     const p = captureNextKey({
       listDevices: () => Object.keys(devs),
       canRead: () => true,
       openStream: (d: string) => devs[d as keyof typeof devs].stream as never,
     }, 5000)
-    const dev = devs['/dev/input/event3']
-    dev.emitData(frame(1, 275, 1))  // BTN_SIDE — off-table, ignored
-    dev.emitData(frame(1, 185, 1))  // F15 — curated
-    expect(await p).toEqual({ code: 185, name: 'F15' })
+    devs['/dev/input/event3'].emitData(frame(1, 275, 1))  // BTN_SIDE — off-table
+    expect(await p).toEqual({ code: 275, name: 'KEY_275' })
   })
 })

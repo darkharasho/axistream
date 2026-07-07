@@ -201,11 +201,10 @@ describe('AudioSettings', () => {
     expect(screen.getByLabelText(/push to talk/i)).toBeInTheDocument()
   })
 
-  it('toggling PTT calls setPttEnabled and shows the Discord note', async () => {
+  it('toggling PTT calls setPttEnabled', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     fireEvent.click(screen.getByLabelText(/push to talk/i))
     expect(axi.setPttEnabled).toHaveBeenCalledWith(true)
-    expect(screen.getByText(/voice activity/i)).toBeInTheDocument()
   })
 
   it('shows TRANSMITTING while active and the portal-missing hint when unavailable', async () => {
@@ -259,7 +258,7 @@ describe('AudioSettings', () => {
 
   it('exclusive rebind is a dropdown calling setPttKey', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
-    fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: '183' } })
+    fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: 'F13' } })
     expect(axi.setPttKey).toHaveBeenCalledWith({ code: 183, name: 'F13' })
   })
 })

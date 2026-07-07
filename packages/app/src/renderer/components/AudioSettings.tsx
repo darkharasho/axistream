@@ -198,16 +198,14 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
               {unlockErr && <p className="ptt-err">{unlockErr}</p>}
               <label className="muted">Push-to-talk key
-                <select value={String(PTT_KEY_CHOICES.find((k) => k.name === ptt.keyName)?.code ?? 188)}
-                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.code === Number(e.target.value)); if (k) axi().setPttKey(k) }}>
-                  {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.code}>{k.name}</option>)}
+                <select value={ptt.keyName}
+                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttKey(k) }}>
+                  {!PTT_KEY_CHOICES.some((k) => k.name === ptt.keyName) && <option value={ptt.keyName}>{ptt.keyName}</option>}
+                  {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.name}>{k.name}</option>)}
                 </select>
               </label>
               <p className="muted">Binding again may show a KDE confirmation.</p>
             </>
-          )}
-          {pttEnabled && (
-            <p className="muted">AxiStream mutes your mic at the system level and unmutes it while the key is held. Set Discord to <strong>Voice Activity</strong> (not Push to Talk) — it follows automatically.</p>
           )}
         </div>
       )}
