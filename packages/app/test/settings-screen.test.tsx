@@ -39,7 +39,7 @@ const base: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
-  ptt: { available: false, enabled: false, active: false, error: null },
+  ptt: { available: false, enabled: false, active: false, error: null }, windowFitted: false, masksVisible: true,
 }
 
 describe('SettingsScreen', () => {

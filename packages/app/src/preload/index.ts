@@ -42,6 +42,7 @@ const api: AxiApi = {
   testDiscordWebhook: () => ipcRenderer.invoke(CH.testDiscordWebhook) as Promise<DiscordTestResult>,
   recordAudioTest: () => ipcRenderer.invoke(CH.recordAudioTest) as Promise<AudioTestResult>,
   setPttEnabled: (enabled) => ipcRenderer.invoke(CH.setPttEnabled, enabled) as Promise<void>,
+  setMasksVisible: (visible) => ipcRenderer.invoke(CH.setMasksVisible, visible) as Promise<void>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),

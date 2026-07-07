@@ -4,7 +4,7 @@ import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
 const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, keyMasked: '····7f3a', stats: null, error: null, encoder: 'x264',
-  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null } }
+  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null }, windowFitted: false, masksVisible: true }
 const axi = { provision: vi.fn(), saveKey: vi.fn(), forgetKey: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn() }
 const store = { applyState: vi.fn() }
 
@@ -39,5 +39,15 @@ describe('StreamScreen', () => {
     render(<StreamScreen state={{ ...base, phase: 'LIVE', stats: { bitrateKbps: 5980, droppedFrames: 0, droppedPct: 0, durationMs: 767000, encoder: 'x264', cpuPct: 11, reconnecting: false } }} preview={null} axi={axi as any} store={store as any} />)
     expect(screen.getByRole('button', { name: /end stream/i })).toBeInTheDocument()
     expect(screen.getByText('LIVE')).toBeInTheDocument()
+  })
+})
+
+
+describe('StreamScreen fit label', () => {
+  it("says Fit when unfitted and Unfit when the window matches the game's aspect", () => {
+    const { rerender } = render(<StreamScreen state={{ ...base, windowFitted: false }} preview={null} axi={axi as never} store={store as never} />)
+    expect(screen.getByRole('button', { name: /fit/i })).toHaveTextContent('Fit')
+    rerender(<StreamScreen state={{ ...base, windowFitted: true }} preview={null} axi={axi as never} store={store as never} />)
+    expect(screen.getByRole('button', { name: /unfit/i })).toBeInTheDocument()
   })
 })

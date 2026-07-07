@@ -30,3 +30,11 @@ export function toggleWindowSize(current: Size, workArea: Size, fraction: number
   if (Math.abs(current.width - fitW) <= 2) return computeWindowSize(workArea, fraction, min)
   return { width: fitW, height: current.height }
 }
+
+/** Whether the current content width already matches fit-to-capture, using
+ *  the same ±2px rounding tolerance as toggleWindowSize — drives the Fit
+ *  button's label (Fit vs Unfit). Degenerate capture dims are never fitted. */
+export function isFittedWidth(sidebarW: number, currentW: number, contentH: number, capW: number, capH: number, minW: number, maxW: number): boolean {
+  if (!(capW > 0) || !(capH > 0)) return false
+  return Math.abs(currentW - fitWidthForCapture(sidebarW, contentH, capW, capH, minW, maxW)) <= 2
+}

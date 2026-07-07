@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeWindowSize, fitWidthForCapture, toggleWindowSize } from '../src/main/window-size.js'
+import { computeWindowSize, fitWidthForCapture, toggleWindowSize, isFittedWidth } from '../src/main/window-size.js'
 
 const MIN = { width: 820, height: 560 }
 
@@ -70,5 +70,17 @@ describe('toggleWindowSize', () => {
     const fitW = fitWidthForCapture(200, 864, 3440, 1440, MIN.width, WA.width)
     expect(toggleWindowSize({ width: fitW - 2, height: 864 }, WA, 0.6, MIN, 200, 3440, 1440))
       .toEqual(computeWindowSize(WA, 0.6, MIN))
+  })
+})
+
+describe('isFittedWidth', () => {
+  it('true within the same ±2 tolerance the toggle uses', () => {
+    const fitW = fitWidthForCapture(200, 864, 3440, 1440, MIN.width, 2560) // clamped to 2560
+    expect(isFittedWidth(200, fitW, 864, 3440, 1440, MIN.width, 2560)).toBe(true)
+    expect(isFittedWidth(200, fitW - 2, 864, 3440, 1440, MIN.width, 2560)).toBe(true)
+    expect(isFittedWidth(200, fitW - 3, 864, 3440, 1440, MIN.width, 2560)).toBe(false)
+  })
+  it('false for degenerate capture dims', () => {
+    expect(isFittedWidth(200, 820, 864, 0, 0, MIN.width, 2560)).toBe(false)
   })
 })
