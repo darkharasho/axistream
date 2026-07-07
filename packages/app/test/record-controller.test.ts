@@ -12,6 +12,7 @@ function harness(overrides: Record<string, any> = {}) {
         return v
       }
       if (req === 'StopRecord') return { outputPath: '/tmp/clip.mp4' }
+      if (req === 'GetRecordStatus') return { outputActive: true }
       return {}
     }),
   }
@@ -34,7 +35,18 @@ describe('RecordController.recordTestClip', () => {
     const order = h.calls.map((c) => c.req)
     expect(order.indexOf('StartRecord')).toBeGreaterThan(order.lastIndexOf('SetProfileParameter'))
     expect(order.indexOf('StopRecord')).toBeGreaterThan(order.indexOf('StartRecord'))
-    expect(h.sleeps).toEqual([6000])
+    expect(h.sleeps).toEqual([300, 6000])
+  })
+
+  it('fails fast when the record output never becomes active', async () => {
+    // A FilePath OBS cannot write (e.g. a dir missing inside its flatpak
+    // namespace) kills the output right after StartRecord is accepted.
+    const h = harness({ GetRecordStatus: { outputActive: false } })
+    const r = await h.ctl.recordTestClip(6000, '/tmp/x')
+    expect(r.ok).toBe(false)
+    expect(r.error).toMatch(/did not start/i)
+    expect(h.calls.some((c) => c.req === 'StopRecord')).toBe(false)
+    expect(h.sleeps).toEqual([300])
   })
 
   it('a profile-param failure aborts before StartRecord', async () => {
@@ -57,6 +69,7 @@ describe('RecordController.recordTestClip', () => {
     const client = {
       call: vi.fn(async (req: string) => {
         if (req === 'StopRecord') { stops++; throw new Error('stop failed') }
+        if (req === 'GetRecordStatus') return { outputActive: true }
         return {}
       }),
     }

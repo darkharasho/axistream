@@ -33,6 +33,22 @@ export class RecordController {
       console.warn('[record] StartRecord failed', msg)
       return { ok: false, error: msg }
     }
+    // StartRecord only means "request accepted" — the output can die right
+    // after (e.g. a FilePath that doesn't exist inside OBS's flatpak
+    // namespace). Verify it actually went active before burning the full
+    // record window on a dead output.
+    await sleep(300)
+    try {
+      const st = await c.call('GetRecordStatus') as { outputActive?: boolean }
+      if (!st.outputActive) {
+        console.warn('[record] output did not start (bad record folder?)')
+        return { ok: false, error: 'recording did not start — is the record folder writable by OBS?' }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.warn('[record] GetRecordStatus failed', msg)
+      return { ok: false, error: msg }
+    }
     await sleep(durationMs)
     let lastError = ''
     for (let attempt = 0; attempt < 2; attempt++) {

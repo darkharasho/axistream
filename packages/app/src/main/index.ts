@@ -455,9 +455,12 @@ if (primary) app.whenReady().then(async () => {
       if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture) {
         return { ok: false, error: 'not available right now' }
       }
-      // Dedicated subdir so the boot sweep can never touch third-party files
-      // in the shared OS temp dir.
-      const dir = join(app.getPath('temp'), 'axistream-audiotest')
+      // Must be a HOME-based path: OBS writes this file from inside its
+      // flatpak, whose /tmp is a private tmpfs (even with host access), so an
+      // OS-temp dir here means the record output dies instantly (StopRecord
+      // 501, no file). Home is mapped identically inside the sandbox. The
+      // dedicated subdir keeps the boot sweep away from anything else.
+      const dir = join(app.getPath('userData'), 'audiotest')
       await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
       const r = await recorder.recordTestClip(6000, dir)
       if (!r.ok || !r.outputPath) return { ok: false, error: r.error ?? 'recording failed' }
@@ -491,7 +494,7 @@ if (primary) app.whenReady().then(async () => {
   // an app-owned subdir, so nothing third-party can ever be swept).
   void (async () => {
     try {
-      const dir = join(app.getPath('temp'), 'axistream-audiotest')
+      const dir = join(app.getPath('userData'), 'audiotest')
       const dayAgo = Date.now() - 86_400_000
       for (const f of await fsPromises.readdir(dir)) {
         if (!f.endsWith('.mp4')) continue
