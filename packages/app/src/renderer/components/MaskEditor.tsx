@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { MAX_MASKS, type MaskRect, type AppState } from '../../shared/state.js'
-import { coverContentRect, type CoverRect } from '../cover-transform.js'
+import { containContentRect, type CoverRect } from '../cover-transform.js'
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 const newId = () => Math.random().toString(36).slice(2, 10)
@@ -38,7 +38,7 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
       const el = boxRef.current
       if (!el) return
       const video = el.parentElement?.querySelector('video')
-      setContent(coverContentRect(video?.videoWidth ?? 0, video?.videoHeight ?? 0, el.clientWidth, el.clientHeight))
+      setContent(containContentRect(video?.videoWidth ?? 0, video?.videoHeight ?? 0, el.clientWidth, el.clientHeight))
     }
     measure()
     window.addEventListener('resize', measure)
