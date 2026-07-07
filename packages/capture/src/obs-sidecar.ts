@@ -54,6 +54,13 @@ export class ObsSidecar {
 
   get port(): number { return this._port }
 
+  /** Connection info for auxiliary websocket connections (e.g. the audio
+   *  level meter). Null until start(). */
+  wsInfo(): { url: string; password: string } | null {
+    if (!this.obs || !this._port) return null
+    return { url: `ws://127.0.0.1:${this._port}`, password: this.password }
+  }
+
   on(event: 'crashed', cb: () => void): void { this.emitter.on(event, cb) }
 
   client(): OBSWebSocket {
