@@ -290,7 +290,11 @@ if (primary) app.whenReady().then(async () => {
             try { await live.confirmLive(session!.broadcastId) } catch { /* best-effort */ }
             const cfg = settings.load()
             if (cfg.discordWebhookUrl.trim()) {
-              await announce({
+              // Fire-and-forget: onIngestActive is awaited on the go-live
+              // critical path (StreamController flips to LIVE only after it
+              // resolves), so a slow webhook must not delay the LIVE
+              // transition. announce swallows its own errors; void detaches it.
+              void announce({
                 webhookUrl: cfg.discordWebhookUrl,
                 title,
                 watchUrl: `https://www.youtube.com/watch?v=${session!.broadcastId}`,
