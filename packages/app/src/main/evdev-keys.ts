@@ -41,6 +41,8 @@ const realDeps: EvdevDeps = {
   canRead: (path) => {
     try { closeSync(openSync(path, 'r')); return true } catch { return false }
   },
+  // fs.ReadStream's event overloads don't structurally match the narrow
+  // EvdevDeps shape — the cast is interface-narrowing, not type-punning.
   openStream: (path) => createReadStream(path) as never,
 }
 
@@ -59,8 +61,10 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
       if (readable.length === 0) throw new Error('no readable input devices — pass-through is locked')
       let onAct: (() => void) | null = null
       let onDeact: (() => void) | null = null
-      const streams = readable.map((path) => {
+      const streams = new Set<ReturnType<EvdevDeps['openStream']>>()
+      readable.forEach((path) => {
         const stream = deps.openStream(path)
+        streams.add(stream)
         let rest: Buffer = Buffer.alloc(0)
         stream.on('data', ((chunk: Buffer) => {
           const parsed = parseInputEvents(Buffer.concat([rest, chunk]))
@@ -74,8 +78,9 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
         }) as never)
         stream.on('error', ((e: Error) => {
           console.warn(`[ptt] evdev device dropped (${path}):`, e.message)
+          streams.delete(stream)
+          try { stream.destroy() } catch { /* ignore */ }
         }) as never)
-        return stream
       })
       return {
         onActivated: (cb) => { onAct = cb },

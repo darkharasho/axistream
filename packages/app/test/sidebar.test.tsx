@@ -9,7 +9,7 @@ const mkState = (over: Partial<AppState> = {}): AppState => ({
   phase: 'READY',
   audio: { ...INITIAL_STATE.audio, micEnabled: true },
   masks: [{ id: 'a', x: 0.1, y: 0.1, w: 0.2, h: 0.2 }],
-  ptt: { available: true, enabled: false, active: false, error: null, mode: null as 'passthrough' | 'exclusive' | null },
+  ptt: { available: true, enabled: false, active: false, error: null, mode: null },
   ...over,
 })
 

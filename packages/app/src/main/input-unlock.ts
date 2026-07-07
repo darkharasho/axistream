@@ -16,7 +16,8 @@ export async function runInputUnlock(exec: ExecFileLike): Promise<{ ok: boolean;
     return { ok: true }
   } catch (e) {
     const code = (e as { code?: number }).code
-    // pkexec: 126 = auth dialog dismissed, 127 = not authorized
+    // pkexec: 126 = dialog dismissed/authorization refused, 127 = command not
+    // found/executable — both surface to the user as a cancelled unlock
     if (code === 126 || code === 127) return { ok: false, error: 'Authorization was cancelled' }
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
