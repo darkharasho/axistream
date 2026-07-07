@@ -10,7 +10,7 @@ interface Drag { id: string; mode: 'move' | 'resize'; px: number; py: number; or
 
 // Edit overlay for privacy masks. Coordinates are normalized (0–1) against
 // the OBS canvas; the sibling preview <video> shows that canvas under
-// object-fit: cover, so we map through its content rect to line up on screen.
+// object-fit: contain, so we map through its content rect to line up on screen.
 // Local state is authoritative while editing; every add/delete/drag-end
 // commits the full array upward (which persists + drives OBS live).
 export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPlugin, onSetStyle, onInstallBlur, onRelaunch }: {
@@ -37,7 +37,7 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
     const measure = () => {
       const el = boxRef.current
       if (!el) return
-      const video = el.parentElement?.querySelector('video')
+      const video = el.parentElement?.querySelector('video.preview-video')
       setContent(containContentRect(video?.videoWidth ?? 0, video?.videoHeight ?? 0, el.clientWidth, el.clientHeight))
     }
     measure()
