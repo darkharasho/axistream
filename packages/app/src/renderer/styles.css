@@ -38,6 +38,11 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .navitem.on { background: rgba(34,211,238,.1); color: #bfeef7; border: 1px solid rgba(34,211,238,.22); }
 .navitem.dim { color: #586069; }
 .soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid #2a323b; padding: 3px 5px; border-radius: 5px; }
+/* Update banner */
+.updatepill { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 9px 11px; border-radius: 9px; background: rgba(34,211,238,.08); border: 1px solid rgba(34,211,238,.3); color: #7ee3f2; font: 600 11px/1 ui-monospace, monospace; cursor: pointer; }
+.updatepill:hover { background: rgba(34,211,238,.15); }
+.updatepill.passive { cursor: default; color: #8b98a5; background: #0d1117; border-color: #161c25; }
+
 /* Sidebar quick toggles */
 .quick { margin-top: auto; padding-bottom: 10px; }
 .quickrow { display: flex; gap: 6px; }

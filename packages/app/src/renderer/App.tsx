@@ -4,13 +4,14 @@ import { createStore } from './store.js'
 import { Sidebar } from './components/Sidebar.js'
 import { StreamScreen } from './components/StreamScreen.js'
 import { SettingsScreen } from './components/SettingsScreen.js'
-import type { AxiApi } from '../shared/state.js'
+import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
 const store = createStore()
 const axi = (globalThis as unknown as { axi: AxiApi }).axi
 
 export function App() {
   const [nav, setNav] = useState<'stream' | 'settings'>('stream')
+  const [update, setUpdate] = useState<UpdateStatus | null>(null)
   const state = useSyncExternalStore(store.subscribe, store.getState)
   const preview = useSyncExternalStore(store.subscribe, store.getPreview)
 
@@ -21,6 +22,7 @@ export function App() {
       axi.onState((p) => store.applyState(p)),
       axi.onStats((s) => store.applyStats(s)),
       axi.onPreview((d) => store.applyPreview(d)),
+      axi.onUpdateStatus(setUpdate),
     ]
     axi.getInitialState().then((s) => store.applyState(s))
     return () => offs.forEach((off) => off())
@@ -29,7 +31,7 @@ export function App() {
   return (
     <div className="app">
       <div className="dragbar" />
-      <Sidebar active={nav} state={state} onNav={setNav} axi={axi} />
+      <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
       {nav === 'stream'
         ? <StreamScreen state={state} preview={preview} axi={axi} store={store} />
         : <SettingsScreen state={state} axi={axi} />}
