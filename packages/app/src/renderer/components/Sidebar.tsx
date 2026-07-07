@@ -1,10 +1,10 @@
-import { Radio, Settings, Mic, MicOff, Eye, EyeOff, Keyboard } from 'lucide-react'
+import { Radio, Settings, Mic, MicOff, Eye, EyeOff, Keyboard, Download } from 'lucide-react'
 import { AxiMark } from './AxiMark.js'
-import type { AppState, AxiApi } from '../../shared/state.js'
+import type { AppState, AxiApi, UpdateStatus } from '../../shared/state.js'
 
 const ICON = 16
 
-export function Sidebar({ active, state, onNav, axi }: { active: 'stream' | 'settings'; state: AppState; onNav: (s: 'stream' | 'settings') => void; axi: AxiApi }) {
+export function Sidebar({ active, state, onNav, axi, update = null }: { active: 'stream' | 'settings'; state: AppState; onNav: (s: 'stream' | 'settings') => void; axi: AxiApi; update?: UpdateStatus | null }) {
   const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING'
   const { audio, masks, masksVisible, ptt } = state
   return (
@@ -37,6 +37,14 @@ export function Sidebar({ active, state, onNav, axi }: { active: 'stream' | 'set
         </div>
       </div>
 
+      {update?.state === 'ready' && (
+        <button className="updatepill" onClick={() => axi.installUpdate()} title={`Version ${update.version} downloaded — restart to apply`}>
+          <Download size={12} /> Update ready
+        </button>
+      )}
+      {update?.state === 'downloading' && (
+        <div className="updatepill passive">Updating… {update.percent}%</div>
+      )}
       <div className={`enginepill ${live ? 'onair' : ''}`}>
         <span className="dot" /> {live ? 'On air' : 'Engine ready'}
       </div>

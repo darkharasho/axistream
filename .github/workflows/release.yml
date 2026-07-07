@@ -36,17 +36,14 @@ jobs:
           npm version "$VERSION" --no-git-tag-version --allow-same-version -w @axistream/app
           echo "Building AxiStream $VERSION"
 
-      - name: Build distributables
-        run: npm run dist
+      - name: Build + upload to draft release
+        # --publish always also uploads latest-linux.yml, the electron-updater feed.
+        run: npm -w @axistream/app run build && npx --workspace @axistream/app electron-builder --config electron-builder.yml --publish always
         env:
-          # electron-builder auto-publish stays off; the release step below owns uploads.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            packages/app/dist/*.AppImage
-            packages/app/dist/*.deb
-          generate_release_notes: true
-          draft: false
+      - name: Publish the release
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

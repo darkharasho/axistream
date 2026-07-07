@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -43,10 +43,13 @@ const api: AxiApi = {
   recordAudioTest: () => ipcRenderer.invoke(CH.recordAudioTest) as Promise<AudioTestResult>,
   setPttEnabled: (enabled) => ipcRenderer.invoke(CH.setPttEnabled, enabled) as Promise<void>,
   setMasksVisible: (visible) => ipcRenderer.invoke(CH.setMasksVisible, visible) as Promise<void>,
+  checkForUpdates: () => ipcRenderer.invoke(CH.updatesCheck) as Promise<void>,
+  installUpdate: () => ipcRenderer.invoke(CH.updatesInstall) as Promise<void>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),
   onCaptureChanged: (cb) => sub<void>(CH.evtCaptureChanged, () => cb()),
   onAudioLevels: (cb) => sub<AudioLevels>(CH.evtAudioLevels, cb),
+  onUpdateStatus: (cb) => sub<UpdateStatus>(CH.evtUpdateStatus, cb),
 }
 contextBridge.exposeInMainWorld('axi', api)

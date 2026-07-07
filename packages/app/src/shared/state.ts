@@ -60,6 +60,15 @@ export interface AudioLevels { desktop: number; mic: number; game: number }
 
 export interface DiscordTestResult { ok: boolean; error?: string }
 
+/** Update lifecycle pushed to the renderer for a non-intrusive banner. */
+export type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available'; version: string }
+  | { state: 'none' }
+  | { state: 'downloading'; percent: number }
+  | { state: 'ready'; version: string }
+  | { state: 'error'; message: string }
+
 export interface AudioTestResult { ok: boolean; clip?: Uint8Array; mime?: string; error?: string }
 
 export const CH = {
@@ -103,6 +112,9 @@ export const CH = {
   recordAudioTest: 'axi:recordAudioTest',
   setPttEnabled: 'axi:setPttEnabled',
   setMasksVisible: 'axi:setMasksVisible',
+  updatesCheck: 'updates:check',
+  updatesInstall: 'updates:install',
+  evtUpdateStatus: 'updates:status',
 } as const
 
 export interface AxiApi {
@@ -141,6 +153,9 @@ export interface AxiApi {
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
   setMasksVisible(visible: boolean): Promise<void>
+  checkForUpdates(): Promise<void>
+  installUpdate(): Promise<void>
+  onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

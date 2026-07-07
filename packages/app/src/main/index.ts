@@ -43,6 +43,7 @@ import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
 import { PttController } from './PttController.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
+import { setupUpdater } from './updater.js'
 import { createPortalShortcuts } from './portal-shortcuts.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
@@ -120,6 +121,11 @@ if (primary) app.whenReady().then(async () => {
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
 
   const win = createWindow()
+
+  // GitHub-Releases auto-update (packaged only) + tell the AxiOM launcher
+  // what's installed (it reads userData/axiom-version).
+  setupUpdater(() => win)
+  try { writeFileSync(join(app.getPath('userData'), 'axiom-version'), app.getVersion()) } catch { /* non-fatal */ }
 
   // AxiStream's own tray icon (OBS's is disabled via hideObsTray below).
   const showWin = () => { if (win.isMinimized()) win.restore(); win.show(); win.focus() }
