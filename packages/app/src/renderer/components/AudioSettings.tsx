@@ -159,7 +159,8 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
           {test.st === 'recording' ? `Recording — speak now… ${test.left}` : 'Test audio'}
         </button>
         {test.st === 'ready' && test.url && (
-          <audio data-testid="audio-test-player" controls src={test.url} />
+          <audio data-testid="audio-test-player" controls src={test.url}
+            onError={() => setTest({ st: 'error', error: "Couldn't play the clip — the recording may be corrupt or blocked" })} />
         )}
         {test.st === 'error' && <span className="audio-test-err">{test.error}</span>}
         <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.</p>
