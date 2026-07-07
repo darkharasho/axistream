@@ -8,6 +8,7 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
     <div className="hero settings-panel">
       <div className="settings-inner">
         <h2>Settings</h2>
+        <div className="settings-grid">
 
         <section className="setting">
           <YouTubeSettings youtube={state.youtube} />
@@ -43,6 +44,7 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
           <p className="muted">Re-run setup if you changed monitors or the capture stopped working.</p>
           <button className="btn ghost" onClick={() => axi.repairCapture()}>Re-set up capture</button>
         </section>
+        </div>
       </div>
     </div>
   )
