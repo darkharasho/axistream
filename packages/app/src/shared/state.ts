@@ -12,6 +12,8 @@ export interface StreamSettingsView {
   titleTemplate: string
   dateFormat: string
   privacy: 'public' | 'unlisted' | 'private'
+  discordWebhookUrl: string
+  discordMessage: string
 }
 
 export interface AudioDevice { id: string; name: string }
@@ -40,7 +42,7 @@ export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
   encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
-  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
+  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },

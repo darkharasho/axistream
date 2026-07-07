@@ -19,6 +19,8 @@ export interface StreamSettingsData {
   preferSoftware: boolean
   gameAudioApps: string[]
   maskStyle: MaskStyle
+  discordWebhookUrl: string
+  discordMessage: string
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -35,6 +37,8 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   preferSoftware: false,
   gameAudioApps: [],
   maskStyle: 'box',
+  discordWebhookUrl: '',
+  discordMessage: '',
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -100,6 +104,8 @@ export class StreamSettings {
         preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
         gameAudioApps,
         maskStyle: MASK_STYLES.includes(raw.maskStyle as MaskStyle) ? (raw.maskStyle as MaskStyle) : DEFAULT_SETTINGS.maskStyle,
+        discordWebhookUrl: typeof raw.discordWebhookUrl === 'string' ? raw.discordWebhookUrl : DEFAULT_SETTINGS.discordWebhookUrl,
+        discordMessage: typeof raw.discordMessage === 'string' ? raw.discordMessage : DEFAULT_SETTINGS.discordMessage,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

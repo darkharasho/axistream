@@ -50,7 +50,7 @@ const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
 const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
 const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
-const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy })
+const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage })
 let state: AppState = { ...INITIAL_STATE }
 
 // MumbleLink reader deps — /proc/<pid>/mem reads the live address space, so
