@@ -33,3 +33,17 @@ describe('renderTitle', () => {
     expect(renderTitle('{{date}}', { ...ctx, dateFormat: 'M/D/YY' })).toBe('6/24/26')
   })
 })
+
+describe('gw2 variables', () => {
+  const ctx = { now: new Date('2026-07-06T12:00:00'), counter: 1, dateFormat: 'YYYY-MM-DD',
+    gw2: { character: 'Not Haro', class: 'Mesmer', map: 'Lions Arch', race: 'Sylvari' } }
+  it('resolves character/class/map/race', () => {
+    expect(renderTitle('{{character}} — {{class}} in {{map}} ({{race}})', ctx)).toBe('Not Haro — Mesmer in Lions Arch (Sylvari)')
+  })
+  it('missing gw2 context renders them empty (no throw)', () => {
+    expect(renderTitle('[{{character}}]', { now: ctx.now, counter: 1, dateFormat: 'YYYY-MM-DD' })).toBe('[]')
+  })
+  it('existing variables still work alongside', () => {
+    expect(renderTitle('{{date}} {{class}}', ctx)).toBe('2026-07-06 Mesmer')
+  })
+})
