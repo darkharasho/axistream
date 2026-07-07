@@ -23,7 +23,7 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, WindowsObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -62,9 +62,13 @@ let state: AppState = { ...INITIAL_STATE }
 
 // MumbleLink reader deps — /proc/<pid>/mem reads the live address space, so
 // it works for Proton's deleted-tmpfile-backed shared block (no native addon).
+// /proc is Linux-only; the win32 arms return empty/null so readIdentity
+// degrades to "GW2 not found" instead of leaning on downstream .catch()es.
 const mumbleDeps: MumbleDeps = {
   readProc: (p) => readFileSync(p, 'utf8'),
-  listPids: () => readdirSync('/proc').map(Number).filter((n) => Number.isInteger(n) && n > 0),
+  listPids: process.platform === 'linux'
+    ? () => readdirSync('/proc').map(Number).filter((n) => Number.isInteger(n) && n > 0)
+    : () => [],
   readMem: (pid, addr, len) => {
     try {
       const fd = openSync(`/proc/${pid}/mem`, 'r')
@@ -166,7 +170,11 @@ if (primary) app.whenReady().then(async () => {
   const config = new CaptureConfig(join(userData, 'capture.json'))
   const visibleLauncher = new FlatpakObsLauncher()
   const useHeadless = process.platform === 'linux' && !process.env.AXISTREAM_OBS_VISIBLE
-  const launcher = useHeadless ? new HeadlessCageObsLauncher(visibleLauncher) : visibleLauncher
+  // win32 gets the native OBS launcher (fails fast with a clear message when
+  // OBS isn't installed — no flatpak, no 30s port-wait hang).
+  const launcher = process.platform === 'win32'
+    ? new WindowsObsLauncher()
+    : useHeadless ? new HeadlessCageObsLauncher(visibleLauncher) : visibleLauncher
   const sidecar = new ObsSidecar({ launcher, collection: 'AxiStream' })
 
   const preview = new PreviewPump({ client: () => sidecar.client(), sourceName: CAPTURE_SOURCE, emit: (d) => push(CH.evtPreview, d) })
@@ -605,7 +613,7 @@ if (primary) app.whenReady().then(async () => {
       // PTT: install the desktop entry the portal Registry validates our host
       // app id against, then crash recovery (a previous run may have died
       // source-muted), then probe the portal and re-arm if the user had it on.
-      await ensureDesktopEntry(process.execPath, homedir(), {
+      if (process.platform === 'linux') await ensureDesktopEntry(process.execPath, homedir(), {
         mkdir: (p) => fsPromises.mkdir(p, { recursive: true }),
         readFile: (p) => fsPromises.readFile(p, 'utf8'),
         writeFile: (p, c) => fsPromises.writeFile(p, c),

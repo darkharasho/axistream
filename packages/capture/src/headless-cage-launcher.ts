@@ -12,7 +12,7 @@ const HEADLESS_ENV = {
 
 // True if a `cage` executable is on PATH.
 export function cageOnPath(): boolean {
-  const dirs = (process.env.PATH ?? '').split(':').filter(Boolean)
+  const dirs = (process.env.PATH ?? '').split(process.platform === 'win32' ? ';' : ':').filter(Boolean)
   return dirs.some((d) => {
     try { return existsSync(join(d, 'cage')) } catch { return false }
   })
