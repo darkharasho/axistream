@@ -52,6 +52,8 @@ export const INITIAL_STATE: AppState = {
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
 
+export interface DiscordTestResult { ok: boolean; error?: string }
+
 export const CH = {
   getInitialState: 'axi:getInitialState',
   provision: 'axi:provision',
@@ -89,6 +91,7 @@ export const CH = {
   getGameAudioApps: 'axi:getGameAudioApps',
   fitWindowToCapture: 'axi:fitWindowToCapture',
   evtAudioLevels: 'axi:evt:audioLevels',
+  testDiscordWebhook: 'axi:testDiscordWebhook',
 } as const
 
 export interface AxiApi {
@@ -123,6 +126,7 @@ export interface AxiApi {
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
   fitWindowToCapture(): Promise<void>
+  testDiscordWebhook(): Promise<DiscordTestResult>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

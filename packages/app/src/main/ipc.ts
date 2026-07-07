@@ -1,4 +1,4 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult } from '../shared/state.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
@@ -32,6 +32,7 @@ export interface IpcHandlers {
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
   fitWindowToCapture(): Promise<void>
+  testDiscordWebhook(): Promise<DiscordTestResult>
 }
 
 export interface IpcDeps {
@@ -73,5 +74,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.setGameAudioApps, (_e: unknown, apps: string[]) => handlers.setGameAudioApps(apps))
   ipcMain.handle(CH.getGameAudioApps, () => handlers.getGameAudioApps())
   ipcMain.handle(CH.fitWindowToCapture, () => handlers.fitWindowToCapture())
+  ipcMain.handle(CH.testDiscordWebhook, () => handlers.testDiscordWebhook())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }
