@@ -7,8 +7,10 @@ import { AudioPulse } from './AudioPulse.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
-export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppState['audio']; gameAudioPlugin: AppState['gameAudioPlugin']; phase: AppState['phase'] }) {
+export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: AppState['audio']; gameAudioPlugin: AppState['gameAudioPlugin']; phase: AppState['phase']; ptt: AppState['ptt'] }) {
   const [test, setTest] = useState<{ st: 'idle' | 'recording' | 'ready' | 'error'; url?: string; error?: string; left?: number }>({ st: 'idle' })
+  const [pttEnabled, setPttEnabledLocal] = useState(ptt.enabled)
+  useEffect(() => { setPttEnabledLocal(ptt.enabled) }, [ptt.enabled])
   const canTest = phase === 'READY' || phase === 'NEEDS_KEY' || phase === 'NEEDS_TITLE'
 
   const runTest = async () => {
@@ -153,6 +155,25 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
           </label>
         )
       })()}
+
+      {audio.micEnabled && (
+        <div className="ptt">
+          <label className="audio-row">
+            <input type="checkbox" checked={pttEnabled} disabled={!ptt.available} aria-label="Push to talk (hold F18)"
+              onChange={(e) => { setPttEnabledLocal(e.target.checked); axi().setPttEnabled(e.target.checked) }} />
+            <span>Push to talk (hold F18)</span>
+            {pttEnabled && (ptt.active
+              ? <span className="ptt-live">🔴 TRANSMITTING</span>
+              : <span className="ptt-muted">muted — hold F18 to talk</span>)}
+          </label>
+          {!ptt.available && <p className="muted">Needs the GlobalShortcuts portal — available on KDE Plasma</p>}
+          {ptt.error && <p className="ptt-err">{ptt.error}</p>}
+          {pttEnabled && (
+            <p className="muted">AxiStream mutes your mic at the system level and unmutes it while the key is held. Set Discord to <strong>Voice Activity</strong> (not Push to Talk) — it follows automatically.</p>
+          )}
+          {pttEnabled && <p className="muted">Change the key in KDE System Settings → Shortcuts → AxiStream.</p>}
+        </div>
+      )}
 
       <div className="audio-test">
         <button className="btn ghost sm" disabled={!canTest || test.st === 'recording'} onClick={runTest}>

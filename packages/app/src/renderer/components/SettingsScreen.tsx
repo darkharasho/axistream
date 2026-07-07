@@ -14,7 +14,7 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
         </section>
 
         <section className="setting">
-          <AudioSettings audio={state.audio} gameAudioPlugin={state.gameAudioPlugin} phase={state.phase} />
+          <AudioSettings audio={state.audio} gameAudioPlugin={state.gameAudioPlugin} phase={state.phase} ptt={state.ptt} />
         </section>
 
         <section className="setting">

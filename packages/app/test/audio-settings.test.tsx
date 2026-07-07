@@ -14,6 +14,7 @@ const axi = {
   getGameAudioApps: vi.fn(async () => [{ id: 'gw2-64.exe', name: 'Guild Wars 2' }, { id: 'Discord', name: 'Discord' }]),
   onAudioLevels: vi.fn(() => () => {}),
   recordAudioTest: vi.fn(async (): Promise<AudioTestResult> => ({ ok: true, clip: new Uint8Array([0]), mime: 'video/mp4' })),
+  setPttEnabled: vi.fn(async () => {}),
 }
 beforeEach(() => {
   (globalThis as any).axi = axi
@@ -23,17 +24,18 @@ beforeEach(() => {
 })
 
 const pluginReady = { status: 'ready' as any, error: null }
+const pttOff = { available: true, enabled: false, active: false, error: null }
 
 describe('AudioSettings', () => {
   it('toggles desktop audio', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     fireEvent.click(screen.getByLabelText(/desktop audio/i))
     expect(axi.setDesktopEnabled).toHaveBeenCalledWith(false)
     await screen.findByLabelText('Guild Wars 2')
   })
 
   it('toggles mic and shows a populated device picker', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(axi.getAudioDevices).toHaveBeenCalled()
     await waitFor(() => expect(screen.getByRole('option', { name: 'Yeti' })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/microphone device/i), { target: { value: 'yeti' } })
@@ -41,13 +43,13 @@ describe('AudioSettings', () => {
   })
 
   it('does not query devices when mic is off', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(axi.getAudioDevices).not.toHaveBeenCalled()
     await screen.findByLabelText('Guild Wars 2')
   })
 
   it('populates the output dropdown when desktop audio is on and selection calls setDesktopDevice', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(axi.getDesktopDevices).toHaveBeenCalled()
     await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/output device/i), { target: { value: 'hdmi' } })
@@ -56,13 +58,13 @@ describe('AudioSettings', () => {
   })
 
   it('does not query output devices when desktop audio is off', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(axi.getDesktopDevices).not.toHaveBeenCalled()
     await screen.findByLabelText('Guild Wars 2')
   })
 
   it('renders an unavailable placeholder when the saved output device is not enumerated', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'unplugged-dac', micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'unplugged-dac', micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
     const select = screen.getByLabelText(/output device/i) as HTMLSelectElement
     expect(select.value).toBe('unplugged-dac')
@@ -70,7 +72,7 @@ describe('AudioSettings', () => {
   })
 
   it('renders an unavailable placeholder when the saved mic device is not enumerated', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: true, micDevice: 'unplugged-mic', gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: true, micDevice: 'unplugged-mic', gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
     const select = screen.getByLabelText(/microphone device/i) as HTMLSelectElement
     expect(select.value).toBe('unplugged-mic')
@@ -82,7 +84,7 @@ describe('AudioSettings', () => {
     // placeholder must not appear in the pre-resolution render.
     let resolveDevices: (d: { id: string; name: string }[]) => void = () => {}
     axi.getDesktopDevices.mockImplementationOnce(() => new Promise((r) => { resolveDevices = r }))
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'hdmi', micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'hdmi', micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(screen.queryByText('Saved device (unavailable)')).toBeNull()
     resolveDevices([{ id: 'hdmi', name: 'HDMI' }])
     await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
@@ -91,13 +93,13 @@ describe('AudioSettings', () => {
   })
 
   it('checking an app calls setGameAudioApps with the union', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     fireEvent.click(await screen.findByLabelText('Guild Wars 2'))
     expect(axi.setGameAudioApps).toHaveBeenCalledWith(['gw2-64.exe'])
   })
 
   it('unchecking an app calls setGameAudioApps without it', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['gw2-64.exe', 'Discord'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['gw2-64.exe', 'Discord'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     fireEvent.click(await screen.findByLabelText('Guild Wars 2'))
     expect(axi.setGameAudioApps).toHaveBeenCalledWith(['Discord'])
   })
@@ -105,14 +107,14 @@ describe('AudioSettings', () => {
   it('selected apps sort to the top of the list', async () => {
     // Running order from the mock is Guild Wars 2 then Discord; selecting only
     // Discord must float it above the unselected Guild Wars 2.
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['Discord'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['Discord'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     const discord = await screen.findByText('Discord')
     const gw2 = screen.getByText('Guild Wars 2')
     expect(discord.compareDocumentPosition(gw2) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('checking All desktop audio while apps are selected still just calls setDesktopEnabled(true)', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['gw2-64.exe'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['gw2-64.exe'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     await screen.findByLabelText('Guild Wars 2')
     fireEvent.click(screen.getByLabelText('All desktop audio'))
     expect(axi.setDesktopEnabled).toHaveBeenCalledWith(true)
@@ -120,13 +122,13 @@ describe('AudioSettings', () => {
 
   it('saved app absent from the running list shows the not-running pill', async () => {
     axi.getGameAudioApps.mockResolvedValueOnce([{ id: 'Discord', name: 'Discord' }])
-    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['closed-game.exe'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['closed-game.exe'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     expect(await screen.findByText('not running')).toBeInTheDocument()
     expect(screen.getByLabelText('closed-game.exe')).toBeChecked()
   })
 
   it('two rapid toggles (no await between) send the full combined selection in the second call', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     await screen.findByLabelText('Guild Wars 2')
     fireEvent.click(screen.getByLabelText('Guild Wars 2'))
     fireEvent.click(screen.getByLabelText('Discord'))
@@ -135,7 +137,7 @@ describe('AudioSettings', () => {
   })
 
   it('refresh re-enumerates', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     await screen.findByLabelText('Guild Wars 2')
     fireEvent.click(screen.getByTitle('Refresh running apps'))
     expect(axi.getGameAudioApps).toHaveBeenCalledTimes(2)
@@ -144,25 +146,25 @@ describe('AudioSettings', () => {
   })
 
   it('renders pulse meters on the desktop and mic rows and the apps divider', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={pttOff} />)
     await screen.findByLabelText('Guild Wars 2')
     expect(document.querySelectorAll('.audio-pulse')).toHaveLength(3)
   })
 
   it('plugin not ready: no app rows, install flow renders instead', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'missing', error: null }} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'missing', error: null }} phase="READY" ptt={pttOff} />)
     expect(axi.getGameAudioApps).not.toHaveBeenCalled()
     expect(screen.getByText('Install plugin')).toBeInTheDocument()
     await screen.findByRole('option', { name: 'Default' })
   })
 
   it('Test audio renders and is disabled while live', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="LIVE" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="LIVE" ptt={pttOff} />)
     expect(screen.getByRole('button', { name: /test audio/i })).toBeDisabled()
   })
 
   it('running a test shows the countdown then a player', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     fireEvent.click(screen.getByRole('button', { name: /test audio/i }))
     expect(screen.getByText(/speak now/i)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('audio-test-player')).toBeInTheDocument())
@@ -171,7 +173,7 @@ describe('AudioSettings', () => {
 
   it('a failed test shows the error and allows retry', async () => {
     axi.recordAudioTest.mockResolvedValueOnce({ ok: false, error: 'output busy' })
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     fireEvent.click(screen.getByRole('button', { name: /test audio/i }))
     await waitFor(() => expect(screen.getByText(/output busy/i)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /test audio/i })).not.toBeDisabled()
@@ -180,12 +182,41 @@ describe('AudioSettings', () => {
   it('a player load failure surfaces as an error instead of a dead 0:00 player', async () => {
     // A CSP-rejected or undecodable blob fires the audio element's error
     // event with no other visible symptom — it must not fail silently.
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     fireEvent.click(screen.getByRole('button', { name: /test audio/i }))
     const player = await screen.findByTestId('audio-test-player')
     fireEvent.error(player)
     expect(screen.getByText(/couldn't play the clip/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /test audio/i })).not.toBeDisabled()
+  })
+
+  it('PTT row hidden when the mic is off; visible when on', async () => {
+    const base = { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }
+    const { rerender } = render(<AudioSettings audio={base} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
+    expect(screen.queryByLabelText(/push to talk/i)).not.toBeInTheDocument()
+    rerender(<AudioSettings audio={{ ...base, micEnabled: true }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
+    expect(screen.getByLabelText(/push to talk/i)).toBeInTheDocument()
+  })
+
+  it('toggling PTT calls setPttEnabled and shows the Discord note', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
+    fireEvent.click(screen.getByLabelText(/push to talk/i))
+    expect(axi.setPttEnabled).toHaveBeenCalledWith(true)
+    expect(screen.getByText(/voice activity/i)).toBeInTheDocument()
+  })
+
+  it('shows TRANSMITTING while active and the portal-missing hint when unavailable', async () => {
+    const audio = { desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }
+    const { rerender } = render(<AudioSettings audio={audio} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: true, error: null }} />)
+    expect(screen.getByText(/transmitting/i)).toBeInTheDocument()
+    rerender(<AudioSettings audio={audio} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: false, enabled: false, active: false, error: null }} />)
+    expect(screen.getByLabelText(/push to talk/i)).toBeDisabled()
+    expect(screen.getByText(/GlobalShortcuts portal/i)).toBeInTheDocument()
+  })
+
+  it('surfaces a PTT error', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)' }} />)
+    expect(screen.getByText(/portal request denied/i)).toBeInTheDocument()
   })
 })
 
@@ -198,7 +229,7 @@ describe('AudioSettings app search', () => {
       { id: 'gw2-64.exe', name: 'Guild Wars 2' },
       { id: 'Discord', name: 'Discord' },
     ])
-    render(<AudioSettings audio={base} gameAudioPlugin={ready} phase="READY" />)
+    render(<AudioSettings audio={base} gameAudioPlugin={ready} phase="READY" ptt={pttOff} />)
     await screen.findByLabelText('Guild Wars 2')
     fireEvent.change(screen.getByLabelText('Search apps'), { target: { value: 'guild' } })
     expect(screen.getByLabelText('Guild Wars 2')).toBeInTheDocument()
