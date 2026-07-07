@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AudioSettings } from '../src/renderer/components/AudioSettings.js'
+import type { AudioTestResult } from '../src/shared/state.js'
 
 const axi = {
   getAudioDevices: vi.fn(async () => [{ id: 'default', name: 'Default' }, { id: 'yeti', name: 'Yeti' }]),
@@ -12,8 +13,14 @@ const axi = {
   setGameAudioApps: vi.fn(async () => {}),
   getGameAudioApps: vi.fn(async () => [{ id: 'gw2-64.exe', name: 'Guild Wars 2' }, { id: 'Discord', name: 'Discord' }]),
   onAudioLevels: vi.fn(() => () => {}),
+  recordAudioTest: vi.fn(async (): Promise<AudioTestResult> => ({ ok: true, clip: new Uint8Array([0]), mime: 'video/mp4' })),
 }
-beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
+beforeEach(() => {
+  (globalThis as any).axi = axi
+  vi.clearAllMocks()
+  URL.createObjectURL = URL.createObjectURL ?? (() => 'blob:mock')
+  URL.revokeObjectURL = URL.revokeObjectURL ?? (() => {})
+})
 
 const pluginReady = { status: 'ready' as any, error: null }
 
@@ -147,6 +154,27 @@ describe('AudioSettings', () => {
     expect(axi.getGameAudioApps).not.toHaveBeenCalled()
     expect(screen.getByText('Install plugin')).toBeInTheDocument()
     await screen.findByRole('option', { name: 'Default' })
+  })
+
+  it('Test audio renders and is disabled while live', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="LIVE" />)
+    expect(screen.getByRole('button', { name: /test audio/i })).toBeDisabled()
+  })
+
+  it('running a test shows the countdown then a player', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    fireEvent.click(screen.getByRole('button', { name: /test audio/i }))
+    expect(screen.getByText(/speak now/i)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('audio-test-player')).toBeInTheDocument())
+    expect(axi.recordAudioTest).toHaveBeenCalled()
+  })
+
+  it('a failed test shows the error and allows retry', async () => {
+    axi.recordAudioTest.mockResolvedValueOnce({ ok: false, error: 'output busy' })
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" />)
+    fireEvent.click(screen.getByRole('button', { name: /test audio/i }))
+    await waitFor(() => expect(screen.getByText(/output busy/i)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /test audio/i })).not.toBeDisabled()
   })
 })
 
