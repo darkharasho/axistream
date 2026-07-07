@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { findGw2Pid, readIdentity, type MumbleDeps } from '../src/mumble-reader.js'
 
 const IDENTITY = '{"name":"Not Haro","profession":7,"spec":73,"race":4,"map_id":95,"world_id":2147483650,"commander":true}'

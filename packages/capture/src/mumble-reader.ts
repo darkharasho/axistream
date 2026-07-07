@@ -60,7 +60,9 @@ export function readIdentity(d: MumbleDeps): MumbleIdentity | null {
     if (t1 && t2 && t1.readUInt32LE(0) !== t2.readUInt32LE(0)) { chosen = start; break }
   }
   // Fallback: first range that yields a parseable identity.
-  const tryOrder = chosen !== null ? [chosen] : ranges
+  // Try the ticking range first, then the rest — a non-MumbleLink block that
+  // happens to tick shouldn't strand the real one (it won't parse as identity).
+  const tryOrder = chosen !== null ? [chosen, ...ranges.filter((r) => r !== chosen)] : ranges
   for (const start of tryOrder) {
     const buf = d.readMem(pid, start + IDENTITY_OFFSET, IDENTITY_LEN)
     if (!buf) continue
