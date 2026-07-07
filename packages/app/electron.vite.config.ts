@@ -7,11 +7,17 @@ import { resolve } from 'node:path'
 // without them. Mark them external so the bundle leaves them as runtime requires
 // (which ws try/catches) instead of failing to resolve them at bundle/load time.
 // `usocket` is dbus-next's identical case (optional native for abstract-socket
-// dbus addresses; modern sessions use path= and never hit it).
+// dbus addresses; modern sessions use path= and never hit it). dbus-next's
+// optional 'x11' require can't be safely externalized (rollup hoists it into a
+// top-level import that crashes at load) — it's aliased to a bundled stub in
+// the main config below instead.
 const optionalNatives = ['bufferutil', 'utf-8-validate', 'usocket']
 
 export default defineConfig({
   main: {
+    resolve: {
+      alias: { x11: resolve(__dirname, 'src/main/x11-stub.ts') },
+    },
     build: {
       rollupOptions: {
         input: resolve(__dirname, 'src/main/index.ts'),
