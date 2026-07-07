@@ -23,6 +23,12 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
     axi().saveSettings(p)
   }
 
+  const sendDiscordTest = async () => {
+    setTestMsg(null)
+    const r = await axi().testDiscordWebhook()
+    setTestMsg({ ok: r.ok, text: r.ok ? 'Sent ✓' : (r.error ?? 'Failed') })
+  }
+
   return (
     <section className="yt-settings">
       <h3>YouTube</h3>
@@ -57,6 +63,7 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
           </label>
 
           <div className="yt-discord">
+            <h4 className="yt-discord-head">Discord announcement</h4>
             <label>Discord webhook URL
               <input value={s.discordWebhookUrl} placeholder="https://discord.com/api/webhooks/…"
                 onChange={(e) => update({ discordWebhookUrl: e.target.value })} />
@@ -68,8 +75,7 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
             </label>
             <div className="yt-hint">Prepended above the embed — use <code>@here</code> or a role mention to ping.</div>
             <div className="yt-discord-test">
-              <button className="btn ghost sm" disabled={!s.discordWebhookUrl.trim()}
-                onClick={async () => { setTestMsg(null); const r = await axi().testDiscordWebhook(); setTestMsg({ ok: r.ok, text: r.ok ? 'Sent ✓' : (r.error ?? 'Failed') }) }}>
+              <button className="btn ghost sm" disabled={!s.discordWebhookUrl.trim()} onClick={sendDiscordTest}>
                 Send test
               </button>
               {testMsg && <span className={testMsg.ok ? 'yt-test-ok' : 'yt-test-err'}>{testMsg.text}</span>}

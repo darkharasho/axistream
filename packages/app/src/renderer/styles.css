@@ -149,6 +149,14 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
 .yt-vars { font-size: 12px; color: #5b6470; font-family: ui-monospace, monospace; }
 .yt-preview { font-size: 13px; color: #9fd8ff; }
 .yt-hint { font-size: 12px; color: #5b6470; }
+.yt-hint code { background: rgba(255,255,255,.08); border-radius: 4px; padding: 1px 4px; font-size: 11px; }
+
+/* Discord announcement */
+.yt-discord { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
+.yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: #8b98a5; }
+.yt-discord-test { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.yt-test-ok { font-size: 12px; font-weight: 600; color: #3fb950; }
+.yt-test-err { font-size: 12px; font-weight: 600; color: #f85149; }
 
 /* Title prompt modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }

@@ -1,4 +1,3 @@
-// packages/app/src/main/DiscordAnnounce.ts
 export interface DiscordAnnounceConfig {
   webhookUrl: string
   title: string
@@ -6,6 +5,8 @@ export interface DiscordAnnounceConfig {
   message?: string
 }
 export interface DiscordAnnounceResult { ok: boolean; error?: string }
+
+interface DiscordEmbed { title: string; url: string; description: string; color: number }
 
 export type FetchLike = (url: string, init: {
   method: string; headers: Record<string, string>; body: string
@@ -17,7 +18,7 @@ export async function announce(cfg: DiscordAnnounceConfig, fetchFn: FetchLike): 
   const url = cfg.webhookUrl.trim()
   if (!url) return { ok: false, error: 'no webhook configured' }
   const message = (cfg.message ?? '').trim()
-  const payload: { content?: string; embeds: unknown[] } = {
+  const payload: { content?: string; embeds: DiscordEmbed[] } = {
     embeds: [{ title: cfg.title, url: cfg.watchUrl, description: '🔴 Live now on YouTube', color: 16711680 }],
   }
   if (message) payload.content = message
