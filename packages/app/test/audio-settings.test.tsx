@@ -238,3 +238,18 @@ describe('AudioSettings app search', () => {
     expect(await screen.findByLabelText('Discord')).toBeInTheDocument()
   })
 })
+
+describe('AudioSettings PTT failed-enable resync', () => {
+  it('a failed enable (prop already false) still unchecks the optimistic toggle', async () => {
+    const audio = { desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }
+    const off = { available: true, enabled: false, active: false, error: null }
+    const { rerender } = render(<AudioSettings audio={audio} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={off} />)
+    fireEvent.click(screen.getByLabelText(/push to talk/i))
+    expect(screen.getByLabelText(/push to talk/i)).toBeChecked()
+    // Main pushes a FRESH ptt object with enabled still false + an error —
+    // the optimistic checkbox must resync even though the VALUE didn't change.
+    rerender(<AudioSettings audio={audio} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)' }} />)
+    expect(screen.getByLabelText(/push to talk/i)).not.toBeChecked()
+    expect(screen.getByText(/portal request denied/i)).toBeInTheDocument()
+  })
+})

@@ -37,6 +37,8 @@ export class PttController {
       return { ok: false, error: msg }
     }
     this.shortcut = sc
+    // onActive fires before the async unmute completes on purpose — instant
+    // UI feedback; the mic follows within the pactl round-trip.
     sc.onActivated(() => { void this.setMute(false); this.d.onActive(true) })
     sc.onDeactivated(() => { void this.setMute(true); this.d.onActive(false) })
     await this.setMute(true)

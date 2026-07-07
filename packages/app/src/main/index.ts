@@ -172,6 +172,8 @@ if (primary) app.whenReady().then(async () => {
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
 
+  // Thin void exec for PTT's pactl calls (flatpakExec below captures output
+  // for installer flows — different job).
   const execAsync = (cmd: string, args: string[]) => new Promise<void>((resolve, reject) => {
     execFile(cmd, args, (err) => (err ? reject(err) : resolve()))
   })

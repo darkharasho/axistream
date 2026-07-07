@@ -10,7 +10,10 @@ const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: AppState['audio']; gameAudioPlugin: AppState['gameAudioPlugin']; phase: AppState['phase']; ptt: AppState['ptt'] }) {
   const [test, setTest] = useState<{ st: 'idle' | 'recording' | 'ready' | 'error'; url?: string; error?: string; left?: number }>({ st: 'idle' })
   const [pttEnabled, setPttEnabledLocal] = useState(ptt.enabled)
-  useEffect(() => { setPttEnabledLocal(ptt.enabled) }, [ptt.enabled])
+  // Resync on OBJECT identity, not value: main pushes a fresh ptt object on
+  // every setPttEnabled result, so a FAILED enable (enabled stays false)
+  // still fires this and corrects the optimistic checkbox.
+  useEffect(() => { setPttEnabledLocal(ptt.enabled) }, [ptt])
   const canTest = phase === 'READY' || phase === 'NEEDS_KEY' || phase === 'NEEDS_TITLE'
 
   const runTest = async () => {

@@ -17,6 +17,8 @@ export interface BoundShortcut { onActivated(cb: () => void): void; onDeactivate
 let tokenCounter = 0
 const nextToken = () => `axistream_${process.pid}_${++tokenCounter}`
 
+// NOTE: bus.name is only populated after the Hello reply; every caller first
+// awaits a getProxyObject on the same connection, which orders after Hello.
 function requestPath(bus: MessageBus, token: string): string {
   // ':1.42' -> '1_42' per the portal spec's sender-path convention.
   // dbus-next's MessageBus has a runtime .name but the bundled .d.ts omits it.
