@@ -4,8 +4,11 @@
 //   CreateSession -> (Response signal) -> BindShortcuts -> (Response signal)
 //   -> Activated / Deactivated signals carry press/release edges.
 // Request Response signals arrive on a PREDICTABLE path derived from our
-// unique bus name + handle_token, so we proxy that path BEFORE calling the
-// method (avoids the classic reply-before-subscribe race).
+// unique bus name + handle_token. The Request OBJECT doesn't exist until the
+// method is called, so it can't be proxied ahead of time (getProxyObject
+// introspects and finds no Request interface) — instead we install a
+// low-level match rule + raw message listener BEFORE the call, which closes
+// the reply-before-subscribe race without needing the object to exist.
 import dbus, { Variant, type MessageBus, type ClientInterface } from 'dbus-next'
 
 const PORTAL_DEST = 'org.freedesktop.portal.Desktop'
@@ -26,15 +29,46 @@ function requestPath(bus: MessageBus, token: string): string {
   return `/org/freedesktop/portal/desktop/request/${sender}/${token}`
 }
 
+const REQUEST_IFACE = 'org.freedesktop.portal.Request'
+// BindShortcuts can pop an interactive approval dialog (KDE) — give the user
+// time to click it before giving up.
+const RESPONSE_TIMEOUT_MS = 60_000
+
+interface RawMessage { path?: string; interface?: string; member?: string; body?: unknown[] }
+// dbus-next's low-level surface: _addMatch/_removeMatch install D-Bus match
+// rules; 'message' events deliver every matched signal raw. Underscore-named
+// but stable and the only way to hear signals for an object that doesn't
+// exist yet (0.10.2 has no public equivalent).
+interface LowLevelBus {
+  _addMatch(rule: string): Promise<unknown>
+  _removeMatch(rule: string): Promise<unknown>
+  on(event: 'message', cb: (msg: RawMessage) => void): void
+  removeListener(event: 'message', cb: (msg: RawMessage) => void): void
+}
+
 async function awaitResponse(bus: MessageBus, token: string, call: () => Promise<unknown>): Promise<Record<string, Variant>> {
   const path = requestPath(bus, token)
-  const obj = await bus.getProxyObject(PORTAL_DEST, path)
-  const req = obj.getInterface('org.freedesktop.portal.Request')
+  const low = bus as unknown as LowLevelBus
+  const rule = `type='signal',interface='${REQUEST_IFACE}',member='Response',path='${path}'`
+  await low._addMatch(rule)
   const response = new Promise<Record<string, Variant>>((resolve, reject) => {
-    req.once('Response', (code: number, results: Record<string, Variant>) => {
-      if (code === 0) resolve(results)
+    const timer = setTimeout(() => {
+      cleanup()
+      reject(new Error('portal request timed out'))
+    }, RESPONSE_TIMEOUT_MS)
+    const handler = (msg: RawMessage) => {
+      if (msg.path !== path || msg.interface !== REQUEST_IFACE || msg.member !== 'Response') return
+      cleanup()
+      const [code, results] = (msg.body ?? []) as [number, Record<string, Variant>]
+      if (code === 0) resolve(results ?? {})
       else reject(new Error(`portal request denied (code ${code})`))
-    })
+    }
+    const cleanup = () => {
+      clearTimeout(timer)
+      low.removeListener('message', handler)
+      void Promise.resolve(low._removeMatch(rule)).catch(() => {})
+    }
+    low.on('message', handler)
   })
   await call()
   return response
