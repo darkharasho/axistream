@@ -403,9 +403,13 @@ if (primary) app.whenReady().then(async () => {
       setState({ audio: { ...state.audio, micEnabled: enabled } })
     },
     setMicDevice: async (deviceId: string) => {
+      const prevDev = settings.load().micDevice
+      const prevSource = prevDev && prevDev !== 'default' ? prevDev : '@DEFAULT_SOURCE@'
       settings.patch({ micDevice: deviceId })
       await audio.setMicDevice(deviceId)
       setState({ audio: { ...state.audio, micDevice: deviceId } })
+      // PTT's baseline mute lives on the source — move it with the device.
+      await ptt.rearmSource(prevSource)
     },
     setGameAudioApps: async (apps: string[]) => {
       const next = sanitizeGameAudioApps(apps)

@@ -187,7 +187,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
             onError={() => setTest({ st: 'error', error: "Couldn't play the clip — the recording may be corrupt or blocked" })} />
         )}
         {test.st === 'error' && <span className="audio-test-err">{test.error}</span>}
-        <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.</p>
+        <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.{pttEnabled ? ' Hold F18 while recording to test your mic.' : null}</p>
       </div>
     </section>
   )

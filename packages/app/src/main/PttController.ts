@@ -54,4 +54,14 @@ export class PttController {
   }
 
   async restore(): Promise<void> { await this.setMute(false) }
+
+  // The mic device changed while PTT is enabled: the baseline mute lives on
+  // the OLD source — unmute it (never strand it) and baseline-mute the new
+  // one (sourceId() already resolves to it). No-op when disabled.
+  async rearmSource(previousSourceId: string): Promise<void> {
+    if (!this.shortcut) return
+    try { await this.d.exec('pactl', ['set-source-mute', previousSourceId, '0']) }
+    catch (e) { console.warn('[ptt] unmuting previous source failed', e instanceof Error ? e.message : e) }
+    await this.setMute(true)
+  }
 }

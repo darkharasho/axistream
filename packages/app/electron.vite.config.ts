@@ -6,14 +6,16 @@ import { resolve } from 'node:path'
 // optionally requires these native addons; they aren't installed and ws works
 // without them. Mark them external so the bundle leaves them as runtime requires
 // (which ws try/catches) instead of failing to resolve them at bundle/load time.
-const wsOptionalNatives = ['bufferutil', 'utf-8-validate']
+// `usocket` is dbus-next's identical case (optional native for abstract-socket
+// dbus addresses; modern sessions use path= and never hit it).
+const optionalNatives = ['bufferutil', 'utf-8-validate', 'usocket']
 
 export default defineConfig({
   main: {
     build: {
       rollupOptions: {
         input: resolve(__dirname, 'src/main/index.ts'),
-        external: wsOptionalNatives,
+        external: optionalNatives,
       },
     },
   },
@@ -27,7 +29,7 @@ export default defineConfig({
         output: {
           entryFileNames: 'index.cjs',
         },
-        external: wsOptionalNatives,
+        external: optionalNatives,
       },
     },
   },

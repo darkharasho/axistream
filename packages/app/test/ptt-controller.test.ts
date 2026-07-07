@@ -103,3 +103,21 @@ describe('PttController', () => {
     expect(await broken.available()).toBe(false)
   })
 })
+
+describe('PttController.rearmSource', () => {
+  it('unmutes the previous source and baseline-mutes the current one while enabled', async () => {
+    const h = harness()
+    await h.ctl.enable()
+    await h.ctl.rearmSource('old-scarlett-source')
+    expect(h.mutes.slice(-2)).toEqual([
+      'set-source-mute old-scarlett-source 0',
+      'set-source-mute @DEFAULT_SOURCE@ 1',
+    ])
+  })
+
+  it('is a no-op when PTT is disabled', async () => {
+    const h = harness()
+    await h.ctl.rearmSource('old-scarlett-source')
+    expect(h.mutes).toEqual([])
+  })
+})
