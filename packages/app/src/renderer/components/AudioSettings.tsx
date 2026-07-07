@@ -10,6 +10,7 @@ const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: AppState['audio']; gameAudioPlugin: AppState['gameAudioPlugin']; phase: AppState['phase']; ptt: AppState['ptt'] }) {
   const [test, setTest] = useState<{ st: 'idle' | 'recording' | 'ready' | 'error'; url?: string; error?: string; left?: number }>({ st: 'idle' })
   const [pttEnabled, setPttEnabledLocal] = useState(ptt.enabled)
+  const [unlockErr, setUnlockErr] = useState<string | null>(null)
   // Resync on OBJECT identity, not value: main pushes a fresh ptt object on
   // every setPttEnabled result, so a FAILED enable (enabled stays false)
   // still fires this and corrects the optimistic checkbox.
@@ -28,6 +29,12 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
     } else {
       setTest({ st: 'error', error: r.error ?? 'Test failed' })
     }
+  }
+
+  const unlock = async () => {
+    setUnlockErr(null)
+    const r = await axi().unlockPassthrough()
+    if (!r.ok) setUnlockErr(r.error ?? 'Unlock failed')
   }
 
   const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
@@ -171,6 +178,17 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           </label>
           {!ptt.available && <p className="muted">Needs the GlobalShortcuts portal — available on KDE Plasma</p>}
           {ptt.error && <p className="ptt-err">{ptt.error}</p>}
+          {ptt.enabled && ptt.mode === 'passthrough' && (
+            <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
+          )}
+          {ptt.enabled && ptt.mode === 'exclusive' && (
+            <>
+              <p className="muted">AxiStream owns the key — Discord won't see F18.</p>
+              <button className="btn ghost xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
+              <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
+              {unlockErr && <p className="ptt-err">{unlockErr}</p>}
+            </>
+          )}
           {pttEnabled && (
             <p className="muted">AxiStream mutes your mic at the system level and unmutes it while the key is held. Set Discord to <strong>Voice Activity</strong> (not Push to Talk) — it follows automatically.</p>
           )}

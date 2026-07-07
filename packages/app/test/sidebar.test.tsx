@@ -9,7 +9,7 @@ const mkState = (over: Partial<AppState> = {}): AppState => ({
   phase: 'READY',
   audio: { ...INITIAL_STATE.audio, micEnabled: true },
   masks: [{ id: 'a', x: 0.1, y: 0.1, w: 0.2, h: 0.2 }],
-  ptt: { available: true, enabled: false, active: false, error: null },
+  ptt: { available: true, enabled: false, active: false, error: null, mode: null },
   ...over,
 })
 
@@ -36,13 +36,13 @@ describe('Sidebar quick toggles', () => {
   })
 
   it('PTT button glows while transmitting', () => {
-    render(<Sidebar active="stream" state={mkState({ ptt: { available: true, enabled: true, active: true, error: null } })} onNav={() => {}} axi={mkAxi() as never} />)
+    render(<Sidebar active="stream" state={mkState({ ptt: { available: true, enabled: true, active: true, error: null, mode: null } })} onNav={() => {}} axi={mkAxi() as never} />)
     expect(screen.getByLabelText('Quick toggle push to talk').className).toContain('tx')
   })
 
   it('PTT toggle hidden when the portal is unavailable, disabled without mic, arms with mic', () => {
     const axi = mkAxi()
-    const { rerender } = render(<Sidebar active="stream" state={mkState({ ptt: { available: false, enabled: false, active: false, error: null } })} onNav={() => {}} axi={axi as never} />)
+    const { rerender } = render(<Sidebar active="stream" state={mkState({ ptt: { available: false, enabled: false, active: false, error: null, mode: null } })} onNav={() => {}} axi={axi as never} />)
     expect(screen.queryByLabelText('Quick toggle push to talk')).not.toBeInTheDocument()
     rerender(<Sidebar active="stream" state={mkState({ audio: { ...INITIAL_STATE.audio, micEnabled: false } })} onNav={() => {}} axi={axi as never} />)
     expect(screen.getByLabelText('Quick toggle push to talk')).toBeDisabled()

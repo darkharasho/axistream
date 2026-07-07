@@ -35,6 +35,7 @@ export interface IpcHandlers {
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
+  unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
 }
 
@@ -80,6 +81,7 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.testDiscordWebhook, () => handlers.testDiscordWebhook())
   ipcMain.handle(CH.recordAudioTest, () => handlers.recordAudioTest())
   ipcMain.handle(CH.setPttEnabled, (_e: unknown, enabled: boolean) => handlers.setPttEnabled(enabled))
+  ipcMain.handle(CH.unlockPassthrough, () => handlers.unlockPassthrough())
   ipcMain.handle(CH.setMasksVisible, (_e: unknown, visible: boolean) => handlers.setMasksVisible(visible))
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

@@ -37,7 +37,7 @@ export interface AppState {
   gameAudioPlugin: GameAudioPluginView
   blurPlugin: GameAudioPluginView
   maskStyle: 'box' | 'blur'
-  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null }
+  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null }
   windowFitted: boolean
   masksVisible: boolean
 }
@@ -51,7 +51,7 @@ export const INITIAL_STATE: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
-  ptt: { available: false, enabled: false, active: false, error: null },
+  ptt: { available: false, enabled: false, active: false, error: null, mode: null },
   windowFitted: false,
   masksVisible: true,
 }
@@ -111,6 +111,7 @@ export const CH = {
   testDiscordWebhook: 'axi:testDiscordWebhook',
   recordAudioTest: 'axi:recordAudioTest',
   setPttEnabled: 'axi:setPttEnabled',
+  unlockPassthrough: 'axi:unlockPassthrough',
   setMasksVisible: 'axi:setMasksVisible',
   updatesCheck: 'updates:check',
   updatesInstall: 'updates:install',
@@ -152,6 +153,7 @@ export interface AxiApi {
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
+  unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
   checkForUpdates(): Promise<void>
   installUpdate(): Promise<void>
