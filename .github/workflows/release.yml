@@ -1,0 +1,52 @@
+name: Release
+
+# Tag a release: git tag v0.1.0 && git push origin v0.1.0
+# Builds the Linux AppImage + deb and attaches them to a GitHub Release —
+# GearLever-installable straight from the releases page.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p packages/app/tsconfig.json
+
+      - name: Sync package version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version -w @axistream/app
+          echo "Building AxiStream $VERSION"
+
+      - name: Build distributables
+        run: npm run dist
+        env:
+          # electron-builder auto-publish stays off; the release step below owns uploads.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            packages/app/dist/*.AppImage
+            packages/app/dist/*.deb
+          generate_release_notes: true
+          draft: false
