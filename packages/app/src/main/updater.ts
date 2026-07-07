@@ -102,7 +102,9 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   // Manual check + install are always registered so the renderer can call
   // them; in dev they simply report "none".
   ipcMain.handle(CH.updatesCheck, async () => {
-    if (!app.isPackaged) return { state: 'none' } as UpdateStatus
+    // Dev builds have no update feed — push 'none' so the Updates section
+    // shows "Up to date" instead of a dead button.
+    if (!app.isPackaged) { send({ state: 'none' }); return { state: 'none' } as UpdateStatus }
     try {
       await autoUpdater.checkForUpdates()
     } catch (err) {

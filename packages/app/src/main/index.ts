@@ -621,7 +621,7 @@ if (primary) app.whenReady().then(async () => {
     getWhatsNew: async () => {
       const version = app.getVersion()
       try {
-        const res = await fetch('https://api.github.com/repos/darkharasho/axistream/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
+        const res = await fetch('https://api.github.com/repos/darkharasho/axistream/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(5000) })
         if (!res.ok) return { version, notes: null }
         const raw = await res.json() as { tag_name?: string; body?: string }[]
         const releases: GithubRelease[] = raw.map((r) => ({ tag: String(r.tag_name ?? ''), body: String(r.body ?? '') }))
