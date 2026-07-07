@@ -37,7 +37,7 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
     const measure = () => {
       const el = boxRef.current
       if (!el) return
-      const video = el.parentElement?.querySelector('video.preview-video')
+      const video = el.parentElement?.querySelector<HTMLVideoElement>('video.preview-video')
       setContent(containContentRect(video?.videoWidth ?? 0, video?.videoHeight ?? 0, el.clientWidth, el.clientHeight))
     }
     measure()

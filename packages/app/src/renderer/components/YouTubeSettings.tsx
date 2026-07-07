@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AxiApi, StreamSettingsView } from '../../shared/state.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
-const VARS = '{{date}} · {{time}} · {{day}} · {{week}} · {{n}}'
+const VARS = '{{date}} · {{time}} · {{day}} · {{week}} · {{n}} · {{character}} · {{class}} · {{map}} · {{race}} (GW2, while in a map)'
 
 export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; channel: string | null } }) {
   const [s, setS] = useState<StreamSettingsView | null>(null)

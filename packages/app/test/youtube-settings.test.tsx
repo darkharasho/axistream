@@ -23,4 +23,13 @@ describe('YouTubeSettings', () => {
     expect(screen.getByText(/my channel/i)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('EWW - 2026-06-24')).toBeInTheDocument())
   })
+
+  it('lists GW2 template variables in the cheat-sheet', async () => {
+    render(<YouTubeSettings youtube={{ connected: true, channel: 'My Channel' }} />)
+    await waitFor(() => expect(screen.getByText(/\{\{character\}\}/)).toBeInTheDocument())
+    expect(screen.getByText(/\{\{class\}\}/)).toBeInTheDocument()
+    expect(screen.getByText(/\{\{map\}\}/)).toBeInTheDocument()
+    expect(screen.getByText(/\{\{race\}\}/)).toBeInTheDocument()
+    expect(screen.getByText(/GW2, while in a map/)).toBeInTheDocument()
+  })
 })

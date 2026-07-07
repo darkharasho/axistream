@@ -1,7 +1,7 @@
 import './load-env.js' // must run before any process.env read below
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen } from 'electron'
 import { join } from 'node:path'
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
 
@@ -23,7 +23,7 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, type MumbleDeps } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -52,6 +52,32 @@ const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
 const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
 const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy })
 let state: AppState = { ...INITIAL_STATE }
+
+// MumbleLink reader deps — /proc/<pid>/mem reads the live address space, so
+// it works for Proton's deleted-tmpfile-backed shared block (no native addon).
+const mumbleDeps: MumbleDeps = {
+  readProc: (p) => readFileSync(p, 'utf8'),
+  listPids: () => readdirSync('/proc').map(Number).filter((n) => Number.isInteger(n) && n > 0),
+  readMem: (pid, addr, len) => {
+    try {
+      const fd = openSync(`/proc/${pid}/mem`, 'r')
+      try { const b = Buffer.alloc(len); readSync(fd, b, 0, len, addr); return b }
+      finally { closeSync(fd) }
+    } catch { return null }
+  },
+}
+
+const fetchJson = async (url: string) => {
+  const r = await fetch(url)
+  if (!r.ok) throw new Error(`GW2 API ${r.status}`)
+  return r.json()
+}
+const resolveGw2 = async (): Promise<{ character: string; class: string; map: string; race: string } | undefined> => {
+  const id = readIdentity(mumbleDeps)
+  if (!id) return undefined
+  const [spec, map] = await Promise.all([specName(id.spec, fetchJson), mapName(id.mapId, fetchJson)])
+  return { character: id.character, class: spec || professionName(id.profession), map, race: raceName(id.race) }
+}
 
 function createWindow(): BrowserWindow {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
@@ -246,8 +272,12 @@ if (primary) app.whenReady().then(async () => {
       try {
         const s = settings.load()
         const tpl = s.titleTemplate.trim()
+        const gw2 = await Promise.race([
+          resolveGw2().catch(() => undefined),
+          new Promise<undefined>((r) => setTimeout(() => r(undefined), 1500)),
+        ])
         const title = (titleOverride && titleOverride.trim()) ||
-          (tpl && renderTitle(tpl, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat }))
+          (tpl && renderTitle(tpl, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat, gw2 }))
         if (!title) { setState({ phase: 'NEEDS_TITLE' }); return }
         setState({ phase: 'GOING_LIVE' })
         session = await live.startSession({ title, privacy: s.privacy, reuseStreamId: s.streamId, now: new Date() })
@@ -300,7 +330,11 @@ if (primary) app.whenReady().then(async () => {
     },
     previewTitle: async (template) => {
       const s = settings.load()
-      return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat })
+      const gw2 = await Promise.race([
+        resolveGw2().catch(() => undefined),
+        new Promise<undefined>((r) => setTimeout(() => r(undefined), 1500)),
+      ])
+      return renderTitle(template, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat, gw2 })
     },
     setMasks: async (masks: MaskRect[]) => {
       const next = sanitizeMasks(masks)
