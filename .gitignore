@@ -4,6 +4,8 @@ node_modules/
 .DS_Store
 dist/
 build
+# electron-builder buildResources are SOURCE, not build output
+!packages/app/build/
 out/
 *.log
 .obs-test-config/

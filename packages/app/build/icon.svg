@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.32"/>
+      <stop offset="60%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="208" fill="#16171a"/>
+  <rect width="1024" height="1024" rx="208" fill="url(#glow)"/>
+  <g transform="translate(512 512)" fill="none" stroke-linecap="round">
+    <!-- accent back arcs (duo-tone secondary) -->
+    <path d="M-300 -300 a424 424 0 0 0 0 600 M300 -300 a424 424 0 0 1 0 600"
+      stroke="#22d3ee" stroke-opacity="0.45" stroke-width="56"/>
+    <!-- main arcs (off-white) -->
+    <path d="M-150 -150 a212 212 0 0 0 0 300 M150 -150 a212 212 0 0 1 0 300"
+      stroke="#e4e3dc" stroke-width="56"/>
+  </g>
+  <!-- solid core (accent) -->
+  <circle cx="512" cy="512" r="82" fill="#22d3ee"/>
+</svg>

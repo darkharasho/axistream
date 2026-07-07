@@ -8,6 +8,7 @@ directories:
   buildResources: build
 files:
   - out/**
+  - build/icon.png
 asar: true
 npmRebuild: false            # everything is bundled by electron-vite; no native deps
 electronLanguages: [en-US]
