@@ -545,22 +545,28 @@ if (primary) app.whenReady().then(async () => {
       if (ptt.isEnabled()) {
         await ptt.disable()
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: key.name } })
       }
     },
     capturePttKey: async () => {
       if (!(await evdevBackend.available())) return null
       const wasEnabled = ptt.isEnabled()
-      // the pressed key must never transmit: capture with PTT disarmed
+      // the pressed key must never transmit: capture with PTT disarmed.
+      // try/finally: captureNextKey never rejects today, but a future
+      // rejection path must not strand PTT disabled.
       if (wasEnabled) await ptt.disable()
-      const key = await captureNextKey()
-      if (key) {
-        settings.patch({ pttKeyCode: key.code, pttKeyName: key.name })
-        setState({ ptt: { ...state.ptt, keyName: key.name } })
-      }
-      if (wasEnabled) {
-        const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+      let key: PttKey | null = null
+      try {
+        key = await captureNextKey()
+        if (key) {
+          settings.patch({ pttKeyCode: key.code, pttKeyName: key.name })
+          setState({ ptt: { ...state.ptt, keyName: key.name } })
+        }
+      } finally {
+        if (wasEnabled) {
+          const r = await ptt.enable()
+          setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+        }
       }
       return key
     },
