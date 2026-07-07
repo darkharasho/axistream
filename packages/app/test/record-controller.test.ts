@@ -60,7 +60,7 @@ describe('RecordController.recordTestClip', () => {
         return {}
       }),
     }
-    const ctl = new (await import('../src/main/RecordController.js')).RecordController({ client: () => client, sleep: async () => {} })
+    const ctl = new RecordController({ client: () => client, sleep: async () => {} })
     const r = await ctl.recordTestClip(6000, '/tmp/x')
     expect(r.ok).toBe(false)
     expect(stops).toBe(2)

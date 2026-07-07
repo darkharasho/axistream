@@ -455,7 +455,11 @@ if (primary) app.whenReady().then(async () => {
       if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture) {
         return { ok: false, error: 'not available right now' }
       }
-      const r = await recorder.recordTestClip(6000, app.getPath('temp'))
+      // Dedicated subdir so the boot sweep can never touch third-party files
+      // in the shared OS temp dir.
+      const dir = join(app.getPath('temp'), 'axistream-audiotest')
+      await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
+      const r = await recorder.recordTestClip(6000, dir)
       if (!r.ok || !r.outputPath) return { ok: false, error: r.error ?? 'recording failed' }
       try {
         const clip = await fsPromises.readFile(r.outputPath)
@@ -483,10 +487,11 @@ if (primary) app.whenReady().then(async () => {
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 
-  // Sweep stale audio-test clips (OBS names them; we only control the dir).
+  // Sweep stale audio-test clips (OBS names them; we only control the dir —
+  // an app-owned subdir, so nothing third-party can ever be swept).
   void (async () => {
     try {
-      const dir = app.getPath('temp')
+      const dir = join(app.getPath('temp'), 'axistream-audiotest')
       const dayAgo = Date.now() - 86_400_000
       for (const f of await fsPromises.readdir(dir)) {
         if (!f.endsWith('.mp4')) continue
@@ -494,7 +499,7 @@ if (primary) app.whenReady().then(async () => {
         const st = await fsPromises.stat(p).catch(() => null)
         if (st && st.mtimeMs < dayAgo) await fsPromises.unlink(p).catch(() => {})
       }
-    } catch { /* best-effort */ }
+    } catch { /* best-effort — dir may not exist yet */ }
   })()
 
   // Boot the engine, then derive the initial phase.

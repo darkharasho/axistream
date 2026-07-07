@@ -34,19 +34,17 @@ export class RecordController {
       return { ok: false, error: msg }
     }
     await sleep(durationMs)
+    let lastError = ''
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const r = await c.call('StopRecord') as { outputPath?: string }
         if (!r.outputPath) return { ok: false, error: 'no output path from OBS' }
         return { ok: true, outputPath: r.outputPath }
       } catch (e) {
-        if (attempt === 1) {
-          const msg = e instanceof Error ? e.message : String(e)
-          console.warn('[record] StopRecord failed', msg)
-          return { ok: false, error: msg }
-        }
+        lastError = e instanceof Error ? e.message : String(e)
       }
     }
-    return { ok: false, error: 'unreachable' }
+    console.warn('[record] StopRecord failed', lastError)
+    return { ok: false, error: lastError }
   }
 }
