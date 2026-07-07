@@ -3,6 +3,11 @@
 html, body, #root { height: 100%; }
 html, body { overflow: hidden; }
 body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+/* App chrome is not a document — no drag-selecting labels/buttons/pills.
+   Re-enabled only where selecting has value: form fields and error text. */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
+.overlay-pill, .ptt-err, .audio-test-err, .yt-test-err, .yt-preview { -webkit-user-select: text; user-select: text; }
 /* Corner rounding (KWin/compositor rounds the window; #root matches the radius
    so content doesn't poke into the rounded corner). Window is opaque
    (transparent:false + dark backgroundColor) — same technique as axibridge. */
