@@ -38,3 +38,35 @@ describe('waitForStableFile', () => {
     expect(i).toBeGreaterThanOrEqual(5)
   })
 })
+
+import { hasTopLevelMoov } from '../src/main/wait-stable-file.js'
+
+const atom = (typ: string, payload = 0) => {
+  const b = Buffer.alloc(8 + payload)
+  b.writeUInt32BE(8 + payload, 0)
+  b.write(typ, 4, 'latin1')
+  return b
+}
+
+describe('hasTopLevelMoov', () => {
+  it('finds moov among top-level atoms', () => {
+    const buf = Buffer.concat([atom('ftyp', 16), atom('mdat', 64), atom('moov', 32)])
+    expect(hasTopLevelMoov(buf)).toBe(true)
+  })
+
+  it('a finalization-raced file (no moov yet) is rejected', () => {
+    const buf = Buffer.concat([atom('ftyp', 16), atom('free', 8), atom('mdat', 64)])
+    expect(hasTopLevelMoov(buf)).toBe(false)
+  })
+
+  it('does not match "moov" bytes inside mdat payload', () => {
+    const mdat = atom('mdat', 64)
+    mdat.write('moov', 20, 'latin1')
+    expect(hasTopLevelMoov(Buffer.concat([atom('ftyp', 16), mdat]))).toBe(false)
+  })
+
+  it('tolerates truncated/garbage tails without throwing', () => {
+    const buf = Buffer.concat([atom('ftyp', 16), Buffer.from([0, 0])])
+    expect(hasTopLevelMoov(buf)).toBe(false)
+  })
+})

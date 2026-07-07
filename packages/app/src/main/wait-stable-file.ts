@@ -27,3 +27,26 @@ export async function waitForStableFile(
   }
   return false
 }
+
+/** True when the buffer's TOP-LEVEL mp4 atoms include a moov box. OBS writes
+ *  the moov index last when finalizing a regular mp4 — a size-stable file
+ *  without it plays as 0:00 in Chromium. Walks the top-level atom chain only
+ *  (never matches 'moov' bytes inside mdat); malformed tails just end the walk. */
+export function hasTopLevelMoov(buf: Uint8Array): boolean {
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+  let off = 0
+  while (off + 8 <= buf.byteLength) {
+    let size = view.getUint32(off)
+    const typ = String.fromCharCode(buf[off + 4], buf[off + 5], buf[off + 6], buf[off + 7])
+    if (typ === 'moov') return true
+    if (size === 1) {
+      if (off + 16 > buf.byteLength) return false
+      const hi = view.getUint32(off + 8)
+      const lo = view.getUint32(off + 12)
+      size = hi * 4294967296 + lo
+    }
+    if (size < 8) return false
+    off += size
+  }
+  return false
+}
