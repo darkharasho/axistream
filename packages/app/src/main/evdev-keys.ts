@@ -48,9 +48,9 @@ const realDeps: EvdevDeps = {
 }
 
 /** Observational PTT capture: reads every readable /dev/input/event* and
- *  watches for KEY_F18 edges. Nothing is grabbed or consumed — Discord's own
- *  PTT (and everything else) still receives the key. Non-keyboards simply
- *  never emit code 188. */
+ *  watches for the configured key's edges. Nothing is grabbed or consumed —
+ *  Discord's own PTT (and everything else) still receives the key.
+ *  Non-keyboards simply never emit the bound code. */
 export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
   return {
     async available(): Promise<boolean> {
