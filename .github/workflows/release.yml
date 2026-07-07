@@ -38,7 +38,9 @@ jobs:
 
       - name: Build + upload to draft release
         # --publish always also uploads latest-linux.yml, the electron-updater feed.
-        run: npm -w @axistream/app run build && npx --workspace @axistream/app electron-builder --config electron-builder.yml --publish always
+        # npm run -w changes CWD to the workspace — electron-builder's config and
+        # project-dir resolution both need to run from packages/app.
+        run: npm -w @axistream/app run dist:publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'

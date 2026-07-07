@@ -2,6 +2,7 @@ import { app, ipcMain, type BrowserWindow } from 'electron'
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import electronUpdater from 'electron-updater'
+import { CH, type UpdateStatus } from '../shared/state.js'
 
 /**
  * electron-updater installs an AppImage update by `unlink`ing process.env.APPIMAGE
@@ -63,7 +64,6 @@ function makeUpdaterLog(): { info: typeof log; warn: typeof log; error: typeof l
   return { info: log, warn: log, error: log, debug: log }
 }
 
-import type { UpdateStatus } from '../shared/state.js'
 
 /**
  * Wire GitHub-Releases auto-updates. Active only in the packaged app — in dev
@@ -73,7 +73,7 @@ import type { UpdateStatus } from '../shared/state.js'
 export function setupUpdater(getWindow: () => BrowserWindow | null): void {
   const send = (status: UpdateStatus): void => {
     const win = getWindow()
-    if (win && !win.isDestroyed()) win.webContents.send('updates:status', status)
+    if (win && !win.isDestroyed()) win.webContents.send(CH.evtUpdateStatus, status)
   }
 
   // Accessed lazily (not at module load): electron-updater's `autoUpdater` getter
@@ -100,7 +100,7 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
 
   // Manual check + install are always registered so the renderer can call
   // them; in dev they simply report "none".
-  ipcMain.handle('updates:check', async () => {
+  ipcMain.handle(CH.updatesCheck, async () => {
     if (!app.isPackaged) return { state: 'none' } as UpdateStatus
     try {
       await autoUpdater.checkForUpdates()
@@ -110,13 +110,12 @@ export function setupUpdater(getWindow: () => BrowserWindow | null): void {
     return null
   })
 
-  ipcMain.handle('updates:install', () => {
+  ipcMain.handle(CH.updatesInstall, () => {
     if (!app.isPackaged) return
     guardAppImageInstall()
     autoUpdater.quitAndInstall()
   })
 
-  ipcMain.handle('app:version', () => app.getVersion())
 
   if (!app.isPackaged) return
 

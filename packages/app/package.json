@@ -12,6 +12,7 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "dist": "electron-vite build && electron-builder --config electron-builder.yml",
+    "dist:publish": "electron-vite build && electron-builder --config electron-builder.yml --publish always",
     "test": "vitest run"
   },
   "devDependencies": {
