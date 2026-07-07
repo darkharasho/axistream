@@ -42,6 +42,7 @@ import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
 import { PttController } from './PttController.js'
+import { ensureDesktopEntry } from './desktop-entry.js'
 import { createPortalShortcuts } from './portal-shortcuts.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
@@ -573,8 +574,14 @@ if (primary) app.whenReady().then(async () => {
       const a = settings.load()
       setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioApps: a.gameAudioApps } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
-      // PTT: crash recovery first (a previous run may have died source-muted),
-      // then probe the portal and re-arm if the user had it on.
+      // PTT: install the desktop entry the portal Registry validates our host
+      // app id against, then crash recovery (a previous run may have died
+      // source-muted), then probe the portal and re-arm if the user had it on.
+      await ensureDesktopEntry(process.execPath, homedir(), {
+        mkdir: (p) => fsPromises.mkdir(p, { recursive: true }),
+        readFile: (p) => fsPromises.readFile(p, 'utf8'),
+        writeFile: (p, c) => fsPromises.writeFile(p, c),
+      })
       await ptt.restore()
       const pttAvailable = await ptt.available()
       setState({ ptt: { ...state.ptt, available: pttAvailable } })
