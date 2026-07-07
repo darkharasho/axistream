@@ -23,7 +23,7 @@ function hideObsTray(): void {
     } catch { /* best-effort */ }
   }
 }
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, type MumbleDeps } from '@axistream/capture'
+import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -72,11 +72,11 @@ const fetchJson = async (url: string) => {
   if (!r.ok) throw new Error(`GW2 API ${r.status}`)
   return r.json()
 }
-const resolveGw2 = async (): Promise<{ character: string; class: string; map: string; race: string } | undefined> => {
+const resolveGw2 = async (): Promise<{ character: string; class: string; map: string; race: string; team: string } | undefined> => {
   const id = readIdentity(mumbleDeps)
   if (!id) return undefined
-  const [spec, map] = await Promise.all([specName(id.spec, fetchJson), mapName(id.mapId, fetchJson)])
-  return { character: id.character, class: spec || professionName(id.profession), map, race: raceName(id.race) }
+  const [spec, map, team] = await Promise.all([specName(id.spec, fetchJson), mapName(id.mapId, fetchJson), teamColorName(id.teamColorId, fetchJson)])
+  return { character: id.character, class: spec || professionName(id.profession), map, race: raceName(id.race), team }
 }
 
 function createWindow(): BrowserWindow {

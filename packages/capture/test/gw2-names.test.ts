@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { professionName, raceName, mapName, specName } from '../src/gw2-names.js'
+import { professionName, raceName, mapName, specName, teamColorName } from '../src/gw2-names.js'
 
 describe('static tables', () => {
   it('profession ids map to names; out-of-range is empty', () => {
@@ -37,5 +37,25 @@ describe('mapName / specName memoized lookups', () => {
   it('missing name field yields empty string', async () => {
     const fetchJson = vi.fn(async () => ({}))
     expect(await mapName(950005, fetchJson)).toBe('')
+  })
+})
+
+describe('teamColorName', () => {
+  it('classifies the team-color dye by dominant channel', async () => {
+    const red = vi.fn(async () => ({ cloth: { rgb: [133, 36, 26] } }))
+    expect(await teamColorName(376, red)).toBe('Red')
+    const green = vi.fn(async () => ({ cloth: { rgb: [40, 120, 45] } }))
+    expect(await teamColorName(377, green)).toBe('Green')
+    const blue = vi.fn(async () => ({ cloth: { rgb: [30, 50, 140] } }))
+    expect(await teamColorName(378, blue)).toBe('Blue')
+  })
+  it('memoizes and returns empty on id 0 / failure / missing rgb', async () => {
+    const f = vi.fn(async () => ({ cloth: { rgb: [133, 36, 26] } }))
+    expect(await teamColorName(9376, f)).toBe('Red')
+    expect(await teamColorName(9376, f)).toBe('Red')
+    expect(f).toHaveBeenCalledTimes(1)
+    expect(await teamColorName(0, f)).toBe('')
+    expect(await teamColorName(9377, vi.fn(async () => { throw new Error('offline') }))).toBe('')
+    expect(await teamColorName(9378, vi.fn(async () => ({})))).toBe('')
   })
 })

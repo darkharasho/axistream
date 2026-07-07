@@ -1,5 +1,5 @@
 export interface MumbleIdentity {
-  character: string; profession: number; spec: number; race: number; mapId: number; commander: boolean
+  character: string; profession: number; spec: number; race: number; mapId: number; commander: boolean; teamColorId: number
 }
 export interface MumbleDeps {
   readProc(path: string): string
@@ -40,6 +40,7 @@ function parseIdentityBuf(buf: Buffer): MumbleIdentity | null {
     return {
       character: o.name, profession: Number(o.profession) || 0, spec: Number(o.spec) || 0,
       race: Number(o.race) || 0, mapId: Number(o.map_id) || 0, commander: !!o.commander,
+      teamColorId: Number(o.team_color_id) || 0,
     }
   } catch { return null }
 }
