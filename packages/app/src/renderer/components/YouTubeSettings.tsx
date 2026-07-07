@@ -7,6 +7,7 @@ const VARS = '{{date}} · {{time}} · {{day}} · {{week}} · {{n}} · {{characte
 export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; channel: string | null } }) {
   const [s, setS] = useState<StreamSettingsView | null>(null)
   const [preview, setPreview] = useState('')
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => { axi().getSettings().then(setS) }, [])
   useEffect(() => {
@@ -20,6 +21,12 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
     const next = { ...s, ...p }
     setS(next)
     axi().saveSettings(p)
+  }
+
+  const sendDiscordTest = async () => {
+    setTestMsg(null)
+    const r = await axi().testDiscordWebhook()
+    setTestMsg({ ok: r.ok, text: r.ok ? 'Sent ✓' : (r.error ?? 'Failed') })
   }
 
   return (
@@ -54,6 +61,26 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
               <option value="private">Private</option>
             </select>
           </label>
+
+          <div className="yt-discord">
+            <h4 className="yt-discord-head">Discord announcement</h4>
+            <label>Discord webhook URL
+              <input value={s.discordWebhookUrl} placeholder="https://discord.com/api/webhooks/…"
+                onChange={(e) => update({ discordWebhookUrl: e.target.value })} />
+            </label>
+            <div className="yt-hint">Server Settings → Integrations → Webhooks. Announces your stream when you go live.</div>
+            <label>Announcement message (optional)
+              <input value={s.discordMessage} placeholder="@here WvW raid starting"
+                onChange={(e) => update({ discordMessage: e.target.value })} />
+            </label>
+            <div className="yt-hint">Prepended above the embed — use <code>@here</code> or a role mention to ping.</div>
+            <div className="yt-discord-test">
+              <button className="btn ghost sm" disabled={!s.discordWebhookUrl.trim()} onClick={sendDiscordTest}>
+                Send test
+              </button>
+              {testMsg && <span className={testMsg.ok ? 'yt-test-ok' : 'yt-test-err'}>{testMsg.text}</span>}
+            </div>
+          </div>
         </>
       )}
     </section>

@@ -12,6 +12,8 @@ export interface StreamSettingsView {
   titleTemplate: string
   dateFormat: string
   privacy: 'public' | 'unlisted' | 'private'
+  discordWebhookUrl: string
+  discordMessage: string
 }
 
 export interface AudioDevice { id: string; name: string }
@@ -40,7 +42,7 @@ export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
   encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
-  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public' },
+  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
@@ -49,6 +51,8 @@ export const INITIAL_STATE: AppState = {
 }
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
+
+export interface DiscordTestResult { ok: boolean; error?: string }
 
 export const CH = {
   getInitialState: 'axi:getInitialState',
@@ -87,6 +91,7 @@ export const CH = {
   getGameAudioApps: 'axi:getGameAudioApps',
   fitWindowToCapture: 'axi:fitWindowToCapture',
   evtAudioLevels: 'axi:evt:audioLevels',
+  testDiscordWebhook: 'axi:testDiscordWebhook',
 } as const
 
 export interface AxiApi {
@@ -121,6 +126,7 @@ export interface AxiApi {
   setGameAudioApps(apps: string[]): Promise<void>
   getGameAudioApps(): Promise<AudioDevice[]>
   fitWindowToCapture(): Promise<void>
+  testDiscordWebhook(): Promise<DiscordTestResult>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

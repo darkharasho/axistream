@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type DiscordTestResult } from '../shared/state.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -39,6 +39,7 @@ const api: AxiApi = {
   setGameAudioApps: (apps) => ipcRenderer.invoke(CH.setGameAudioApps, apps) as Promise<void>,
   getGameAudioApps: () => ipcRenderer.invoke(CH.getGameAudioApps) as Promise<AudioDevice[]>,
   fitWindowToCapture: () => ipcRenderer.invoke(CH.fitWindowToCapture) as Promise<void>,
+  testDiscordWebhook: () => ipcRenderer.invoke(CH.testDiscordWebhook) as Promise<DiscordTestResult>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),

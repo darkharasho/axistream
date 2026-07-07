@@ -160,6 +160,24 @@ describe('StreamSettings', () => {
       expect(new StreamSettings(file).load().maskStyle).toBe('box')
     })
   })
+
+  it('defaults the discord fields to empty and round-trips them', () => {
+    const s = new StreamSettings(file)
+    expect(s.load().discordWebhookUrl).toBe('')
+    expect(s.load().discordMessage).toBe('')
+    s.patch({ discordWebhookUrl: 'https://discord.com/api/webhooks/1/x', discordMessage: '@here' })
+    const reloaded = new StreamSettings(file).load()
+    expect(reloaded.discordWebhookUrl).toBe('https://discord.com/api/webhooks/1/x')
+    expect(reloaded.discordMessage).toBe('@here')
+  })
+
+  it('sanitizes non-string discord fields to empty', () => {
+    const s = new StreamSettings(file)
+    s.save({ ...DEFAULT_SETTINGS, discordWebhookUrl: 123 as unknown as string, discordMessage: null as unknown as string })
+    const loaded = new StreamSettings(file).load()
+    expect(loaded.discordWebhookUrl).toBe('')
+    expect(loaded.discordMessage).toBe('')
+  })
 })
 
 describe('sanitizeMasks', () => {

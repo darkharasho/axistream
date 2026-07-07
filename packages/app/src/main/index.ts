@@ -39,6 +39,7 @@ import { PreviewPump } from './PreviewPump.js'
 import { MaskController } from './MaskController.js'
 import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PLUGIN_REF, BLUR_PLUGIN_REF } from './PluginInstaller.js'
 import { GameAudioController } from './GameAudioController.js'
+import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize, toggleWindowSize } from './window-size.js'
@@ -50,7 +51,7 @@ const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
 const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
 const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
-const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy })
+const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage })
 let state: AppState = { ...INITIAL_STATE }
 
 // MumbleLink reader deps — /proc/<pid>/mem reads the live address space, so
@@ -72,6 +73,7 @@ const fetchJson = async (url: string) => {
   if (!r.ok) throw new Error(`GW2 API ${r.status}`)
   return r.json()
 }
+const realFetch: FetchLike = (url, init) => fetch(url, init).then((r) => ({ ok: r.ok, status: r.status }))
 const resolveGw2 = async (): Promise<{ character: string; class: string; map: string; race: string; team: string } | undefined> => {
   const id = readIdentity(mumbleDeps)
   if (!id) return undefined
@@ -286,6 +288,19 @@ if (primary) app.whenReady().then(async () => {
         await stream.goLive(session.ingest, {
           onIngestActive: async () => {
             try { await live.confirmLive(session!.broadcastId) } catch { /* best-effort */ }
+            const cfg = settings.load()
+            if (cfg.discordWebhookUrl.trim()) {
+              // Fire-and-forget: onIngestActive is awaited on the go-live
+              // critical path (StreamController flips to LIVE only after it
+              // resolves), so a slow webhook must not delay the LIVE
+              // transition. announce swallows its own errors; void detaches it.
+              void announce({
+                webhookUrl: cfg.discordWebhookUrl,
+                title,
+                watchUrl: `https://www.youtube.com/watch?v=${session!.broadcastId}`,
+                message: cfg.discordMessage,
+              }, realFetch).catch(() => {})
+            }
           },
           onStop: () => live.complete(session!.broadcastId),
         })
@@ -425,6 +440,15 @@ if (primary) app.whenReady().then(async () => {
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },
     windowClose: async () => { win.close() },
+    testDiscordWebhook: async () => {
+      const cfg = settings.load()
+      return announce({
+        webhookUrl: cfg.discordWebhookUrl,
+        title: 'AxiStream test announcement',
+        watchUrl: 'https://www.youtube.com/@axistream',
+        message: cfg.discordMessage,
+      }, realFetch)
+    },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
