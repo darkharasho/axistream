@@ -209,7 +209,6 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           {pttEnabled && (
             <p className="muted">AxiStream mutes your mic at the system level and unmutes it while the key is held. Set Discord to <strong>Voice Activity</strong> (not Push to Talk) — it follows automatically.</p>
           )}
-          {pttEnabled && <p className="muted">Change the key in KDE System Settings → Shortcuts → AxiStream.</p>}
         </div>
       )}
 
