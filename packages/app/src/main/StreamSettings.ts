@@ -3,6 +3,7 @@ import { dirname } from 'node:path'
 import { MAX_MASKS, type MaskRect } from '../shared/state.js'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
+export type MaskStyle = 'box' | 'blur'
 
 export interface StreamSettingsData {
   titleTemplate: string
@@ -17,6 +18,7 @@ export interface StreamSettingsData {
   masks: MaskRect[]
   preferSoftware: boolean
   gameAudioApps: string[]
+  maskStyle: MaskStyle
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -32,9 +34,11 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   masks: [],
   preferSoftware: false,
   gameAudioApps: [],
+  maskStyle: 'box',
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
+const MASK_STYLES: MaskStyle[] = ['box', 'blur']
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
@@ -95,6 +99,7 @@ export class StreamSettings {
         masks: sanitizeMasks(raw.masks),
         preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
         gameAudioApps,
+        maskStyle: MASK_STYLES.includes(raw.maskStyle as MaskStyle) ? (raw.maskStyle as MaskStyle) : DEFAULT_SETTINGS.maskStyle,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }
