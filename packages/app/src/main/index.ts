@@ -45,6 +45,8 @@ import { PttController } from './PttController.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
 import { setupUpdater } from './updater.js'
 import { createPortalShortcuts } from './portal-shortcuts.js'
+import { createEvdevShortcuts } from './evdev-keys.js'
+import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
@@ -208,8 +210,23 @@ if (primary) app.whenReady().then(async () => {
   const execAsync = (cmd: string, args: string[]) => new Promise<void>((resolve, reject) => {
     execFile(cmd, args, (err) => (err ? reject(err) : resolve()))
   })
+  const portalBackend = createPortalShortcuts()
+  const evdevBackend = createEvdevShortcuts()
+  let pttMode: 'passthrough' | 'exclusive' | null = null
+  // Probed at every enable (not boot-cached) so the pkexec unlock upgrades
+  // the running app without a restart.
+  const selectBackend = async () => (await evdevBackend.available())
+    ? { backend: evdevBackend, mode: 'passthrough' as const }
+    : { backend: portalBackend, mode: 'exclusive' as const }
   const ptt = new PttController({
-    portal: createPortalShortcuts(),
+    portal: {
+      available: async () => (await evdevBackend.available()) || (await portalBackend.available()),
+      bind: async (id, description, preferredTrigger) => {
+        const sel = await selectBackend()
+        pttMode = sel.mode
+        return sel.backend.bind(id, description, preferredTrigger)
+      },
+    },
     exec: execAsync,
     sourceId: () => {
       const dev = settings.load().micDevice
@@ -514,11 +531,21 @@ if (primary) app.whenReady().then(async () => {
       settings.patch({ pttEnabled: enabled })
       if (enabled) {
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed') } })
+        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
       } else {
         await ptt.disable()
-        setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null } })
+        setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null, mode: null } })
       }
+    },
+    unlockPassthrough: async () => {
+      const r = await runInputUnlock(execAsync)
+      if (r.ok && ptt.isEnabled()) {
+        // upgrade in place: closing the portal binding releases F18 to Discord
+        await ptt.disable()
+        const en = await ptt.enable()
+        setState({ ptt: { ...state.ptt, enabled: en.ok, active: false, error: en.ok ? null : (en.error ?? 'failed'), mode: en.ok ? pttMode : null } })
+      }
+      return r
     },
     recordAudioTest: async () => {
       if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture) {
@@ -623,7 +650,7 @@ if (primary) app.whenReady().then(async () => {
       setState({ ptt: { ...state.ptt, available: pttAvailable } })
       if (pttAvailable && a.pttEnabled) {
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed') } })
+        setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
       }
       setState({ masks: a.masks, masksVisible: a.masksVisible })
       pushFitted()
