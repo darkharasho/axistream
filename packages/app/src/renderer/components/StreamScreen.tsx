@@ -65,7 +65,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
           {phase === 'AWAITING_APPROVAL' ? null
             : <button className="btn ghost xs" onClick={() => setEditingMasks((v) => !v)} title="Black out chat or other areas on the stream"><Shield size={12} /> Masks</button>}
           {capture && phase !== 'AWAITING_APPROVAL'
-            ? <button className="btn ghost xs" onClick={() => axi.fitWindowToCapture()} title="Resize the window to the game's aspect (removes letterbox bars)"><Scan size={12} /> Fit</button>
+            ? <button className="btn ghost xs" onClick={() => axi.fitWindowToCapture()} title="Toggle between the game's aspect (no letterbox bars) and the default window size"><Scan size={12} /> Fit</button>
             : null}
           {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />

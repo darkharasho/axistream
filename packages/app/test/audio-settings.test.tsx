@@ -95,6 +95,15 @@ describe('AudioSettings', () => {
     expect(axi.setGameAudioApps).toHaveBeenCalledWith(['Discord'])
   })
 
+  it('selected apps sort to the top of the list', async () => {
+    // Running order from the mock is Guild Wars 2 then Discord; selecting only
+    // Discord must float it above the unselected Guild Wars 2.
+    render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['Discord'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
+    const discord = await screen.findByText('Discord')
+    const gw2 = screen.getByText('Guild Wars 2')
+    expect(discord.compareDocumentPosition(gw2) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('checking All desktop audio while apps are selected still just calls setDesktopEnabled(true)', async () => {
     render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: ['gw2-64.exe'] }} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" />)
     await screen.findByLabelText('Guild Wars 2')

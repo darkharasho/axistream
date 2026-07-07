@@ -48,9 +48,15 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
     ...(runningApps ?? []),
     ...audio.gameAudioApps.filter((id) => !(runningApps ?? []).some((r) => r.id === id)).map((id) => ({ id, name: id })),
   ]
+  // Selected apps float to the top so what's on-stream is always visible first;
+  // order within each group is preserved (running before saved-not-running).
+  const ordered = [
+    ...rows.filter((r) => audio.gameAudioApps.includes(r.id)),
+    ...rows.filter((r) => !audio.gameAudioApps.includes(r.id)),
+  ]
   const shownRows = appFilter.trim()
-    ? rows.filter((r) => r.name.toLowerCase().includes(appFilter.trim().toLowerCase()))
-    : rows
+    ? ordered.filter((r) => r.name.toLowerCase().includes(appFilter.trim().toLowerCase()))
+    : ordered
   const isRunning = (id: string) => (runningApps ?? []).some((r) => r.id === id)
 
   return (

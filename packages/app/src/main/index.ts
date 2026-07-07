@@ -41,7 +41,7 @@ import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PL
 import { GameAudioController } from './GameAudioController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
-import { computeWindowSize, fitWidthForCapture } from './window-size.js'
+import { computeWindowSize, toggleWindowSize } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
 
@@ -417,9 +417,10 @@ if (primary) app.whenReady().then(async () => {
     fitWindowToCapture: async () => {
       const cap = state.capture
       if (!cap) return
-      const [, ch] = win.getContentSize()
+      const [cw, ch] = win.getContentSize()
       const wa = screen.getDisplayMatching(win.getBounds()).workArea
-      win.setContentSize(fitWidthForCapture(SIDEBAR_W, ch, cap.width, cap.height, WINDOW_MIN.width, wa.width), ch)
+      const next = toggleWindowSize({ width: cw, height: ch }, wa, WINDOW_FRACTION, WINDOW_MIN, SIDEBAR_W, cap.width, cap.height)
+      win.setContentSize(next.width, next.height)
     },
     windowMinimize: async () => { win.minimize() },
     windowToggleMaximize: async () => { if (win.isMaximized()) win.unmaximize(); else win.maximize() },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeWindowSize, fitWidthForCapture } from '../src/main/window-size.js'
+import { computeWindowSize, fitWidthForCapture, toggleWindowSize } from '../src/main/window-size.js'
 
 const MIN = { width: 820, height: 560 }
 
@@ -47,5 +47,28 @@ describe('fitWidthForCapture', () => {
   })
   it('degenerate capture dims return the minimum', () => {
     expect(fitWidthForCapture(200, 840, 0, 0, 820, 3400)).toBe(820)
+  })
+})
+
+describe('toggleWindowSize', () => {
+  const WA = { width: 2560, height: 1440 }
+
+  it('fits the width to the capture aspect when not currently fitted', () => {
+    // content 1400x864 (default-ish), capture 3440x1440 → fit width 200 + 864*3440/1440 = 2264
+    const next = toggleWindowSize({ width: 1400, height: 864 }, WA, 0.6, MIN, 200, 3440, 1440)
+    expect(next).toEqual({ width: 2264, height: 864 })
+  })
+
+  it('snaps back to the default window size when already fitted', () => {
+    // start already at the fit width for this capture/height → toggle returns computeWindowSize
+    const fitW = fitWidthForCapture(200, 864, 3440, 1440, MIN.width, WA.width) // 2264
+    expect(toggleWindowSize({ width: fitW, height: 864 }, WA, 0.6, MIN, 200, 3440, 1440))
+      .toEqual(computeWindowSize(WA, 0.6, MIN))
+  })
+
+  it('treats a within-tolerance width as fitted (rounding slack)', () => {
+    const fitW = fitWidthForCapture(200, 864, 3440, 1440, MIN.width, WA.width)
+    expect(toggleWindowSize({ width: fitW - 2, height: 864 }, WA, 0.6, MIN, 200, 3440, 1440))
+      .toEqual(computeWindowSize(WA, 0.6, MIN))
   })
 })
