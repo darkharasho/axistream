@@ -37,6 +37,7 @@ export interface AppState {
   gameAudioPlugin: GameAudioPluginView
   blurPlugin: GameAudioPluginView
   maskStyle: 'box' | 'blur'
+  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null }
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
@@ -48,6 +49,7 @@ export const INITIAL_STATE: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
+  ptt: { available: false, enabled: false, active: false, error: null },
 }
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
@@ -95,6 +97,7 @@ export const CH = {
   evtAudioLevels: 'axi:evt:audioLevels',
   testDiscordWebhook: 'axi:testDiscordWebhook',
   recordAudioTest: 'axi:recordAudioTest',
+  setPttEnabled: 'axi:setPttEnabled',
 } as const
 
 export interface AxiApi {
@@ -131,6 +134,7 @@ export interface AxiApi {
   fitWindowToCapture(): Promise<void>
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
+  setPttEnabled(enabled: boolean): Promise<void>
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

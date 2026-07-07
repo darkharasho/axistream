@@ -34,6 +34,7 @@ export interface IpcHandlers {
   fitWindowToCapture(): Promise<void>
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
+  setPttEnabled(enabled: boolean): Promise<void>
 }
 
 export interface IpcDeps {
@@ -77,5 +78,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.fitWindowToCapture, () => handlers.fitWindowToCapture())
   ipcMain.handle(CH.testDiscordWebhook, () => handlers.testDiscordWebhook())
   ipcMain.handle(CH.recordAudioTest, () => handlers.recordAudioTest())
+  ipcMain.handle(CH.setPttEnabled, (_e: unknown, enabled: boolean) => handlers.setPttEnabled(enabled))
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }
