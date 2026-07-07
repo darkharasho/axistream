@@ -23,6 +23,8 @@ export interface StreamSettingsData {
   discordMessage: string
   pttEnabled: boolean
   masksVisible: boolean
+  pttKeyCode: number
+  pttKeyName: string
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -43,6 +45,8 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   discordMessage: '',
   pttEnabled: false,
   masksVisible: true,
+  pttKeyCode: 188,
+  pttKeyName: 'F18',
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -112,6 +116,8 @@ export class StreamSettings {
         discordMessage: typeof raw.discordMessage === 'string' ? raw.discordMessage : DEFAULT_SETTINGS.discordMessage,
         pttEnabled: typeof raw.pttEnabled === 'boolean' ? raw.pttEnabled : DEFAULT_SETTINGS.pttEnabled,
         masksVisible: typeof raw.masksVisible === 'boolean' ? raw.masksVisible : DEFAULT_SETTINGS.masksVisible,
+        pttKeyCode: Number.isInteger(raw.pttKeyCode) && (raw.pttKeyCode as number) >= 1 && (raw.pttKeyCode as number) <= 767 ? raw.pttKeyCode as number : DEFAULT_SETTINGS.pttKeyCode,
+        pttKeyName: typeof raw.pttKeyName === 'string' && raw.pttKeyName ? raw.pttKeyName : DEFAULT_SETTINGS.pttKeyName,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

@@ -1,3 +1,5 @@
+import type { PttKey } from './keys.js'
+
 export type StreamPhase =
   | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
@@ -37,7 +39,7 @@ export interface AppState {
   gameAudioPlugin: GameAudioPluginView
   blurPlugin: GameAudioPluginView
   maskStyle: 'box' | 'blur'
-  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null }
+  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string }
   windowFitted: boolean
   masksVisible: boolean
 }
@@ -51,7 +53,7 @@ export const INITIAL_STATE: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
-  ptt: { available: false, enabled: false, active: false, error: null, mode: null },
+  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18' },
   windowFitted: false,
   masksVisible: true,
 }
@@ -111,6 +113,8 @@ export const CH = {
   testDiscordWebhook: 'axi:testDiscordWebhook',
   recordAudioTest: 'axi:recordAudioTest',
   setPttEnabled: 'axi:setPttEnabled',
+  setPttKey: 'axi:setPttKey',
+  capturePttKey: 'axi:capturePttKey',
   unlockPassthrough: 'axi:unlockPassthrough',
   setMasksVisible: 'axi:setMasksVisible',
   updatesCheck: 'updates:check',
@@ -153,6 +157,8 @@ export interface AxiApi {
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
+  setPttKey(key: PttKey): Promise<void>
+  capturePttKey(): Promise<PttKey | null>
   unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
   checkForUpdates(): Promise<void>

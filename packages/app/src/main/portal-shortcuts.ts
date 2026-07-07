@@ -10,6 +10,7 @@
 // low-level match rule + raw message listener BEFORE the call, which closes
 // the reply-before-subscribe race without needing the object to exist.
 import dbus, { Variant, type MessageBus, type ClientInterface } from 'dbus-next'
+import { type PttKey } from '../shared/keys.js'
 
 const PORTAL_DEST = 'org.freedesktop.portal.Desktop'
 const PORTAL_PATH = '/org/freedesktop/portal/desktop'
@@ -91,7 +92,7 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
       }
     },
 
-    async bind(id: string, description: string, preferredTrigger: string): Promise<BoundShortcut> {
+    async bind(id: string, description: string, key: PttKey): Promise<BoundShortcut> {
       const bus = await busFactory()
       const obj = await bus.getProxyObject(PORTAL_DEST, PORTAL_PATH)
       // Host (non-flatpak) apps have no implicit app id, and KDE's portal
@@ -117,7 +118,7 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
       const bindToken = nextToken()
       await awaitResponse(bus, bindToken, () => gs.BindShortcuts(
         sessionHandle,
-        [[id, { description: new Variant('s', description), preferred_trigger: new Variant('s', preferredTrigger) }]],
+        [[id, { description: new Variant('s', description), preferred_trigger: new Variant('s', key.name) }]],
         '',
         { handle_token: new Variant('s', bindToken) },
       ))

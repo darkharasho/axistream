@@ -4,6 +4,7 @@ import type { AxiApi, AudioDevice, AppState, AudioLevels } from '../../shared/st
 import { staleOption } from '../device-options.js'
 import { GameAudioSettings } from './GameAudioSettings.js'
 import { AudioPulse } from './AudioPulse.js'
+import { PTT_KEY_CHOICES } from '../../shared/keys.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
@@ -11,6 +12,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
   const [test, setTest] = useState<{ st: 'idle' | 'recording' | 'ready' | 'error'; url?: string; error?: string; left?: number }>({ st: 'idle' })
   const [pttEnabled, setPttEnabledLocal] = useState(ptt.enabled)
   const [unlockErr, setUnlockErr] = useState<string | null>(null)
+  const [capturing, setCapturing] = useState(false)
   // Resync on OBJECT identity, not value: main pushes a fresh ptt object on
   // every setPttEnabled result, so a FAILED enable (enabled stays false)
   // still fires this and corrects the optimistic checkbox.
@@ -35,6 +37,11 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
     setUnlockErr(null)
     const r = await axi().unlockPassthrough()
     if (!r.ok) setUnlockErr(r.error ?? 'Unlock failed')
+  }
+
+  const rebind = async () => {
+    setCapturing(true)
+    try { await axi().capturePttKey() } finally { setCapturing(false) }
   }
 
   const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
@@ -169,30 +176,39 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
       {audio.micEnabled && (
         <div className="ptt">
           <label className="audio-row">
-            <input type="checkbox" checked={pttEnabled} disabled={!ptt.available} aria-label="Push to talk (hold F18)"
+            <input type="checkbox" checked={pttEnabled} disabled={!ptt.available} aria-label={`Push to talk (hold ${ptt.keyName})`}
               onChange={(e) => { setPttEnabledLocal(e.target.checked); axi().setPttEnabled(e.target.checked) }} />
-            <span>Push to talk (hold F18)</span>
+            <span>Push to talk (hold {ptt.keyName})</span>
             {pttEnabled && (ptt.active
               ? <span className="ptt-live">🔴 TRANSMITTING</span>
-              : <span className="ptt-muted">muted — hold F18 to talk</span>)}
+              : <span className="ptt-muted">muted — hold {ptt.keyName} to talk</span>)}
           </label>
           {!ptt.available && <p className="muted">Needs the GlobalShortcuts portal — available on KDE Plasma</p>}
           {ptt.error && <p className="ptt-err">{ptt.error}</p>}
           {ptt.enabled && ptt.mode === 'passthrough' && (
-            <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
+            <>
+              <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
+              {capturing ? <span className="muted">Press any key… (Esc to cancel)</span> : <button className="btn ghost xs" onClick={rebind}>Rebind</button>}
+            </>
           )}
           {ptt.enabled && ptt.mode === 'exclusive' && (
             <>
-              <p className="muted">AxiStream owns the key — Discord won't see F18.</p>
+              <p className="muted">AxiStream owns the key — Discord won't see {ptt.keyName}.</p>
               <button className="btn ghost xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
               <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
               {unlockErr && <p className="ptt-err">{unlockErr}</p>}
+              <label className="muted">Push-to-talk key
+                <select value={String(PTT_KEY_CHOICES.find((k) => k.name === ptt.keyName)?.code ?? 188)}
+                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.code === Number(e.target.value)); if (k) axi().setPttKey(k) }}>
+                  {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.code}>{k.name}</option>)}
+                </select>
+              </label>
+              <p className="muted">Binding again may show a KDE confirmation.</p>
             </>
           )}
           {pttEnabled && (
             <p className="muted">AxiStream mutes your mic at the system level and unmutes it while the key is held. Set Discord to <strong>Voice Activity</strong> (not Push to Talk) — it follows automatically.</p>
           )}
-          {pttEnabled && <p className="muted">Change the key in KDE System Settings → Shortcuts → AxiStream.</p>}
         </div>
       )}
 
@@ -205,7 +221,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
             onError={() => setTest({ st: 'error', error: "Couldn't play the clip — the recording may be corrupt or blocked" })} />
         )}
         {test.st === 'error' && <span className="audio-test-err">{test.error}</span>}
-        <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.{pttEnabled ? ' Hold F18 while recording to test your mic.' : null}</p>
+        <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.{pttEnabled ? ` Hold ${ptt.keyName} while recording to test your mic.` : null}</p>
       </div>
     </section>
   )

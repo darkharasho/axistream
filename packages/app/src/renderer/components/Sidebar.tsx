@@ -29,7 +29,7 @@ export function Sidebar({ active, state, onNav, axi, update = null }: { active: 
           </button>
           {ptt.available && (
             <button className={`qt ${ptt.enabled ? 'on' : ''} ${ptt.active ? 'tx' : ''}`} aria-label="Quick toggle push to talk" disabled={!audio.micEnabled}
-              title={!audio.micEnabled ? 'Enable the microphone first' : ptt.active ? 'Transmitting' : ptt.enabled ? 'Push to talk armed — hold F18 to speak' : 'Push to talk is off'}
+              title={!audio.micEnabled ? 'Enable the microphone first' : ptt.active ? 'Transmitting' : ptt.enabled ? `Push to talk armed — hold ${ptt.keyName} to speak` : 'Push to talk is off'}
               onClick={() => axi.setPttEnabled(!ptt.enabled)}>
               <Keyboard size={14} />
             </button>

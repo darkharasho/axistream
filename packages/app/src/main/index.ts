@@ -45,11 +45,12 @@ import { PttController } from './PttController.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
 import { setupUpdater } from './updater.js'
 import { createPortalShortcuts } from './portal-shortcuts.js'
-import { createEvdevShortcuts } from './evdev-keys.js'
+import { createEvdevShortcuts, captureNextKey } from './evdev-keys.js'
 import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
+import type { PttKey } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
@@ -221,10 +222,10 @@ if (primary) app.whenReady().then(async () => {
   const ptt = new PttController({
     portal: {
       available: async () => (await evdevBackend.available()) || (await portalBackend.available()),
-      bind: async (id, description, preferredTrigger) => {
+      bind: async (id, description, key) => {
         const sel = await selectBackend()
         pttMode = sel.mode
-        return sel.backend.bind(id, description, preferredTrigger)
+        return sel.backend.bind(id, description, key)
       },
     },
     exec: execAsync,
@@ -233,6 +234,7 @@ if (primary) app.whenReady().then(async () => {
       return dev && dev !== 'default' ? dev : '@DEFAULT_SOURCE@'
     },
     onActive: (active) => setState({ ptt: { ...state.ptt, active } }),
+    key: () => { const s = settings.load(); return { code: s.pttKeyCode, name: s.pttKeyName } },
   })
 
   const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
@@ -531,11 +533,44 @@ if (primary) app.whenReady().then(async () => {
       settings.patch({ pttEnabled: enabled })
       if (enabled) {
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: settings.load().pttKeyName } })
       } else {
         await ptt.disable()
-        setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null, mode: null } })
+        setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null, mode: null, keyName: settings.load().pttKeyName } })
       }
+    },
+    setPttKey: async (key: PttKey) => {
+      settings.patch({ pttKeyCode: key.code, pttKeyName: key.name })
+      setState({ ptt: { ...state.ptt, keyName: key.name } })
+      if (ptt.isEnabled()) {
+        await ptt.disable()
+        const r = await ptt.enable()
+        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: key.name } })
+      }
+    },
+    capturePttKey: async () => {
+      if (!(await evdevBackend.available())) return null
+      const wasEnabled = ptt.isEnabled()
+      // the pressed key must never transmit: capture with PTT disarmed.
+      // try/finally: captureNextKey never rejects today, but a future
+      // rejection path must not strand PTT disabled.
+      if (wasEnabled) await ptt.disable()
+      let key: PttKey | null = null
+      try {
+        key = await captureNextKey()
+        if (key) {
+          settings.patch({ pttKeyCode: key.code, pttKeyName: key.name })
+          setState({ ptt: { ...state.ptt, keyName: key.name } })
+        }
+      } finally {
+        // re-sample intent: the user may have toggled PTT OFF while the
+        // capture window was open — never resurrect an explicit disable
+        if (wasEnabled && settings.load().pttEnabled) {
+          const r = await ptt.enable()
+          setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+        }
+      }
+      return key
     },
     unlockPassthrough: async () => {
       const r = await runInputUnlock(execAsync)
@@ -543,7 +578,7 @@ if (primary) app.whenReady().then(async () => {
         // upgrade in place: closing the portal binding releases F18 to Discord
         await ptt.disable()
         const en = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: en.ok, active: false, error: en.ok ? null : (en.error ?? 'failed'), mode: en.ok ? pttMode : null } })
+        setState({ ptt: { ...state.ptt, enabled: en.ok, active: false, error: en.ok ? null : (en.error ?? 'failed'), mode: en.ok ? pttMode : null, keyName: settings.load().pttKeyName } })
       }
       return r
     },
@@ -647,10 +682,10 @@ if (primary) app.whenReady().then(async () => {
       })
       await ptt.restore()
       const pttAvailable = await ptt.available()
-      setState({ ptt: { ...state.ptt, available: pttAvailable } })
+      setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: a.pttKeyName } })
       if (pttAvailable && a.pttEnabled) {
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+        setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: a.pttKeyName } })
       }
       setState({ masks: a.masks, masksVisible: a.masksVisible })
       pushFitted()

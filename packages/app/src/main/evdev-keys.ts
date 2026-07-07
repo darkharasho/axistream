@@ -1,9 +1,10 @@
 import { readdirSync, openSync, closeSync, createReadStream } from 'node:fs'
+import { keyName, isKnownKey, type PttKey } from '../shared/keys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
  *  s32 value — little-endian. */
 const FRAME = 24
-export const KEY_F18 = 188
+const KEY_ESC = 1
 const EV_KEY = 1
 
 export interface InputEvent { type: number; code: number; value: number }
@@ -47,16 +48,16 @@ const realDeps: EvdevDeps = {
 }
 
 /** Observational PTT capture: reads every readable /dev/input/event* and
- *  watches for KEY_F18 edges. Nothing is grabbed or consumed — Discord's own
- *  PTT (and everything else) still receives the key. Non-keyboards simply
- *  never emit code 188. */
+ *  watches for the configured key's edges. Nothing is grabbed or consumed —
+ *  Discord's own PTT (and everything else) still receives the key.
+ *  Non-keyboards simply never emit the bound code. */
 export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
   return {
     async available(): Promise<boolean> {
       return deps.listDevices().some((d) => deps.canRead(d))
     },
 
-    async bind(_id: string, _description: string, _preferredTrigger: string): Promise<BoundShortcut> {
+    async bind(_id: string, _description: string, key: PttKey): Promise<BoundShortcut> {
       const readable = deps.listDevices().filter((d) => deps.canRead(d))
       if (readable.length === 0) throw new Error('no readable input devices — pass-through is locked')
       let onAct: (() => void) | null = null
@@ -72,7 +73,7 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
           const parsed = parseInputEvents(rest.length === 0 ? chunk : Buffer.concat([rest, chunk]))
           rest = parsed.rest
           for (const ev of parsed.events) {
-            if (ev.type !== EV_KEY || ev.code !== KEY_F18) continue
+            if (ev.type !== EV_KEY || ev.code !== key.code) continue
             if (ev.value === 1) onAct?.()
             else if (ev.value === 0) onDeact?.()
             // value 2 = auto-repeat: ignored (the key is already down)
@@ -91,4 +92,43 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
       }
     },
   }
+}
+
+/** Resolve the next keydown seen on any readable device — the press-to-bind
+ *  UX. Escape cancels; timeout returns null. All probe streams are destroyed
+ *  on settle. */
+export function captureNextKey(deps: EvdevDeps = realDeps, timeoutMs = 10000): Promise<PttKey | null> {
+  return new Promise((resolve) => {
+    const readable = deps.listDevices().filter((d) => deps.canRead(d))
+    if (readable.length === 0) { resolve(null); return }
+    const streams: { destroy(): void }[] = []
+    let done = false
+    const settle = (result: PttKey | null) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      for (const s of streams) { try { s.destroy() } catch { /* ignore */ } }
+      resolve(result)
+    }
+    const timer = setTimeout(() => settle(null), timeoutMs)
+    for (const path of readable) {
+      const stream = deps.openStream(path)
+      streams.push(stream)
+      let rest: Buffer = Buffer.alloc(0)
+      stream.on('data', ((chunk: Buffer) => {
+        const parsed = parseInputEvents(rest.length === 0 ? chunk : Buffer.concat([rest, chunk]))
+        rest = parsed.rest
+        for (const ev of parsed.events) {
+          if (ev.type !== EV_KEY || ev.value !== 1) continue
+          if (ev.code === KEY_ESC) { settle(null); return }
+          // off-table keys (mouse buttons etc.) keep listening — binding one
+          // would desync the exclusive dropdown and produce phantom portal hints
+          if (!isKnownKey(ev.code)) continue
+          settle({ code: ev.code, name: keyName(ev.code) })
+          return
+        }
+      }) as never)
+      stream.on('error', (() => { /* dead probe stream — timeout covers it */ }) as never)
+    }
+  })
 }

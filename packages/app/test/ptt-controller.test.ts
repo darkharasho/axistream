@@ -23,6 +23,7 @@ function harness(opts: { bindError?: string; execError?: boolean; availableResul
     }),
     sourceId: () => '@DEFAULT_SOURCE@',
     onActive: (a) => actives.push(a),
+    key: () => ({ code: 188, name: 'F18' }),
   })
   return { ctl, shortcut, mutes, actives, press: () => activated?.(), release: () => deactivated?.() }
 }
@@ -94,11 +95,22 @@ describe('PttController', () => {
     expect(fresh.mutes).toEqual([])
   })
 
+  it('enable binds with the key from the key() dep', async () => {
+    let bound: unknown = null
+    const ctl = new PttController({
+      portal: { available: async () => true, bind: async (_i, _d, key) => { bound = key; return { onActivated: () => {}, onDeactivated: () => {}, close: async () => {} } } },
+      exec: async () => {}, sourceId: () => 's', onActive: () => {},
+      key: () => ({ code: 185, name: 'F15' }),
+    })
+    await ctl.enable()
+    expect(bound).toEqual({ code: 185, name: 'F15' })
+  })
+
   it('available() proxies the portal and is false on error', async () => {
     expect(await harness({ availableResult: true }).ctl.available()).toBe(true)
     const broken = new PttController({
       portal: { available: async () => { throw new Error('no bus') }, bind: async () => { throw new Error('x') } },
-      exec: async () => {}, sourceId: () => 's', onActive: () => {},
+      exec: async () => {}, sourceId: () => 's', onActive: () => {}, key: () => ({ code: 188, name: 'F18' }),
     })
     expect(await broken.available()).toBe(false)
   })
