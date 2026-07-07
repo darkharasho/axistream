@@ -1,7 +1,7 @@
 import './load-env.js' // must run before any process.env read below
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen } from 'electron'
 import { join } from 'node:path'
-import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync, promises as fsPromises } from 'node:fs'
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
 
@@ -40,6 +40,7 @@ import { MaskController } from './MaskController.js'
 import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PLUGIN_REF, BLUR_PLUGIN_REF } from './PluginInstaller.js'
 import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
+import { RecordController } from './RecordController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize, toggleWindowSize } from './window-size.js'
@@ -166,6 +167,7 @@ if (primary) app.whenReady().then(async () => {
   const audio = new AudioController({ client: () => sidecar.client() })
   const maskCtl = new MaskController({ client: () => sidecar.client() })
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
+  const recorder = new RecordController({ client: () => sidecar.client() })
 
   const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
     execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
@@ -449,6 +451,20 @@ if (primary) app.whenReady().then(async () => {
         message: cfg.discordMessage,
       }, realFetch)
     },
+    recordAudioTest: async () => {
+      if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture) {
+        return { ok: false, error: 'not available right now' }
+      }
+      const r = await recorder.recordTestClip(6000, app.getPath('temp'))
+      if (!r.ok || !r.outputPath) return { ok: false, error: r.error ?? 'recording failed' }
+      try {
+        const clip = await fsPromises.readFile(r.outputPath)
+        await fsPromises.unlink(r.outputPath).catch(() => {})
+        return { ok: true, clip, mime: 'video/mp4' }
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
@@ -466,6 +482,20 @@ if (primary) app.whenReady().then(async () => {
   })
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
+
+  // Sweep stale audio-test clips (OBS names them; we only control the dir).
+  void (async () => {
+    try {
+      const dir = app.getPath('temp')
+      const dayAgo = Date.now() - 86_400_000
+      for (const f of await fsPromises.readdir(dir)) {
+        if (!f.endsWith('.mp4')) continue
+        const p = join(dir, f)
+        const st = await fsPromises.stat(p).catch(() => null)
+        if (st && st.mtimeMs < dayAgo) await fsPromises.unlink(p).catch(() => {})
+      }
+    } catch { /* best-effort */ }
+  })()
 
   // Boot the engine, then derive the initial phase.
   try {
