@@ -49,7 +49,10 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
         <TitlePromptModal onClose={() => axi.getInitialState().then((s) => store.applyState(s))} />
       ) : null}
       {editingMasks ? (
-        <MaskEditor masks={state.masks} onCommit={(m) => axi.setMasks(m)} onDone={() => setEditingMasks(false)} />
+        <MaskEditor masks={state.masks} maskStyle={state.maskStyle} blurPlugin={state.blurPlugin}
+          onSetStyle={(s) => axi.setMaskStyle(s)} onInstallBlur={() => axi.installBlurPlugin()}
+          onRelaunch={() => axi.relaunchApp()}
+          onCommit={(m) => axi.setMasks(m)} onDone={() => setEditingMasks(false)} />
       ) : null}
 
       <div className="hero-bottom">

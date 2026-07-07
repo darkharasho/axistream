@@ -1,6 +1,7 @@
 import type { GameAudioPluginStatus } from '../shared/state.js'
 
-export const PLUGIN_REF = 'com.obsproject.Studio.Plugin.PipeWireAudioCapture'
+export const GAME_AUDIO_PLUGIN_REF = 'com.obsproject.Studio.Plugin.PipeWireAudioCapture'
+export const BLUR_PLUGIN_REF = 'com.obsproject.Studio.Plugin.CompositeBlur'
 
 export type { GameAudioPluginStatus }
 export type FlatpakState = 'missing' | 'installed' | 'unsupported'
@@ -8,6 +9,7 @@ export type FlatpakState = 'missing' | 'installed' | 'unsupported'
 export interface ExecResult { code: number; output: string }
 export interface InstallerDeps {
   exec(cmd: string, args: string[], timeoutMs: number): Promise<ExecResult>
+  ref: string
 }
 
 const DETECT_TIMEOUT_MS = 15000
@@ -22,7 +24,7 @@ export class PluginInstaller {
 
   async detectInstalled(): Promise<FlatpakState> {
     try {
-      const r = await this.d.exec('flatpak', ['info', PLUGIN_REF], DETECT_TIMEOUT_MS)
+      const r = await this.d.exec('flatpak', ['info', this.d.ref], DETECT_TIMEOUT_MS)
       return r.code === 0 ? 'installed' : 'missing'
     } catch {
       return 'unsupported' // flatpak binary missing / unspawnable
@@ -33,7 +35,7 @@ export class PluginInstaller {
     let last = ''
     for (const scope of ['--user', '--system']) {
       try {
-        const r = await this.d.exec('flatpak', ['install', scope, '--noninteractive', 'flathub', PLUGIN_REF], INSTALL_TIMEOUT_MS)
+        const r = await this.d.exec('flatpak', ['install', scope, '--noninteractive', 'flathub', this.d.ref], INSTALL_TIMEOUT_MS)
         if (r.code === 0) return { ok: true }
         last = r.output
       } catch (e) {
@@ -51,4 +53,12 @@ export function deriveGameAudioStatus(flatpak: FlatpakState, kinds: string[]): G
   if (flatpak === 'missing') return 'missing'
   const loaded = kinds.some((k) => k !== 'pipewire-screen-capture-source' && /pipewire.*audio|audio.*pipewire/i.test(k))
   return loaded ? 'ready' : 'installed'
+}
+
+/** Blur-plugin readiness: the CompositeBlur filter kind is an exact id —
+ *  no regex needed (unlike the audio plugin's several kinds). */
+export function deriveBlurStatus(flatpak: FlatpakState, filterKinds: string[]): GameAudioPluginStatus {
+  if (flatpak === 'unsupported') return 'unsupported'
+  if (flatpak === 'missing') return 'missing'
+  return filterKinds.includes('obs_composite_blur') ? 'ready' : 'installed'
 }

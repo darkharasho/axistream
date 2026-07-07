@@ -4,16 +4,18 @@ import { MaskEditor } from '../src/renderer/components/MaskEditor.js'
 import type { MaskRect } from '../src/shared/state.js'
 
 const m = (id: string): MaskRect => ({ id, x: 0.1, y: 0.1, w: 0.2, h: 0.2 })
+const ready = { status: 'ready' as const, error: null }
+const defaultStyleProps = { maskStyle: 'box' as const, blurPlugin: ready, onSetStyle: vi.fn(), onInstallBlur: vi.fn(), onRelaunch: vi.fn() }
 
 describe('MaskEditor', () => {
   it('renders a rect per mask', () => {
-    render(<MaskEditor masks={[m('a'), m('b')]} onCommit={() => {}} onDone={() => {}} />)
+    render(<MaskEditor masks={[m('a'), m('b')]} onCommit={() => {}} onDone={() => {}} {...defaultStyleProps} />)
     expect(screen.getAllByTestId('mask-rect')).toHaveLength(2)
   })
 
   it('Add mask appends and commits', () => {
     const onCommit = vi.fn()
-    render(<MaskEditor masks={[]} onCommit={onCommit} onDone={() => {}} />)
+    render(<MaskEditor masks={[]} onCommit={onCommit} onDone={() => {}} {...defaultStyleProps} />)
     fireEvent.click(screen.getByText('Add mask'))
     expect(onCommit).toHaveBeenCalledTimes(1)
     const committed = onCommit.mock.calls[0][0] as MaskRect[]
@@ -24,7 +26,7 @@ describe('MaskEditor', () => {
 
   it('delete removes the mask and commits', () => {
     const onCommit = vi.fn()
-    render(<MaskEditor masks={[m('a')]} onCommit={onCommit} onDone={() => {}} />)
+    render(<MaskEditor masks={[m('a')]} onCommit={onCommit} onDone={() => {}} {...defaultStyleProps} />)
     fireEvent.click(screen.getByLabelText('Delete mask'))
     expect(onCommit).toHaveBeenCalledWith([])
     expect(screen.queryAllByTestId('mask-rect')).toHaveLength(0)
@@ -32,13 +34,13 @@ describe('MaskEditor', () => {
 
   it('Add is disabled at MAX_MASKS', () => {
     const masks = Array.from({ length: 8 }, (_, i) => m(`m${i}`))
-    render(<MaskEditor masks={masks} onCommit={() => {}} onDone={() => {}} />)
+    render(<MaskEditor masks={masks} onCommit={() => {}} onDone={() => {}} {...defaultStyleProps} />)
     expect(screen.getByText('Add mask').closest('button')).toBeDisabled()
   })
 
   it('Done calls onDone', () => {
     const onDone = vi.fn()
-    render(<MaskEditor masks={[]} onCommit={() => {}} onDone={onDone} />)
+    render(<MaskEditor masks={[]} onCommit={() => {}} onDone={onDone} {...defaultStyleProps} />)
     fireEvent.click(screen.getByText('Done'))
     expect(onDone).toHaveBeenCalled()
   })
@@ -71,7 +73,7 @@ describe('MaskEditor pointer interactions', () => {
     const restore = layout()
     try {
       const onCommit = vi.fn()
-      const { container } = render(<MaskEditor masks={[m('a')]} onCommit={onCommit} onDone={() => {}} />)
+      const { container } = render(<MaskEditor masks={[m('a')]} onCommit={onCommit} onDone={() => {}} {...defaultStyleProps} />)
       const editor = container.querySelector('.mask-editor')!
       const rect = screen.getByTestId('mask-rect')
       fireEvent.pointerDown(rect, { pointerId: 1, clientX: 100, clientY: 100 })
@@ -90,7 +92,7 @@ describe('MaskEditor pointer interactions', () => {
     const restore = layout()
     try {
       const onCommit = vi.fn()
-      const { container } = render(<MaskEditor masks={[m('a')]} onCommit={onCommit} onDone={() => {}} />)
+      const { container } = render(<MaskEditor masks={[m('a')]} onCommit={onCommit} onDone={() => {}} {...defaultStyleProps} />)
       const editor = container.querySelector('.mask-editor')!
       const handle = container.querySelector('.mask-resize')!
       fireEvent.pointerDown(handle, { pointerId: 1, clientX: 100, clientY: 100 })
@@ -103,5 +105,52 @@ describe('MaskEditor pointer interactions', () => {
       expect(committed.w).toBeCloseTo(0.3, 5)
       expect(committed.h).toBeCloseTo(0.3, 5)
     } finally { restore() }
+  })
+})
+
+describe('MaskEditor style toggle', () => {
+  const ready = { status: 'ready' as const, error: null }
+  const props = (over: Record<string, unknown> = {}) => ({
+    masks: [], onCommit: () => {}, onDone: () => {},
+    maskStyle: 'box' as const, blurPlugin: ready,
+    onSetStyle: vi.fn(), onInstallBlur: vi.fn(), onRelaunch: vi.fn(), ...over,
+  })
+
+  it('renders Solid and Blur options with the current style active', () => {
+    const p = props()
+    render(<MaskEditor {...p} />)
+    expect(screen.getByText('Solid').className).toContain('on')
+    expect(screen.getByText('Blur').className).not.toContain('on')
+  })
+
+  it('selecting Blur when the plugin is ready sets the style', () => {
+    const p = props()
+    render(<MaskEditor {...p} />)
+    fireEvent.click(screen.getByText('Blur'))
+    expect(p.onSetStyle).toHaveBeenCalledWith('blur')
+  })
+
+  it('selecting Blur when the plugin is missing shows the install prompt instead', () => {
+    const p = props({ blurPlugin: { status: 'missing', error: null } })
+    render(<MaskEditor {...p} />)
+    fireEvent.click(screen.getByText('Blur'))
+    expect(p.onSetStyle).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Install blur plugin'))
+    expect(p.onInstallBlur).toHaveBeenCalled()
+  })
+
+  it('installed status offers Restart AxiStream', () => {
+    const p = props({ blurPlugin: { status: 'installed', error: null } })
+    render(<MaskEditor {...p} />)
+    fireEvent.click(screen.getByText('Blur'))
+    fireEvent.click(screen.getByText('Restart AxiStream'))
+    expect(p.onRelaunch).toHaveBeenCalled()
+  })
+
+  it('selecting Solid always works', () => {
+    const p = props({ maskStyle: 'blur' as const })
+    render(<MaskEditor {...p} />)
+    fireEvent.click(screen.getByText('Solid'))
+    expect(p.onSetStyle).toHaveBeenCalledWith('box')
   })
 })

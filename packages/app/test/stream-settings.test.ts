@@ -146,6 +146,20 @@ describe('StreamSettings', () => {
       expect(s.desktopEnabled).toBe(true)
     })
   })
+
+  describe('maskStyle', () => {
+    it('defaults to box and round-trips blur', () => {
+      const s = new StreamSettings(file)
+      expect(s.load().maskStyle).toBe('box')
+      s.patch({ maskStyle: 'blur' })
+      expect(s.load().maskStyle).toBe('blur')
+    })
+
+    it('invalid value falls back to box', () => {
+      writeFileSync(file, JSON.stringify({ maskStyle: 'plaid' }))
+      expect(new StreamSettings(file).load().maskStyle).toBe('box')
+    })
+  })
 })
 
 describe('sanitizeMasks', () => {

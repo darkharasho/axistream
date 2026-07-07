@@ -37,7 +37,7 @@ import { createLoopback } from './loopback.js'
 import { shell } from 'electron'
 import { PreviewPump } from './PreviewPump.js'
 import { MaskController } from './MaskController.js'
-import { PluginInstaller, deriveGameAudioStatus } from './PluginInstaller.js'
+import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PLUGIN_REF, BLUR_PLUGIN_REF } from './PluginInstaller.js'
 import { GameAudioController } from './GameAudioController.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
@@ -136,16 +136,16 @@ if (primary) app.whenReady().then(async () => {
   const maskCtl = new MaskController({ client: () => sidecar.client() })
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
 
-  const installer = new PluginInstaller({
-    exec: (cmd, args, timeoutMs) => new Promise((resolve, reject) => {
-      execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
-        const output = `${stdout ?? ''}${stderr ?? ''}`
-        if (err && (err as NodeJS.ErrnoException).code === 'ENOENT') { reject(err); return }
-        // Non-ENOENT failures (nonzero exit, timeout kill) resolve with a nonzero code.
-        resolve({ code: err ? ((err as { code?: number }).code as number ?? 1) : 0, output })
-      })
-    }),
+  const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
+    execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
+      const output = `${stdout ?? ''}${stderr ?? ''}`
+      if (err && (err as NodeJS.ErrnoException).code === 'ENOENT') { reject(err); return }
+      // Non-ENOENT failures (nonzero exit, timeout kill) resolve with a nonzero code.
+      resolve({ code: err ? ((err as { code?: number }).code as number ?? 1) : 0, output })
+    })
   })
+  const installer = new PluginInstaller({ exec: flatpakExec, ref: GAME_AUDIO_PLUGIN_REF })
+  const blurInstaller = new PluginInstaller({ exec: flatpakExec, ref: BLUR_PLUGIN_REF })
 
   let encoderKind: EncoderKind = settings.load().preferSoftware
     ? 'x264'
@@ -227,7 +227,7 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
     forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
     goLive: async (titleOverride?: string) => {
@@ -264,7 +264,7 @@ if (primary) app.whenReady().then(async () => {
       }
     },
     stopStream: async () => { await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -276,7 +276,7 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); await maskCtl.applyMasks(masks, settings.load().maskStyle); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -302,7 +302,7 @@ if (primary) app.whenReady().then(async () => {
     setMasks: async (masks: MaskRect[]) => {
       const next = sanitizeMasks(masks)
       settings.patch({ masks: next })
-      await maskCtl.applyMasks(next)
+      await maskCtl.applyMasks(next, settings.load().maskStyle)
       setState({ masks: next })
     },
     getAudioDevices: () => audio.listMicDevices(),
@@ -355,6 +355,17 @@ if (primary) app.whenReady().then(async () => {
       setState({ gameAudioPlugin: { status: 'installing', error: null } })
       const r = await installer.install()
       setState({ gameAudioPlugin: r.ok ? { status: 'installed', error: null } : { status: 'error', error: r.error ?? 'Install failed' } })
+    },
+    installBlurPlugin: async () => {
+      if (state.blurPlugin.status === 'installing') return
+      setState({ blurPlugin: { status: 'installing', error: null } })
+      const r = await blurInstaller.install()
+      setState({ blurPlugin: r.ok ? { status: 'installed', error: null } : { status: 'error', error: r.error ?? 'Install failed' } })
+    },
+    setMaskStyle: async (style: 'box' | 'blur') => {
+      settings.patch({ maskStyle: style })
+      await maskCtl.applyMasks(settings.load().masks, style)
+      setState({ maskStyle: style })
     },
     relaunchApp: async () => {
       if (stream.isLive()) return
@@ -409,16 +420,21 @@ if (primary) app.whenReady().then(async () => {
       setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioApps: a.gameAudioApps } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
       setState({ masks: a.masks })
-      await maskCtl.applyMasks(a.masks)
+      await maskCtl.applyMasks(a.masks, a.maskStyle)
       const flatpakState = await installer.detectInstalled()
       let kinds: string[] = []
       try { kinds = ((await sidecar.client().call('GetInputKindList')) as { inputKinds?: string[] }).inputKinds ?? [] } catch { /* best-effort */ }
       console.info('[game-audio] input kinds', kinds)
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(flatpakState, kinds), error: null } })
       if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(a)
+      let filterKinds: string[] = []
+      try { filterKinds = ((await sidecar.client().call('GetSourceFilterKindList')) as { sourceFilterKinds?: string[] }).sourceFilterKinds ?? [] } catch { /* best-effort */ }
+      console.info('[blur] filter kinds', filterKinds)
+      setState({ blurPlugin: { status: deriveBlurStatus(await blurInstaller.detectInstalled(), filterKinds), error: null }, maskStyle: a.maskStyle })
     } else {
       setState({ phase: 'SETTING_UP' })
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(await installer.detectInstalled(), []), error: null } })
+      setState({ blurPlugin: { status: deriveBlurStatus(await blurInstaller.detectInstalled(), []), error: null }, maskStyle: settings.load().maskStyle })
     }
   } catch (e) {
     setState({ phase: 'ERROR', error: 'Could not start the stream engine (OBS).' })

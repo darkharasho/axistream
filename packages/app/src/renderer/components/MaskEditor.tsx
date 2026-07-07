@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
-import { MAX_MASKS, type MaskRect } from '../../shared/state.js'
+import { MAX_MASKS, type MaskRect, type AppState } from '../../shared/state.js'
 import { coverContentRect, type CoverRect } from '../cover-transform.js'
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
@@ -13,7 +13,16 @@ interface Drag { id: string; mode: 'move' | 'resize'; px: number; py: number; or
 // object-fit: cover, so we map through its content rect to line up on screen.
 // Local state is authoritative while editing; every add/delete/drag-end
 // commits the full array upward (which persists + drives OBS live).
-export function MaskEditor({ masks: initial, onCommit, onDone }: { masks: MaskRect[]; onCommit(masks: MaskRect[]): void; onDone(): void }) {
+export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPlugin, onSetStyle, onInstallBlur, onRelaunch }: {
+  masks: MaskRect[]
+  onCommit(masks: MaskRect[]): void
+  onDone(): void
+  maskStyle: 'box' | 'blur'
+  blurPlugin: AppState['blurPlugin']
+  onSetStyle(style: 'box' | 'blur'): void
+  onInstallBlur(): void
+  onRelaunch(): void
+}) {
   const boxRef = useRef<HTMLDivElement>(null)
   const [masks, setMasks] = useState<MaskRect[]>(initial)
   // Ref mirror so pointer-up commits the exact rects of the final move event,
@@ -22,6 +31,7 @@ export function MaskEditor({ masks: initial, onCommit, onDone }: { masks: MaskRe
   const update = (next: MaskRect[]) => { masksRef.current = next; setMasks(next) }
   const [drag, setDrag] = useState<Drag | null>(null)
   const [content, setContent] = useState<CoverRect | null>(null)
+  const [blurPrompt, setBlurPrompt] = useState(false)
 
   useEffect(() => {
     const measure = () => {
@@ -73,9 +83,23 @@ export function MaskEditor({ masks: initial, onCommit, onDone }: { masks: MaskRe
     <div ref={boxRef} className="mask-editor" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
       <div className="mask-toolbar">
         <button className="btn ghost xs" onClick={add} disabled={masks.length >= MAX_MASKS}><Plus size={12} /> Add mask</button>
+        <div className="mask-style" role="group" aria-label="Mask style">
+          <button className={`mask-style-btn${maskStyle === 'box' ? ' on' : ''}`} onClick={() => { setBlurPrompt(false); onSetStyle('box') }}>Solid</button>
+          <button className={`mask-style-btn${maskStyle === 'blur' ? ' on' : ''}`}
+            onClick={() => { if (blurPlugin.status === 'ready') { setBlurPrompt(false); onSetStyle('blur') } else setBlurPrompt(true) }}>Blur</button>
+        </div>
         <span className="mask-hint">Drag to move · corner to resize · masks hide these areas on stream</span>
         <button className="btn primary xs" onClick={onDone}>Done</button>
       </div>
+      {blurPrompt && blurPlugin.status !== 'ready' && (
+        <div className="mask-blur-prompt">
+          {blurPlugin.status === 'missing' && <button className="btn ghost xs" onClick={onInstallBlur}>Install blur plugin</button>}
+          {blurPlugin.status === 'installing' && <span>Installing…</span>}
+          {blurPlugin.status === 'installed' && <button className="btn ghost xs" onClick={onRelaunch}>Restart AxiStream</button>}
+          {blurPlugin.status === 'error' && <button className="btn ghost xs" onClick={onInstallBlur}>Retry install</button>}
+          {blurPlugin.status === 'unsupported' && <span>Blur needs the OBS flatpak.</span>}
+        </div>
+      )}
       {masks.map((m) => (
         <div key={m.id} data-testid="mask-rect" className="mask-rect"
           style={{ left: rect.left + m.x * rect.width, top: rect.top + m.y * rect.height, width: m.w * rect.width, height: m.h * rect.height }}
