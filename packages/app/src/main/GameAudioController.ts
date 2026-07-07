@@ -22,7 +22,9 @@ export class GameAudioController {
     // Plugin multi-app format: it reads only `value` from each item
     // (pipewire-audio-capture-app.c); hidden/selected are the OBS
     // editable-list conventions.
-    return { CaptureMode: 1, apps: apps.map((value) => ({ value, hidden: false, selected: false })), MatchPriorty: 0 }
+    // MatchPriorty 1 = app name first: Proton games enumerate/match as their
+    // real name ('Guild Wars 2') instead of the shared 'wine64-preloader'.
+    return { CaptureMode: 1, apps: apps.map((value) => ({ value, hidden: false, selected: false })), MatchPriorty: 1 }
   }
 
   async ensure(s: { gameAudioApps: string[] }): Promise<void> {
@@ -47,7 +49,9 @@ export class GameAudioController {
       const r = await this.d.client().call('GetInputPropertiesListPropertyItems', {
         inputName: GAME_AUDIO, propertyName: 'AppToAdd',
       })
-      return (r.propertyItems ?? []).map((it: { itemName: string; itemValue: string }) => ({ id: it.itemValue, name: it.itemName }))
+      return (r.propertyItems ?? [])
+        .filter((it: { itemValue: string }) => it.itemValue)
+        .map((it: { itemName: string; itemValue: string }) => ({ id: it.itemValue, name: it.itemName }))
     } catch (e) { console.warn('[game-audio] listApps failed', e); return [] }
   }
 

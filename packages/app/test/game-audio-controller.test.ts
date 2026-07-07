@@ -28,7 +28,7 @@ describe('GameAudioController.ensure (multi-app)', () => {
     const create = r.calls.find((c) => c.req === 'CreateInput')
     expect(create?.data).toEqual({
       sceneName: 'Main', inputName: GAME_AUDIO, inputKind: GAME_AUDIO_KIND,
-      inputSettings: { CaptureMode: 1, apps: [], MatchPriorty: 0 },
+      inputSettings: { CaptureMode: 1, apps: [], MatchPriorty: 1 },
     })
     expect(r.calls.find((c) => c.req === 'SetInputMute')?.data).toEqual({ inputName: GAME_AUDIO, inputMuted: true })
   })
@@ -39,7 +39,7 @@ describe('GameAudioController.ensure (multi-app)', () => {
     const create = r.calls.find((c) => c.req === 'CreateInput')
     expect(create?.data).toEqual({
       sceneName: 'Main', inputName: GAME_AUDIO, inputKind: GAME_AUDIO_KIND,
-      inputSettings: { CaptureMode: 1, apps: appsArr('gw2-64.exe', 'Discord'), MatchPriorty: 0 },
+      inputSettings: { CaptureMode: 1, apps: appsArr('gw2-64.exe', 'Discord'), MatchPriorty: 1 },
     })
     expect(r.calls.find((c) => c.req === 'SetInputMute')?.data).toEqual({ inputName: GAME_AUDIO, inputMuted: false })
   })
@@ -49,7 +49,7 @@ describe('GameAudioController.ensure (multi-app)', () => {
     await new GameAudioController({ client: r.client }).ensure({ gameAudioApps: [] })
     expect(r.calls.some((c) => c.req === 'CreateInput')).toBe(false)
     expect(r.calls.find((c) => c.req === 'SetInputSettings')?.data).toEqual({
-      inputName: GAME_AUDIO, inputSettings: { CaptureMode: 1, apps: [], MatchPriorty: 0 }, overlay: true,
+      inputName: GAME_AUDIO, inputSettings: { CaptureMode: 1, apps: [], MatchPriorty: 1 }, overlay: true,
     })
     expect(r.calls.find((c) => c.req === 'SetInputMute')?.data).toEqual({ inputName: GAME_AUDIO, inputMuted: true })
   })
@@ -72,6 +72,11 @@ describe('GameAudioController.listApps / setEnabled', () => {
     const apps = await new GameAudioController({ client: r.client }).listApps()
     expect(apps).toEqual([{ id: 'gw2-64.exe', name: 'Guild Wars 2' }])
     expect(r.calls[0].data).toEqual({ inputName: GAME_AUDIO, propertyName: 'AppToAdd' })
+  })
+
+  it('listApps drops empty enumeration entries', async () => {
+    const r = recorder({ items: [{ itemName: '', itemValue: '' }, { itemName: 'Guild Wars 2', itemValue: 'Guild Wars 2' }] })
+    await expect(new GameAudioController({ client: r.client }).listApps()).resolves.toEqual([{ id: 'Guild Wars 2', name: 'Guild Wars 2' }])
   })
 
   it('listApps returns [] on error', async () => {
