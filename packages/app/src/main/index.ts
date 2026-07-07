@@ -41,6 +41,7 @@ import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PL
 import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
+import { waitForStableFile } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { computeWindowSize, toggleWindowSize } from './window-size.js'
@@ -465,6 +466,9 @@ if (primary) app.whenReady().then(async () => {
       const r = await recorder.recordTestClip(6000, dir)
       if (!r.ok || !r.outputPath) return { ok: false, error: r.error ?? 'recording failed' }
       try {
+        // OBS finalizes the file (moov index last) after StopRecord resolves.
+        const path = r.outputPath
+        await waitForStableFile(() => fsPromises.stat(path).then((s) => s.size, () => null))
         const clip = await fsPromises.readFile(r.outputPath)
         await fsPromises.unlink(r.outputPath).catch(() => {})
         return { ok: true, clip, mime: 'video/mp4' }

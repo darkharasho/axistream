@@ -19,7 +19,7 @@ export class RecordController {
       c.call('SetProfileParameter', { parameterCategory: 'SimpleOutput', parameterName, parameterValue })
     try {
       await set('FilePath', dir)
-      await set('RecFormat2', 'fragmented_mp4')
+      await set('RecFormat2', 'mp4')
       await set('RecQuality', 'Stream')
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
