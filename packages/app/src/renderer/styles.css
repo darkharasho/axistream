@@ -180,6 +180,9 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .yt-discord-test { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .yt-test-ok { font-size: 12px; font-weight: 600; color: #3fb950; }
 .yt-test-err { font-size: 12px; font-weight: 600; color: #f85149; }
+.updates-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.whatsnew { border-top: 1px solid rgba(255,255,255,.08); margin-top: 12px; padding-top: 10px; }
+.whatsnew-body { white-space: pre-wrap; font-size: 12px; color: #c4cedb; background: #0b1017; border: 1px solid #1c242e; border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; }
 
 /* Title prompt modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
