@@ -153,3 +153,18 @@ describe('captureNextKey', () => {
     expect(await captureNextKey(h.deps, 10)).toBeNull()
   })
 })
+
+describe('captureNextKey off-table clamp', () => {
+  it('ignores mouse buttons and keeps listening for a curated key', async () => {
+    const devs = { '/dev/input/event3': fakeDevice() }
+    const p = captureNextKey({
+      listDevices: () => Object.keys(devs),
+      canRead: () => true,
+      openStream: (d: string) => devs[d as keyof typeof devs].stream as never,
+    }, 5000)
+    const dev = devs['/dev/input/event3']
+    dev.emitData(frame(1, 275, 1))  // BTN_SIDE — off-table, ignored
+    dev.emitData(frame(1, 185, 1))  // F15 — curated
+    expect(await p).toEqual({ code: 185, name: 'F15' })
+  })
+})

@@ -20,3 +20,9 @@ const NAMES = new Map(PTT_KEY_CHOICES.map((k) => [k.code, k.name]))
 export function keyName(code: number): string {
   return NAMES.get(code) ?? `KEY_${code}`
 }
+
+/** Whether a code is in the curated picker set — press-to-bind clamps to
+ *  this so the exclusive dropdown and portal hints stay coherent. */
+export function isKnownKey(code: number): boolean {
+  return NAMES.has(code)
+}

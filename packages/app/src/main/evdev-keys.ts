@@ -1,5 +1,5 @@
 import { readdirSync, openSync, closeSync, createReadStream } from 'node:fs'
-import { keyName, type PttKey } from '../shared/keys.js'
+import { keyName, isKnownKey, type PttKey } from '../shared/keys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
  *  s32 value — little-endian. */
@@ -121,6 +121,9 @@ export function captureNextKey(deps: EvdevDeps = realDeps, timeoutMs = 10000): P
         for (const ev of parsed.events) {
           if (ev.type !== EV_KEY || ev.value !== 1) continue
           if (ev.code === KEY_ESC) { settle(null); return }
+          // off-table keys (mouse buttons etc.) keep listening — binding one
+          // would desync the exclusive dropdown and produce phantom portal hints
+          if (!isKnownKey(ev.code)) continue
           settle({ code: ev.code, name: keyName(ev.code) })
           return
         }

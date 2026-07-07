@@ -563,7 +563,9 @@ if (primary) app.whenReady().then(async () => {
           setState({ ptt: { ...state.ptt, keyName: key.name } })
         }
       } finally {
-        if (wasEnabled) {
+        // re-sample intent: the user may have toggled PTT OFF while the
+        // capture window was open — never resurrect an explicit disable
+        if (wasEnabled && settings.load().pttEnabled) {
           const r = await ptt.enable()
           setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
         }
