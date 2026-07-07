@@ -8,6 +8,23 @@ import { AudioPulse } from './AudioPulse.js'
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
 export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppState['audio']; gameAudioPlugin: AppState['gameAudioPlugin']; phase: AppState['phase'] }) {
+  const [test, setTest] = useState<{ st: 'idle' | 'recording' | 'ready' | 'error'; url?: string; error?: string; left?: number }>({ st: 'idle' })
+  const canTest = phase === 'READY' || phase === 'NEEDS_KEY' || phase === 'NEEDS_TITLE'
+
+  const runTest = async () => {
+    if (test.url) URL.revokeObjectURL(test.url)
+    setTest({ st: 'recording', left: 6 })
+    const tick = setInterval(() => setTest((t) => (t.st === 'recording' ? { ...t, left: Math.max(0, (t.left ?? 0) - 1) } : t)), 1000)
+    const r = await axi().recordAudioTest()
+    clearInterval(tick)
+    if (r.ok && r.clip) {
+      const url = URL.createObjectURL(new Blob([r.clip as BlobPart], { type: r.mime ?? 'video/mp4' }))
+      setTest({ st: 'ready', url })
+    } else {
+      setTest({ st: 'error', error: r.error ?? 'Test failed' })
+    }
+  }
+
   const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
   const [outputDevices, setOutputDevices] = useState<AudioDevice[] | null>(null)
   const [runningApps, setRunningApps] = useState<AudioDevice[] | null>(null)
@@ -136,6 +153,17 @@ export function AudioSettings({ audio, gameAudioPlugin, phase }: { audio: AppSta
           </label>
         )
       })()}
+
+      <div className="audio-test">
+        <button className="btn ghost sm" disabled={!canTest || test.st === 'recording'} onClick={runTest}>
+          {test.st === 'recording' ? `Recording — speak now… ${test.left}` : 'Test audio'}
+        </button>
+        {test.st === 'ready' && test.url && (
+          <audio data-testid="audio-test-player" controls src={test.url} />
+        )}
+        {test.st === 'error' && <span className="audio-test-err">{test.error}</span>}
+        <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.</p>
+      </div>
     </section>
   )
 }
