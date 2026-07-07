@@ -61,7 +61,7 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
       let onDeact: (() => void) | null = null
       const streams = readable.map((path) => {
         const stream = deps.openStream(path)
-        let rest = Buffer.alloc(0)
+        let rest: Buffer = Buffer.alloc(0)
         stream.on('data', ((chunk: Buffer) => {
           const parsed = parseInputEvents(Buffer.concat([rest, chunk]))
           rest = parsed.rest

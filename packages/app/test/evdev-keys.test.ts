@@ -53,7 +53,7 @@ describe('createEvdevShortcuts', () => {
     const backend = createEvdevShortcuts({
       listDevices: () => Object.keys(devs),
       canRead: () => readable,
-      openStream: (p) => devs[p as keyof typeof devs].stream,
+      openStream: (p) => devs[p as keyof typeof devs].stream as never,
     })
     return { backend, devs }
   }
