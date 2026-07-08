@@ -25,6 +25,7 @@ export interface StreamSettingsData {
   masksVisible: boolean
   pttKeyCode: number
   pttKeyName: string
+  pttModifier: '' | 'ctrl' | 'alt' | 'shift' | 'super'
   lastSeenVersion: string
 }
 
@@ -48,6 +49,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   masksVisible: true,
   pttKeyCode: 188,
   pttKeyName: 'F18',
+  pttModifier: '',
   lastSeenVersion: '',
 }
 
@@ -120,6 +122,7 @@ export class StreamSettings {
         masksVisible: typeof raw.masksVisible === 'boolean' ? raw.masksVisible : DEFAULT_SETTINGS.masksVisible,
         pttKeyCode: Number.isInteger(raw.pttKeyCode) && (raw.pttKeyCode as number) >= 1 && (raw.pttKeyCode as number) <= 767 ? raw.pttKeyCode as number : DEFAULT_SETTINGS.pttKeyCode,
         pttKeyName: typeof raw.pttKeyName === 'string' && raw.pttKeyName ? raw.pttKeyName : DEFAULT_SETTINGS.pttKeyName,
+        pttModifier: raw.pttModifier === 'ctrl' || raw.pttModifier === 'alt' || raw.pttModifier === 'shift' || raw.pttModifier === 'super' ? raw.pttModifier : DEFAULT_SETTINGS.pttModifier,
         lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
       }
     } catch {

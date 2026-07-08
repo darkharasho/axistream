@@ -17,7 +17,7 @@ const axi = {
   recordAudioTest: vi.fn(async (): Promise<AudioTestResult> => ({ ok: true, clip: new Uint8Array([0]), mime: 'video/mp4' })),
   setPttEnabled: vi.fn(async () => {}),
   unlockPassthrough: vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true })),
-  setPttKey: vi.fn(async () => {}),
+  setPttBinding: vi.fn(async () => {}),
   capturePttKey: vi.fn(async (): Promise<PttCaptureResult> => ({ key: { code: 185, name: 'F15' } })),
 }
 beforeEach(() => {
@@ -28,7 +28,7 @@ beforeEach(() => {
 })
 
 const pluginReady = { status: 'ready' as any, error: null }
-const pttOff: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string } = { available: true, enabled: false, active: false, error: null, mode: null, keyName: 'F18' }
+const pttOff: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string; keyCode: number; modifier: import('../src/shared/keys.js').PttModifier | null } = { available: true, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }
 
 describe('AudioSettings', () => {
   it('toggles desktop audio', async () => {
@@ -210,26 +210,26 @@ describe('AudioSettings', () => {
 
   it('shows TRANSMITTING while active and the portal-missing hint when unavailable', async () => {
     const audio = { desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }
-    const { rerender } = render(<AudioSettings audio={audio} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: true, error: null, mode: null, keyName: 'F18' }} />)
+    const { rerender } = render(<AudioSettings audio={audio} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: true, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }} />)
     expect(screen.getByText(/transmitting/i)).toBeInTheDocument()
-    rerender(<AudioSettings audio={audio} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18' }} />)
+    rerender(<AudioSettings audio={audio} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }} />)
     expect(screen.getByLabelText(/push to talk/i)).toBeDisabled()
     expect(screen.getByText(/GlobalShortcuts portal/i)).toBeInTheDocument()
   })
 
   it('surfaces a PTT error', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)', mode: null, keyName: 'F18' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)', mode: null, keyName: 'F18', keyCode: 188, modifier: null }} />)
     expect(screen.getByText(/portal request denied/i)).toBeInTheDocument()
   })
 
   it('shows the pass-through mode line when armed via evdev', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
     expect(screen.getByText(/Discord's own push-to-talk works alongside/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /enable pass-through/i })).not.toBeInTheDocument()
   })
 
   it('exclusive mode shows the warning line and the unlock button; clicking unlocks', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18', keyCode: 188, modifier: null }} />)
     expect(screen.getByText(/Discord won't see F18/i)).toBeInTheDocument()
     expect(screen.getByText(/read access to input devices/i)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /enable pass-through/i }))
@@ -238,19 +238,19 @@ describe('AudioSettings', () => {
 
   it('surfaces an unlock failure inline', async () => {
     axi.unlockPassthrough.mockResolvedValueOnce({ ok: false, error: 'Authorization was cancelled' })
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.click(screen.getByRole('button', { name: /enable pass-through/i }))
     await waitFor(() => expect(screen.getByText(/authorization was cancelled/i)).toBeInTheDocument())
   })
 
   it('labels follow ptt.keyName', () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F15' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F15', keyCode: 185, modifier: null }} />)
     expect(screen.getByLabelText('Push to talk (hold F15)')).toBeInTheDocument()
     expect(screen.getByText(/hold F15 to talk/i)).toBeInTheDocument()
   })
 
   it('pass-through rebind captures a key', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
     expect(screen.getByText(/press any key/i)).toBeInTheDocument()
     await waitFor(() => expect(axi.capturePttKey).toHaveBeenCalled())
@@ -259,15 +259,15 @@ describe('AudioSettings', () => {
 
   it('pass-through rebind shows timeout message when capture times out', async () => {
     axi.capturePttKey.mockResolvedValueOnce({ reason: 'timeout' })
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18' }} />)
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
     await waitFor(() => expect(screen.getByText('No key seen — timed out')).toBeInTheDocument())
   })
 
-  it('exclusive rebind is a dropdown calling setPttKey', async () => {
-    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
+  it('exclusive rebind is a dropdown calling setPttBinding', async () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: 'F13' } })
-    expect(axi.setPttKey).toHaveBeenCalledWith({ code: 183, name: 'F13' })
+    expect(axi.setPttBinding).toHaveBeenCalledWith({ key: { code: 183, name: 'F13' }, modifier: null })
   })
 })
 
@@ -293,13 +293,13 @@ describe('AudioSettings app search', () => {
 describe('AudioSettings PTT failed-enable resync', () => {
   it('a failed enable (prop already false) still unchecks the optimistic toggle', async () => {
     const audio = { desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }
-    const off: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string } = { available: true, enabled: false, active: false, error: null, mode: null, keyName: 'F18' }
+    const off: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string; keyCode: number; modifier: import('../src/shared/keys.js').PttModifier | null } = { available: true, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }
     const { rerender } = render(<AudioSettings audio={audio} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={off} />)
     fireEvent.click(screen.getByLabelText(/push to talk/i))
     expect(screen.getByLabelText(/push to talk/i)).toBeChecked()
     // Main pushes a FRESH ptt object with enabled still false + an error —
     // the optimistic checkbox must resync even though the VALUE didn't change.
-    rerender(<AudioSettings audio={audio} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)', mode: null, keyName: 'F18' }} />)
+    rerender(<AudioSettings audio={audio} gameAudioPlugin={{ status: 'ready', error: null }} phase="READY" ptt={{ available: true, enabled: false, active: false, error: 'portal request denied (code 1)', mode: null, keyName: 'F18', keyCode: 188, modifier: null }} />)
     expect(screen.getByLabelText(/push to talk/i)).not.toBeChecked()
     expect(screen.getByText(/portal request denied/i)).toBeInTheDocument()
   })

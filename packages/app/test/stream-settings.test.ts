@@ -202,6 +202,15 @@ describe('StreamSettings', () => {
     expect(clean.pttKeyName).toBe('F18')
   })
 
+  it('defaults pttModifier to none, round-trips it, and sanitizes garbage', () => {
+    const s = new StreamSettings(file)
+    expect(s.load().pttModifier).toBe('')
+    s.patch({ pttModifier: 'ctrl' })
+    expect(new StreamSettings(file).load().pttModifier).toBe('ctrl')
+    s.save({ ...DEFAULT_SETTINGS, pttModifier: 'hyper' as never })
+    expect(new StreamSettings(file).load().pttModifier).toBe('')
+  })
+
   it('defaults lastSeenVersion to empty and round-trips it', () => {
     const s = new StreamSettings(file)
     expect(s.load().lastSeenVersion).toBe('')

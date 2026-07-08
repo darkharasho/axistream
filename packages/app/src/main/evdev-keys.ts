@@ -1,5 +1,5 @@
 import { readdirSync, openSync, closeSync, readSync, constants } from 'node:fs'
-import { keyName, type PttKey, type PttCaptureResult } from '../shared/keys.js'
+import { keyName, MODIFIER_CODES, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
  *  s32 value — little-endian. */
@@ -89,34 +89,53 @@ const realDeps: EvdevDeps = {
 }
 
 /** Observational PTT capture: reads every readable /dev/input/event* and
- *  watches for the configured key's edges. Nothing is grabbed or consumed —
- *  Discord's own PTT (and everything else) still receives the key.
- *  Non-keyboards simply never emit the bound code. */
+ *  watches for the configured binding's edges; an optional modifier gates
+ *  activation. Nothing is grabbed or consumed — Discord's own PTT (and
+ *  everything else) still receives the key. Non-keyboards simply never emit
+ *  the bound code. */
 export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
   return {
     async available(): Promise<boolean> {
       return deps.listDevices().some((d) => deps.canRead(d))
     },
 
-    async bind(_id: string, _description: string, key: PttKey): Promise<BoundShortcut> {
+    async bind(_id: string, _description: string, binding: PttBinding): Promise<BoundShortcut> {
+      const { key, modifier } = binding
+      const modCodes = modifier ? MODIFIER_CODES[modifier] : null
       const readable = deps.listDevices().filter((d) => deps.canRead(d))
       if (readable.length === 0) throw new Error('no readable input devices — pass-through is locked')
       let onAct: (() => void) | null = null
       let onDeact: (() => void) | null = null
+      // modifier + active state are shared across ALL device streams — the
+      // modifier can come from the keyboard while the key comes from the
+      // mouse. A modifier already held before arming isn't seen until its
+      // next edge (accepted: worst case is one missed activation).
+      let modifierHeld = false
+      let active = false
       const streams = new Set<ReturnType<EvdevDeps['openStream']>>()
       readable.forEach((path) => {
         const stream = deps.openStream(path)
         streams.add(stream)
         let rest: Buffer = Buffer.alloc(0)
         stream.on('data', ((chunk: Buffer) => {
-          // fast path: mice flood EV_REL frames — skip the concat allocation
-          // unless a previous read left a partial frame
           const parsed = parseInputEvents(rest.length === 0 ? chunk : Buffer.concat([rest, chunk]))
           rest = parsed.rest
           for (const ev of parsed.events) {
-            if (ev.type !== EV_KEY || ev.code !== key.code) continue
-            if (ev.value === 1) onAct?.()
-            else if (ev.value === 0) onDeact?.()
+            if (ev.type !== EV_KEY) continue
+            if (modCodes && (ev.code === modCodes[0] || ev.code === modCodes[1])) {
+              if (ev.value === 1) modifierHeld = true
+              else if (ev.value === 0) {
+                modifierHeld = false
+                if (active) { active = false; onDeact?.() }
+              }
+              continue
+            }
+            if (ev.code !== key.code) continue
+            if (ev.value === 1) {
+              if ((!modCodes || modifierHeld) && !active) { active = true; onAct?.() }
+            } else if (ev.value === 0) {
+              if (active) { active = false; onDeact?.() }
+            }
             // value 2 = auto-repeat: ignored (the key is already down)
           }
         }) as never)

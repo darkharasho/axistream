@@ -1,12 +1,12 @@
 // packages/app/src/main/PttController.ts
-import { type PttKey } from '../shared/keys.js'
+import { type PttBinding } from '../shared/keys.js'
 export interface PortalShortcut { onActivated(cb: () => void): void; onDeactivated(cb: () => void): void; close(): Promise<void> }
 export interface PortalDeps {
   available(): Promise<boolean>
-  bind(id: string, description: string, key: PttKey): Promise<PortalShortcut>
+  bind(id: string, description: string, binding: PttBinding): Promise<PortalShortcut>
 }
 export type ExecLike = (cmd: string, args: string[]) => Promise<void>
-export interface PttDeps { portal: PortalDeps; exec: ExecLike; sourceId(): string; onActive(active: boolean): void; key(): PttKey }
+export interface PttDeps { portal: PortalDeps; exec: ExecLike; sourceId(): string; onActive(active: boolean): void; binding(): PttBinding }
 
 // App-owned push-to-talk: a GlobalShortcuts-portal key gates the mic at the
 // PipeWire SOURCE level, so Discord (on voice activity) and the stream both
@@ -31,7 +31,7 @@ export class PttController {
     if (this.shortcut) return { ok: true }
     let sc: PortalShortcut
     try {
-      sc = await this.d.portal.bind('ptt', 'Push to talk', this.d.key())
+      sc = await this.d.portal.bind('ptt', 'Push to talk', this.d.binding())
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.warn('[ptt] bind failed', msg)

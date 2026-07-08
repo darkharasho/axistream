@@ -1,4 +1,4 @@
-import type { PttKey, PttCaptureResult } from './keys.js'
+import type { PttBinding, PttCaptureResult } from './keys.js'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
@@ -39,7 +39,7 @@ export interface AppState {
   gameAudioPlugin: GameAudioPluginView
   blurPlugin: GameAudioPluginView
   maskStyle: 'box' | 'blur'
-  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string }
+  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string; keyCode: number; modifier: import('./keys.js').PttModifier | null }
   windowFitted: boolean
   masksVisible: boolean
 }
@@ -53,7 +53,7 @@ export const INITIAL_STATE: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
-  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18' },
+  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null },
   windowFitted: false,
   masksVisible: true,
 }
@@ -113,7 +113,7 @@ export const CH = {
   testDiscordWebhook: 'axi:testDiscordWebhook',
   recordAudioTest: 'axi:recordAudioTest',
   setPttEnabled: 'axi:setPttEnabled',
-  setPttKey: 'axi:setPttKey',
+  setPttBinding: 'axi:setPttBinding',
   capturePttKey: 'axi:capturePttKey',
   unlockPassthrough: 'axi:unlockPassthrough',
   setMasksVisible: 'axi:setMasksVisible',
@@ -160,7 +160,7 @@ export interface AxiApi {
   testDiscordWebhook(): Promise<DiscordTestResult>
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
-  setPttKey(key: PttKey): Promise<void>
+  setPttBinding(b: PttBinding): Promise<void>
   capturePttKey(): Promise<PttCaptureResult>
   unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
