@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createSmokeWatcher, type SmokeResult } from '../src/main/smoke.js'
+import { createSmokeWatcher } from '../src/main/smoke.js'
 import type { SmokeResult } from '../src/main/smoke.js'
 
 describe('createSmokeWatcher', () => {
