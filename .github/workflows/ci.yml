@@ -41,6 +41,24 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Bisect launcher args (cold OBS)
+        shell: pwsh
+        run: |
+          $exe = "C:\Program Files\obs-studio\bin\64bit\obs64.exe"
+          $wd = "C:\Program Files\obs-studio\bin\64bit"
+          New-Item -ItemType Directory -Force -Path "$env:APPDATA\obs-studio\plugin_config\obs-websocket" | Out-Null
+          '{"server_enabled": true}' | Set-Content "$env:APPDATA\obs-studio\plugin_config\obs-websocket\config.json"
+          function Probe($label, $argList) {
+            Start-Process -FilePath $exe -WorkingDirectory $wd -ArgumentList $argList
+            Start-Sleep -Seconds 20
+            $listen = (Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -eq 4460) -ne $null
+            Write-Host "PROBE [$label] port-listening: $listen"
+            taskkill /F /IM obs64.exe 2>$null
+            Start-Sleep -Seconds 3
+          }
+          Probe "exact launcher args" @("--minimize-to-tray","--websocket_port","4460","--websocket_password","x","--websocket_debug","--multi","--disable-shutdown-check","--collection","AxiStream")
+          Probe "without minimize-to-tray" @("--websocket_port","4460","--websocket_password","x","--websocket_debug","--multi","--disable-shutdown-check","--collection","AxiStream")
+          exit 0
       - name: Run smoke boot
         shell: bash
         timeout-minutes: 10
