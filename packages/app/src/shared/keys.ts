@@ -78,3 +78,62 @@ export function keyName(code: number): string {
 export function isKnownKey(code: number): boolean {
   return NAMES.has(code)
 }
+
+// ---------------------------------------------------------------------------
+// Windows virtual-key mapping
+// ---------------------------------------------------------------------------
+
+// Build evdev→VK map from the group tables where the mapping is systematic.
+// Letters: VK = 0x41 + (letter index A-Z). Digits: VK = 0x30-0x39.
+// F-keys, navigation, misc and mouse buttons handled explicitly below.
+
+const _evdevToVk = new Map<number, number>()
+
+// Letters — built from LETTER_CODES (evdev) and the A-Z VK range (A=0x41…Z=0x5A).
+for (const letter of Object.keys(LETTER_CODES)) {
+  _evdevToVk.set(LETTER_CODES[letter], 0x41 + letter.charCodeAt(0) - 'A'.charCodeAt(0))
+}
+
+// Digits 1–9 (evdev 2–10 → VK 0x31–0x39) and 0 (evdev 11 → VK 0x30)
+for (let i = 0; i < 9; i++) { _evdevToVk.set(2 + i, 0x31 + i) }
+_evdevToVk.set(11, 0x30)
+
+// F1–F10: evdev 59–68 → VK 0x70–0x79
+for (let i = 0; i < 10; i++) { _evdevToVk.set(59 + i, 0x70 + i) }
+// F11, F12: evdev 87, 88 → VK 0x7A, 0x7B
+_evdevToVk.set(87, 0x7A)
+_evdevToVk.set(88, 0x7B)
+// F13–F24: evdev 183–194 → VK 0x7C–0x87
+for (let i = 0; i < 12; i++) { _evdevToVk.set(183 + i, 0x7C + i) }
+
+// Navigation & misc
+_evdevToVk.set(110, 0x2D)  // Insert
+_evdevToVk.set(102, 0x24)  // Home
+_evdevToVk.set(107, 0x23)  // End
+_evdevToVk.set(104, 0x21)  // PageUp
+_evdevToVk.set(109, 0x22)  // PageDown
+_evdevToVk.set(119, 0x13)  // Pause
+_evdevToVk.set(70,  0x91)  // ScrollLock
+_evdevToVk.set(41,  0xC0)  // Grave
+_evdevToVk.set(43,  0xDC)  // Backslash
+
+// Mouse buttons
+_evdevToVk.set(272, 0x01)  // BTN_LEFT
+_evdevToVk.set(273, 0x02)  // BTN_RIGHT
+_evdevToVk.set(274, 0x04)  // BTN_MIDDLE
+_evdevToVk.set(275, 0x05)  // BTN_SIDE
+_evdevToVk.set(276, 0x06)  // BTN_EXTRA
+
+/** Map an evdev input code to a Windows virtual-key code.
+ *  Returns null for codes with no Windows equivalent. */
+export function evdevToVk(code: number): number | null {
+  return _evdevToVk.get(code) ?? null
+}
+
+/** Windows VK codes for each PTT modifier (either VK satisfies the modifier). */
+export const MODIFIER_VKS: Record<PttModifier, number[]> = {
+  ctrl:  [0x11],        // VK_CONTROL (GetAsyncKeyState tracks left/right via this)
+  shift: [0x10],        // VK_SHIFT
+  alt:   [0x12],        // VK_MENU
+  super: [0x5B, 0x5C], // VK_LWIN, VK_RWIN
+}
