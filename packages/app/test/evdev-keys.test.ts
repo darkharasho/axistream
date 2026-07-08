@@ -140,26 +140,32 @@ describe('captureNextKey', () => {
     const h = capHarness()
     const p = captureNextKey(h.deps, 5000)
     h.devs['/dev/input/event3'].emitData(frame(1, 185, 1))
-    expect(await p).toEqual({ code: 185, name: 'F15' })
+    expect(await p).toEqual({ key: { code: 185, name: 'F15' } })
     expect(h.devs['/dev/input/event3'].stream.destroy).toHaveBeenCalled()
   })
-  it('ignores releases and non-key events; Escape cancels with null', async () => {
+  it('ignores releases, non-key events, and plain clicks; Escape cancels', async () => {
     const h = capHarness()
     const p = captureNextKey(h.deps, 5000)
     const dev = h.devs['/dev/input/event3']
     dev.emitData(frame(1, 185, 0))  // release — ignored
     dev.emitData(frame(2, 0, 1))    // EV_REL — ignored
+    dev.emitData(frame(1, 272, 1))  // BTN_LEFT — ignored, capture continues
+    dev.emitData(frame(1, 273, 1))  // BTN_RIGHT — ignored
     dev.emitData(frame(1, 1, 1))    // Escape — cancel
-    expect(await p).toBeNull()
+    expect(await p).toEqual({ reason: 'cancelled' })
   })
-  it('times out to null', async () => {
+  it('times out', async () => {
     const h = capHarness()
-    expect(await captureNextKey(h.deps, 10)).toBeNull()
+    expect(await captureNextKey(h.deps, 10)).toEqual({ reason: 'timeout' })
+  })
+  it('reports unavailable when nothing is readable', async () => {
+    const deps = { listDevices: () => ['/dev/input/event3'], canRead: () => false, openStream: () => { throw new Error('unreachable') } }
+    expect(await captureNextKey(deps as never, 10)).toEqual({ reason: 'unavailable' })
   })
 })
 
 describe('captureNextKey accepts any key', () => {
-  it('captures an off-table key with a KEY_<n> name', async () => {
+  it('captures an off-table key (mouse side button) with a KEY_<n> name', async () => {
     const devs = { '/dev/input/event3': fakeDevice() }
     const p = captureNextKey({
       listDevices: () => Object.keys(devs),
@@ -167,7 +173,7 @@ describe('captureNextKey accepts any key', () => {
       openStream: (d: string) => devs[d as keyof typeof devs].stream as never,
     }, 5000)
     devs['/dev/input/event3'].emitData(frame(1, 275, 1))  // BTN_SIDE — off-table
-    expect(await p).toEqual({ code: 275, name: 'KEY_275' })
+    expect(await p).toEqual({ key: { code: 275, name: 'KEY_275' } })
   })
 })
 

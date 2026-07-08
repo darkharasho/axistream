@@ -1,4 +1,4 @@
-import type { PttKey } from './keys.js'
+import type { PttKey, PttCaptureResult } from './keys.js'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
@@ -161,7 +161,7 @@ export interface AxiApi {
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
   setPttKey(key: PttKey): Promise<void>
-  capturePttKey(): Promise<PttKey | null>
+  capturePttKey(): Promise<PttCaptureResult>
   unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
   checkForUpdates(): Promise<void>

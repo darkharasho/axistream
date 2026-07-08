@@ -1,10 +1,12 @@
 import { readdirSync, openSync, closeSync, readSync, constants } from 'node:fs'
-import { keyName, type PttKey } from '../shared/keys.js'
+import { keyName, type PttKey, type PttCaptureResult } from '../shared/keys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
  *  s32 value — little-endian. */
 const FRAME = 24
 const KEY_ESC = 1
+const BTN_LEFT = 272
+const BTN_RIGHT = 273
 const EV_KEY = 1
 
 export interface InputEvent { type: number; code: number; value: number }
@@ -134,22 +136,24 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
 }
 
 /** Resolve the next keydown seen on any readable device — the press-to-bind
- *  UX. Escape cancels; timeout returns null. All probe streams are destroyed
- *  on settle. */
-export function captureNextKey(deps: EvdevDeps = realDeps, timeoutMs = 10000): Promise<PttKey | null> {
+ *  UX. Escape cancels; plain clicks are skipped (the Rebind click itself
+ *  must never bind BTN_LEFT); the timeout and no-device cases report
+ *  themselves so the UI can say what happened. All probe streams are
+ *  destroyed on settle. */
+export function captureNextKey(deps: EvdevDeps = realDeps, timeoutMs = 10000): Promise<PttCaptureResult> {
   return new Promise((resolve) => {
     const readable = deps.listDevices().filter((d) => deps.canRead(d))
-    if (readable.length === 0) { resolve(null); return }
+    if (readable.length === 0) { resolve({ reason: 'unavailable' }); return }
     const streams: { destroy(): void }[] = []
     let done = false
-    const settle = (result: PttKey | null) => {
+    const settle = (result: PttCaptureResult) => {
       if (done) return
       done = true
       clearTimeout(timer)
       for (const s of streams) { try { s.destroy() } catch { /* ignore */ } }
       resolve(result)
     }
-    const timer = setTimeout(() => settle(null), timeoutMs)
+    const timer = setTimeout(() => settle({ reason: 'timeout' }), timeoutMs)
     for (const path of readable) {
       const stream = deps.openStream(path)
       streams.push(stream)
@@ -159,11 +163,11 @@ export function captureNextKey(deps: EvdevDeps = realDeps, timeoutMs = 10000): P
         rest = parsed.rest
         for (const ev of parsed.events) {
           if (ev.type !== EV_KEY || ev.value !== 1) continue
-          if (ev.code === KEY_ESC) { settle(null); return }
-          // Accept ANY key — "press any key" means what it says. Off-table
-          // keys keep their code with a KEY_<n> name; the exclusive dropdown
-          // shows them honestly (portal treats an unknown trigger as a hint).
-          settle({ code: ev.code, name: keyName(ev.code) })
+          if (ev.code === KEY_ESC) { settle({ reason: 'cancelled' }); return }
+          if (ev.code === BTN_LEFT || ev.code === BTN_RIGHT) continue
+          // Accept ANY other key — "press any key" means what it says.
+          // Off-table keys keep their code with a KEY_<n> name.
+          settle({ key: { code: ev.code, name: keyName(ev.code) } })
           return
         }
       }) as never)
