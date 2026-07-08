@@ -73,10 +73,13 @@ export class WindowsObsLauncher implements ObsLauncher {
     if (!exe) throw new Error('OBS Studio not found — install it from obsproject.com, then relaunch AxiStream')
     enableObsWebsocketServer()
     const cwd = exe.slice(0, exe.lastIndexOf('\\'))
-    const proc = spawn(exe, ['--minimize-to-tray', ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    // detached + no stdio mirrors how OBS expects to start on Windows (a
+    // plain GUI launch). Piped stdio/console inheritance from Electron left
+    // obs-websocket's server dead while the identical Start-Process launch
+    // worked — found by CI bisect on the windows smoke harness. GUI OBS
+    // writes nothing to stdout on Windows anyway.
+    const proc = spawn(exe, ['--minimize-to-tray', ...args], { cwd, stdio: 'ignore', detached: true })
     proc.on('error', (e) => console.error('[obs] spawn failed:', e.message))
-    proc.stdout.on('data', (d) => process.stdout.write(`[obs] ${d}`))
-    proc.stderr.on('data', (d) => process.stderr.write(`[obs] ${d}`))
     return {
       kill: () => { try { proc.kill() } catch { /* ignore */ } },
       onExit: (cb) => proc.on('exit', cb),
