@@ -20,12 +20,26 @@ files:
 asar: true
 npmRebuild: false            # everything is bundled by electron-vite; no native deps
 electronLanguages: [en-US]
-# Windows packaging groundwork — untested on a real Windows machine yet;
-# builds are not wired into CI until the first Windows smoke.
+# Windows + macOS builds are CI-wired (release.yml matrix) but runtime is
+# still experimental — WindowsObsLauncher is untested on real hardware and
+# there is no mac OBS launcher yet. The artifacts install and auto-update.
 win:
   target: [nsis]
   icon: build/icon.ico
   artifactName: ${productName}-Setup-${version}.${ext}
+mac:
+  # zip is required alongside dmg — electron-updater's mac feed updates
+  # from the zip. Signed with the Developer ID Application cert (CSC_LINK/
+  # CSC_KEY_PASSWORD env) and notarized via the APPLE_ID/
+  # APPLE_APP_SPECIFIC_PASSWORD env pair.
+  target: [dmg, zip]
+  icon: build/icon.png
+  category: public.app-category.video
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize:
+    teamId: YMPSC6RQ4F
+  artifactName: ${productName}-${version}-${arch}.${ext}
 linux:
   target: [AppImage, deb]
   executableName: axistream

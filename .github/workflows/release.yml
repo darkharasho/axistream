@@ -1,8 +1,12 @@
 name: Release
 
 # Tag a release: git tag v0.1.0 && git push origin v0.1.0
-# Builds the Linux AppImage + deb and attaches them to a GitHub Release —
-# GearLever-installable straight from the releases page.
+# Gated on the test job; builds Linux (AppImage + deb), Windows (NSIS,
+# unsigned) and macOS (dmg + zip, Developer ID signed + notarized), all
+# uploaded to one draft release with their electron-updater feeds
+# (latest-linux.yml / latest.yml / latest-mac.yml), then promoted once.
+# Mac signing secrets came from 1Password via `gh secret set` (CSC_LINK =
+# base64 of the Developer ID Application .p12) — axiroster pattern.
 on:
   push:
     tags: ['v*']
@@ -11,33 +15,45 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Install
         run: npm ci
-
-      - name: Test
+      - name: Unit tests
         run: npm test
-
       - name: Typecheck
         run: npx tsc --noEmit -p packages/app/tsconfig.json
 
+  # Linux + Windows need no code-signing.
+  build:
+    needs: [test]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
       - name: Sync package version from tag
+        shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           npm version "$VERSION" --no-git-tag-version --allow-same-version -w @axistream/app
-          echo "Building AxiStream $VERSION"
-
+          echo "Building AxiStream $VERSION for ${{ matrix.os }}"
       - name: Build + upload to draft release
-        # --publish always also uploads latest-linux.yml, the electron-updater feed.
+        # --publish always also uploads the per-platform electron-updater feed.
         # npm run -w changes CWD to the workspace — electron-builder's config and
         # project-dir resolution both need to run from packages/app.
         run: npm -w @axistream/app run dist:publish
@@ -45,6 +61,39 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
+  # macOS is signed + notarized with the Developer ID Application cert;
+  # electron-builder reads the CSC_*/APPLE_* values from the environment.
+  build-mac:
+    needs: [test]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Sync package version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version -w @axistream/app
+          echo "Building AxiStream $VERSION for macOS"
+      - name: Build, sign & upload to draft release
+        run: npm -w @axistream/app run dist:publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+  publish:
+    needs: [build, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Publish the release
         run: gh release edit "$GITHUB_REF_NAME" --draft=false
         env:
