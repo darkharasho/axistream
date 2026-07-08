@@ -106,7 +106,9 @@ export class ObsSidecar {
     this.expectExit = true
     try { await this.obs?.disconnect() } catch { /* ignore */ }
     this.obs = undefined
-    this.opts.launcher.killApp()
+    // awaited for symmetry with start(): two concurrent taskkills from a
+    // tight stop()/start() must not race the fresh spawn
+    await this.opts.launcher.killApp()
     this.handle?.kill()
     this.handle = undefined
   }

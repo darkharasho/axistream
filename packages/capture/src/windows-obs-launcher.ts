@@ -74,15 +74,7 @@ export class WindowsObsLauncher implements ObsLauncher {
     if (!exe) throw new Error('OBS Studio not found — install it from obsproject.com, then relaunch AxiStream')
     enableObsWebsocketServer()
     const cwd = exe.slice(0, exe.lastIndexOf('\\'))
-    // detached + no stdio mirrors how OBS expects to start on Windows (a
-    // plain GUI launch). Piped stdio/console inheritance from Electron left
-    // obs-websocket's server dead while the identical Start-Process launch
-    // worked — found by CI bisect on the windows smoke harness. GUI OBS
-    // writes nothing to stdout on Windows anyway.
-    // --websocket_ipv4_only: Windows binds the websocket IPv6-only by default
-    // (IPV6_V6ONLY), so 127.0.0.1 connects never succeed even though the
-    // port shows as listening.
-// detached + no stdio: a plain GUI launch; Windows OBS writes nothing to
+    // detached + no stdio: a plain GUI launch; Windows OBS writes nothing to
     // stdout anyway. --websocket_ipv4_only keeps the server reachable from
     // the sidecar's 127.0.0.1 connect regardless of v6-only bind defaults.
     const proc = spawn(exe, ['--minimize-to-tray', '--websocket_ipv4_only', ...args], { cwd, stdio: 'ignore', detached: true })
