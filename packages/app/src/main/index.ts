@@ -572,7 +572,7 @@ if (primary) app.whenReady().then(async () => {
         // capture window was open — never resurrect an explicit disable
         if (wasEnabled && settings.load().pttEnabled) {
           const r = await ptt.enable()
-          const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyCode: lb.key.code, modifier: lb.modifier } })
+          const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
         }
       }
       return result
