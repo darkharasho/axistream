@@ -41,47 +41,6 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Verify OBS install location
-        shell: bash
-        run: ls -la "/c/Program Files/obs-studio/bin/64bit/obs64.exe"
-      - name: OBS direct-launch diagnostic
-        shell: pwsh
-        run: |
-          $exe = "C:\Program Files\obs-studio\bin\64bit\obs64.exe"
-          $wd = "C:\Program Files\obs-studio\bin\64bit"
-          $wsArgs = @("--websocket_port","4460","--websocket_password","smokediag","--multi","--disable-shutdown-check")
-          Write-Host "=== PASS 1: plain launch, inspect obs-websocket config ==="
-          Start-Process -FilePath $exe -WorkingDirectory $wd -ArgumentList $wsArgs
-          Start-Sleep -Seconds 20
-          $cfg = "$env:APPDATA\obs-studio\plugin_config\obs-websocket\config.json"
-          Write-Host "config exists: $(Test-Path $cfg)"
-          if (Test-Path $cfg) { Get-Content $cfg }
-          Get-ChildItem "$env:APPDATA\obs-studio" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName -First 30
-          Write-Host "port 4460 listening (pass 1): $((Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -eq 4460) -ne $null)"
-          taskkill /F /IM obs64.exe; Start-Sleep -Seconds 3
-          Write-Host "=== PASS 2: pre-enable server_enabled, relaunch ==="
-          New-Item -ItemType Directory -Force -Path "$env:APPDATA\obs-studio\plugin_config\obs-websocket" | Out-Null
-          if (Test-Path $cfg) {
-            $j = Get-Content $cfg | ConvertFrom-Json
-            $j.server_enabled = $true
-            $j | ConvertTo-Json | Set-Content $cfg
-          } else {
-            '{"server_enabled": true, "server_port": 4460, "auth_required": true, "server_password": "smokediag"}' | Set-Content $cfg
-          }
-          Get-Content $cfg
-          Start-Process -FilePath $exe -WorkingDirectory $wd -ArgumentList $wsArgs
-          Start-Sleep -Seconds 20
-          Write-Host "port 4460 listening (pass 2): $((Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -eq 4460) -ne $null)"
-          Get-Process obs64 -ErrorAction SilentlyContinue | Format-List Name,Id,MainWindowTitle,Responding
-          taskkill /F /IM obs64.exe
-          exit 0
-      - name: Upload desktop screenshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-screenshot
-          path: desktop.png
-          if-no-files-found: ignore
       - name: Run smoke boot
         shell: bash
         timeout-minutes: 10
