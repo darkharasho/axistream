@@ -82,7 +82,15 @@ export class WindowsObsLauncher implements ObsLauncher {
     // --websocket_ipv4_only: Windows binds the websocket IPv6-only by default
     // (IPV6_V6ONLY), so 127.0.0.1 connects never succeed even though the
     // port shows as listening.
-    const proc = spawn(exe, ['--minimize-to-tray', '--websocket_ipv4_only', ...args], { cwd, stdio: 'ignore', detached: true })
+    // OBS inherits a minimal env, not Electron's. Under the Electron main
+    // process env (npm_*/ELECTRON_*/CHROME_* vars), obs64 exits code 1
+    // before even creating a log file, while the identical spawn from plain
+    // node with a clean env boots fine — found by CI bisect.
+    const keep = ['SystemRoot', 'windir', 'SystemDrive', 'APPDATA', 'LOCALAPPDATA', 'ProgramFiles', 'ProgramFiles(x86)', 'ProgramData', 'CommonProgramFiles', 'USERPROFILE', 'USERNAME', 'TEMP', 'TMP', 'HOMEDRIVE', 'HOMEPATH', 'PUBLIC', 'COMPUTERNAME', 'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE', 'PATHEXT', 'ComSpec']
+    const env: Record<string, string> = {}
+    for (const k of keep) { const v = process.env[k]; if (v !== undefined) env[k] = v }
+    env['PATH'] = `${cwd};C:\\Windows\\System32;C:\\Windows`
+    const proc = spawn(exe, ['--minimize-to-tray', '--websocket_ipv4_only', ...args], { cwd, stdio: 'ignore', detached: true, env })
     console.info(`[obs] spawned pid=${proc.pid ?? 'NONE'} exe=${exe}`)
     proc.on('error', (e) => console.error('[obs] spawn failed:', e.message))
     proc.on('exit', (code, sig) => console.error(`[obs] exited code=${code} sig=${sig}`))
