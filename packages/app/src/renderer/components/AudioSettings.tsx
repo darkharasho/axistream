@@ -205,7 +205,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
               <label className="muted">Push-to-talk key
                 <select value={ptt.keyName}
-                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttKey(k) }}>
+                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttBinding({ key: k, modifier: null }) }}>
                   {!PTT_KEY_CHOICES.some((k) => k.name === ptt.keyName) && <option value={ptt.keyName}>{ptt.keyName}</option>}
                   {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.name}>{k.name}</option>)}
                 </select>
@@ -224,7 +224,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               {unlockErr && <p className="ptt-err">{unlockErr}</p>}
               <label className="muted">Push-to-talk key
                 <select value={ptt.keyName}
-                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttKey(k) }}>
+                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttBinding({ key: k, modifier: null }) }}>
                   {!PTT_KEY_CHOICES.some((k) => k.name === ptt.keyName) && <option value={ptt.keyName}>{ptt.keyName}</option>}
                   {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.name}>{k.name}</option>)}
                 </select>

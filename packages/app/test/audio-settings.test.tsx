@@ -17,7 +17,7 @@ const axi = {
   recordAudioTest: vi.fn(async (): Promise<AudioTestResult> => ({ ok: true, clip: new Uint8Array([0]), mime: 'video/mp4' })),
   setPttEnabled: vi.fn(async () => {}),
   unlockPassthrough: vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true })),
-  setPttKey: vi.fn(async () => {}),
+  setPttBinding: vi.fn(async () => {}),
   capturePttKey: vi.fn(async (): Promise<PttCaptureResult> => ({ key: { code: 185, name: 'F15' } })),
 }
 beforeEach(() => {
@@ -264,10 +264,10 @@ describe('AudioSettings', () => {
     await waitFor(() => expect(screen.getByText('No key seen — timed out')).toBeInTheDocument())
   })
 
-  it('exclusive rebind is a dropdown calling setPttKey', async () => {
+  it('exclusive rebind is a dropdown calling setPttBinding', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18' }} />)
     fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: 'F13' } })
-    expect(axi.setPttKey).toHaveBeenCalledWith({ code: 183, name: 'F13' })
+    expect(axi.setPttBinding).toHaveBeenCalledWith({ key: { code: 183, name: 'F13' }, modifier: null })
   })
 })
 
