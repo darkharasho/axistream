@@ -32,6 +32,7 @@ export class WindowsObsLauncher implements ObsLauncher {
     if (!exe) throw new Error('OBS Studio not found — install it from obsproject.com, then relaunch AxiStream')
     const cwd = exe.slice(0, exe.lastIndexOf('\\'))
     const proc = spawn(exe, ['--minimize-to-tray', ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    proc.on('error', (e) => console.error('[obs] spawn failed:', e.message))
     proc.stdout.on('data', (d) => process.stdout.write(`[obs] ${d}`))
     proc.stderr.on('data', (d) => process.stderr.write(`[obs] ${d}`))
     return {

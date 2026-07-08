@@ -759,7 +759,9 @@ if (primary) app.whenReady().then(async () => {
       setState({ blurPlugin: { status: deriveBlurStatus(await blurInstaller.detectInstalled(), []), error: null }, maskStyle: settings.load().maskStyle })
     }
   } catch (e) {
-    setState({ phase: 'ERROR', error: 'Could not start the stream engine (OBS).' })
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error('[boot] stream engine failed:', detail)
+    setState({ phase: 'ERROR', error: `Could not start the stream engine (OBS): ${detail}` })
   }
 })
 
