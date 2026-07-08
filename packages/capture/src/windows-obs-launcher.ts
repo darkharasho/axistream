@@ -25,7 +25,7 @@ export function enableObsWebsocketServer(
   appData: string | undefined = process.env['APPDATA'],
   deps: WebsocketConfigDeps = realConfigDeps,
 ): void {
-  if (!appData) return
+  if (!appData) { console.warn('[obs] APPDATA unset — cannot enable websocket server config'); return }
   try {
     const dir = `${appData}\\obs-studio\\plugin_config\\obs-websocket`
     const file = `${dir}\\config.json`
@@ -38,6 +38,7 @@ export function enableObsWebsocketServer(
     if (cfg['server_enabled'] === true) return
     cfg['server_enabled'] = true
     deps.write(file, JSON.stringify(cfg, null, 2))
+    console.info(`[obs] websocket server enabled in ${file}`)
   } catch (e) {
     console.warn('[obs] enabling websocket server config failed:', e instanceof Error ? e.message : e)
   }
