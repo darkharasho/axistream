@@ -671,6 +671,21 @@ if (primary) app.whenReady().then(async () => {
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
+  // Smoke mode: a fresh install boots to SETTING_UP and waits for the user
+  // to start capture setup — drive it like the user would, once. On Windows
+  // provisioning needs no portal approval, so this carries the boot all the
+  // way to READY/NEEDS_KEY (the smoke success states).
+  if (smokeMode) {
+    let kicked = false
+    const kick = setInterval(() => {
+      if (state.phase !== 'SETTING_UP' || kicked) return
+      kicked = true
+      clearInterval(kick)
+      console.log('[smoke] auto-triggering capture provisioning')
+      void handlers.provision().catch((e) => console.error('[smoke] provision failed:', e))
+    }, 1000)
+  }
+
   // Wire quit-while-live guard and engine teardown before booting OBS,
   // so that close events fired during the async start are handled correctly.
   win.on('close', (e) => {
