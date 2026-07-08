@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { parseInputEvents, createEvdevShortcuts, captureNextKey } from '../src/main/evdev-keys.js'
+import { execSync } from 'node:child_process'
+import { openSync, writeSync, closeSync, unlinkSync, constants } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { parseInputEvents, createEvdevShortcuts, captureNextKey, pollStream } from '../src/main/evdev-keys.js'
 
 const KEY_F18 = 188
 
@@ -164,5 +168,36 @@ describe('captureNextKey accepts any key', () => {
     }, 5000)
     devs['/dev/input/event3'].emitData(frame(1, 275, 1))  // BTN_SIDE — off-table
     expect(await p).toEqual({ code: 275, name: 'KEY_275' })
+  })
+})
+
+describe('pollStream (fifo integration)', () => {
+  it('delivers written frames and stops after destroy', async () => {
+    const fifo = join(tmpdir(), `axistream-fifo-${process.pid}-${Math.random().toString(36).slice(2)}`)
+    execSync(`mkfifo ${fifo}`)
+    const s = pollStream(fifo, 5)
+    const chunks: Buffer[] = []
+    s.on('data', ((b: Buffer) => { chunks.push(b) }) as never)
+    s.on('error', (() => { /* ignore */ }) as never)
+    const w = openSync(fifo, constants.O_WRONLY | constants.O_NONBLOCK)
+    try {
+      writeSync(w, frame(1, 188, 1))
+      await new Promise((r) => setTimeout(r, 60))
+      expect(Buffer.concat(chunks).length).toBeGreaterThanOrEqual(24)
+      s.destroy()
+      const before = Buffer.concat(chunks).length
+      try { writeSync(w, frame(1, 188, 0)) } catch { /* EPIPE after destroy is expected */ }
+      await new Promise((r) => setTimeout(r, 40))
+      expect(Buffer.concat(chunks).length).toBe(before)
+    } finally {
+      closeSync(w)
+      unlinkSync(fifo)
+    }
+  })
+
+  it('emits error (not a throw) for an unopenable path', async () => {
+    const s = pollStream('/nonexistent-dir/nope', 5)
+    const err = await new Promise<Error>((resolve) => { s.on('error', ((e: Error) => resolve(e)) as never) })
+    expect(err.message).toMatch(/ENOENT/)
   })
 })

@@ -1,4 +1,4 @@
-import { readdirSync, openSync, closeSync, createReadStream } from 'node:fs'
+import { readdirSync, openSync, closeSync, readSync, constants } from 'node:fs'
 import { keyName, type PttKey } from '../shared/keys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
@@ -33,6 +33,47 @@ export interface EvdevDeps {
   openStream(path: string): { on(ev: 'data' | 'error', cb: (arg: never) => void): void; destroy(): void }
 }
 
+/** Poll-based evdev reader. fs.createReadStream's blocking reads ride
+ *  libuv's 4-thread pool — 40+ never-returning device reads starve it and
+ *  every stream goes silent (PTT dead once the pass-through unlock makes
+ *  all /dev/input nodes readable). Non-blocking opens + a 25 ms readSync
+ *  sweep never touch the pool. */
+export function pollStream(path: string, intervalMs = 25): { on(ev: 'data' | 'error', cb: (arg: never) => void): void; destroy(): void } {
+  let onData: ((b: Buffer) => void) | null = null
+  let onError: ((e: Error) => void) | null = null
+  let fd = -1
+  let openErr: Error | null = null
+  try { fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK) } catch (e) { openErr = e as Error }
+  const buf = Buffer.alloc(FRAME * 64)
+  const destroy = () => {
+    if (timer) clearInterval(timer)
+    if (fd >= 0) { try { closeSync(fd) } catch { /* ignore */ } }
+    fd = -1
+  }
+  const timer = openErr ? null : setInterval(() => {
+    for (;;) {
+      let n: number
+      try { n = readSync(fd, buf, 0, buf.length, null) } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === 'EAGAIN') return
+        destroy()
+        onError?.(e as Error)  // e.g. ENODEV on unplug — bind prunes, capture's timeout covers
+        return
+      }
+      if (n <= 0) return
+      onData?.(Buffer.from(buf.subarray(0, n)))
+      if (n < buf.length) return  // drained
+    }
+  }, intervalMs)
+  return {
+    on: (ev, cb) => {
+      if (ev === 'data') { onData = cb as never; return }
+      onError = cb as never
+      if (openErr) queueMicrotask(() => onError?.(openErr as Error))
+    },
+    destroy,
+  }
+}
+
 const realDeps: EvdevDeps = {
   listDevices: () => {
     try {
@@ -42,9 +83,7 @@ const realDeps: EvdevDeps = {
   canRead: (path) => {
     try { closeSync(openSync(path, 'r')); return true } catch { return false }
   },
-  // fs.ReadStream's event overloads don't structurally match the narrow
-  // EvdevDeps shape — the cast is interface-narrowing, not type-punning.
-  openStream: (path) => createReadStream(path) as never,
+  openStream: (path) => pollStream(path) as never,
 }
 
 /** Observational PTT capture: reads every readable /dev/input/event* and
