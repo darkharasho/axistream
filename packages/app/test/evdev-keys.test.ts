@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { parseInputEvents, createEvdevShortcuts, captureNextKey } from '../src/main/evdev-keys.js'
+import { execSync } from 'node:child_process'
+import { openSync, writeSync, closeSync, unlinkSync, constants } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { parseInputEvents, createEvdevShortcuts, captureNextKey, pollStream } from '../src/main/evdev-keys.js'
 
 const KEY_F18 = 188
 
@@ -136,26 +140,32 @@ describe('captureNextKey', () => {
     const h = capHarness()
     const p = captureNextKey(h.deps, 5000)
     h.devs['/dev/input/event3'].emitData(frame(1, 185, 1))
-    expect(await p).toEqual({ code: 185, name: 'F15' })
+    expect(await p).toEqual({ key: { code: 185, name: 'F15' } })
     expect(h.devs['/dev/input/event3'].stream.destroy).toHaveBeenCalled()
   })
-  it('ignores releases and non-key events; Escape cancels with null', async () => {
+  it('ignores releases, non-key events, and plain clicks; Escape cancels', async () => {
     const h = capHarness()
     const p = captureNextKey(h.deps, 5000)
     const dev = h.devs['/dev/input/event3']
     dev.emitData(frame(1, 185, 0))  // release — ignored
     dev.emitData(frame(2, 0, 1))    // EV_REL — ignored
+    dev.emitData(frame(1, 272, 1))  // BTN_LEFT — ignored, capture continues
+    dev.emitData(frame(1, 273, 1))  // BTN_RIGHT — ignored
     dev.emitData(frame(1, 1, 1))    // Escape — cancel
-    expect(await p).toBeNull()
+    expect(await p).toEqual({ reason: 'cancelled' })
   })
-  it('times out to null', async () => {
+  it('times out', async () => {
     const h = capHarness()
-    expect(await captureNextKey(h.deps, 10)).toBeNull()
+    expect(await captureNextKey(h.deps, 10)).toEqual({ reason: 'timeout' })
+  })
+  it('reports unavailable when nothing is readable', async () => {
+    const deps = { listDevices: () => ['/dev/input/event3'], canRead: () => false, openStream: () => { throw new Error('unreachable') } }
+    expect(await captureNextKey(deps as never, 10)).toEqual({ reason: 'unavailable' })
   })
 })
 
 describe('captureNextKey accepts any key', () => {
-  it('captures an off-table key with a KEY_<n> name', async () => {
+  it('captures an off-table key (mouse side button) with a KEY_<n> name', async () => {
     const devs = { '/dev/input/event3': fakeDevice() }
     const p = captureNextKey({
       listDevices: () => Object.keys(devs),
@@ -163,6 +173,37 @@ describe('captureNextKey accepts any key', () => {
       openStream: (d: string) => devs[d as keyof typeof devs].stream as never,
     }, 5000)
     devs['/dev/input/event3'].emitData(frame(1, 275, 1))  // BTN_SIDE — off-table
-    expect(await p).toEqual({ code: 275, name: 'KEY_275' })
+    expect(await p).toEqual({ key: { code: 275, name: 'KEY_275' } })
+  })
+})
+
+describe('pollStream (fifo integration)', () => {
+  it('delivers written frames and stops after destroy', async () => {
+    const fifo = join(tmpdir(), `axistream-fifo-${process.pid}-${Math.random().toString(36).slice(2)}`)
+    execSync(`mkfifo ${fifo}`)
+    const s = pollStream(fifo, 5)
+    const chunks: Buffer[] = []
+    s.on('data', ((b: Buffer) => { chunks.push(b) }) as never)
+    s.on('error', (() => { /* ignore */ }) as never)
+    const w = openSync(fifo, constants.O_WRONLY | constants.O_NONBLOCK)
+    try {
+      writeSync(w, frame(1, 188, 1))
+      await new Promise((r) => setTimeout(r, 60))
+      expect(Buffer.concat(chunks).length).toBeGreaterThanOrEqual(24)
+      s.destroy()
+      const before = Buffer.concat(chunks).length
+      try { writeSync(w, frame(1, 188, 0)) } catch { /* EPIPE after destroy is expected */ }
+      await new Promise((r) => setTimeout(r, 40))
+      expect(Buffer.concat(chunks).length).toBe(before)
+    } finally {
+      closeSync(w)
+      unlinkSync(fifo)
+    }
+  })
+
+  it('emits error (not a throw) for an unopenable path', async () => {
+    const s = pollStream('/nonexistent-dir/nope', 5)
+    const err = await new Promise<Error>((resolve) => { s.on('error', ((e: Error) => resolve(e)) as never) })
+    expect(err.message).toMatch(/ENOENT/)
   })
 })

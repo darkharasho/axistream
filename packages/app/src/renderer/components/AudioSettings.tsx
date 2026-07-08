@@ -13,6 +13,8 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
   const [pttEnabled, setPttEnabledLocal] = useState(ptt.enabled)
   const [unlockErr, setUnlockErr] = useState<string | null>(null)
   const [capturing, setCapturing] = useState(false)
+  const [captureLeft, setCaptureLeft] = useState(10)
+  const [captureMsg, setCaptureMsg] = useState<string | null>(null)
   // Resync on OBJECT identity, not value: main pushes a fresh ptt object on
   // every setPttEnabled result, so a FAILED enable (enabled stays false)
   // still fires this and corrects the optimistic checkbox.
@@ -41,7 +43,20 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
 
   const rebind = async () => {
     setCapturing(true)
-    try { await axi().capturePttKey() } finally { setCapturing(false) }
+    setCaptureMsg(null)
+    setCaptureLeft(10)
+    const tick = setInterval(() => setCaptureLeft((s) => Math.max(0, s - 1)), 1000)
+    try {
+      const r = await axi().capturePttKey()
+      if ('reason' in r) {
+        setCaptureMsg(r.reason === 'cancelled' ? 'Cancelled'
+          : r.reason === 'timeout' ? 'No key seen — timed out'
+          : 'Pass-through unavailable')
+      }
+    } finally {
+      clearInterval(tick)
+      setCapturing(false)
+    }
   }
 
   const [micDevices, setMicDevices] = useState<AudioDevice[] | null>(null)
@@ -188,7 +203,10 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           {ptt.enabled && ptt.mode === 'passthrough' && (
             <>
               <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
-              {capturing ? <span className="muted">Press any key… (Esc to cancel)</span> : <button className="btn ghost xs" onClick={rebind}>Rebind</button>}
+              {capturing
+                ? <span className="muted">Press any key… {captureLeft}s (Esc cancels)</span>
+                : <button className="btn ghost xs" onClick={rebind}>Rebind</button>}
+              {captureMsg && !capturing && <p className="muted">{captureMsg}</p>}
             </>
           )}
           {ptt.enabled && ptt.mode === 'exclusive' && (

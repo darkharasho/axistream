@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
-import type { PttKey } from '../shared/keys.js'
+import type { PttKey, PttCaptureResult } from '../shared/keys.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -44,7 +44,7 @@ const api: AxiApi = {
   recordAudioTest: () => ipcRenderer.invoke(CH.recordAudioTest) as Promise<AudioTestResult>,
   setPttEnabled: (enabled) => ipcRenderer.invoke(CH.setPttEnabled, enabled) as Promise<void>,
   setPttKey: (key) => ipcRenderer.invoke(CH.setPttKey, key) as Promise<void>,
-  capturePttKey: () => ipcRenderer.invoke(CH.capturePttKey) as Promise<PttKey | null>,
+  capturePttKey: () => ipcRenderer.invoke(CH.capturePttKey) as Promise<PttCaptureResult>,
   unlockPassthrough: () => ipcRenderer.invoke(CH.unlockPassthrough) as Promise<{ ok: boolean; error?: string }>,
   setMasksVisible: (visible) => ipcRenderer.invoke(CH.setMasksVisible, visible) as Promise<void>,
   checkForUpdates: () => ipcRenderer.invoke(CH.updatesCheck) as Promise<void>,

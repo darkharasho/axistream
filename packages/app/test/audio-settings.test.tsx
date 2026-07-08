@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AudioSettings } from '../src/renderer/components/AudioSettings.js'
 import type { AudioTestResult } from '../src/shared/state.js'
+import type { PttCaptureResult } from '../src/shared/keys.js'
 
 const axi = {
   getAudioDevices: vi.fn(async () => [{ id: 'default', name: 'Default' }, { id: 'yeti', name: 'Yeti' }]),
@@ -17,7 +18,7 @@ const axi = {
   setPttEnabled: vi.fn(async () => {}),
   unlockPassthrough: vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true })),
   setPttKey: vi.fn(async () => {}),
-  capturePttKey: vi.fn(async (): Promise<{ code: number; name: string } | null> => ({ code: 185, name: 'F15' })),
+  capturePttKey: vi.fn(async (): Promise<PttCaptureResult> => ({ key: { code: 185, name: 'F15' } })),
 }
 beforeEach(() => {
   (globalThis as any).axi = axi
@@ -254,6 +255,13 @@ describe('AudioSettings', () => {
     expect(screen.getByText(/press any key/i)).toBeInTheDocument()
     await waitFor(() => expect(axi.capturePttKey).toHaveBeenCalled())
     await waitFor(() => expect(screen.queryByText(/press any key/i)).not.toBeInTheDocument())
+  })
+
+  it('pass-through rebind shows timeout message when capture times out', async () => {
+    axi.capturePttKey.mockResolvedValueOnce({ reason: 'timeout' })
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18' }} />)
+    fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
+    await waitFor(() => expect(screen.getByText('No key seen — timed out')).toBeInTheDocument())
   })
 
   it('exclusive rebind is a dropdown calling setPttKey', async () => {

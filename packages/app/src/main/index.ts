@@ -51,7 +51,7 @@ import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
-import type { PttKey } from '../shared/keys.js'
+import type { PttKey, PttCaptureResult } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
@@ -549,19 +549,19 @@ if (primary) app.whenReady().then(async () => {
         setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: key.name } })
       }
     },
-    capturePttKey: async () => {
-      if (!(await evdevBackend.available())) return null
+    capturePttKey: async (): Promise<PttCaptureResult> => {
+      if (!(await evdevBackend.available())) return { reason: 'unavailable' }
       const wasEnabled = ptt.isEnabled()
       // the pressed key must never transmit: capture with PTT disarmed.
       // try/finally: captureNextKey never rejects today, but a future
       // rejection path must not strand PTT disabled.
       if (wasEnabled) await ptt.disable()
-      let key: PttKey | null = null
+      let result: PttCaptureResult = { reason: 'timeout' }
       try {
-        key = await captureNextKey()
-        if (key) {
-          settings.patch({ pttKeyCode: key.code, pttKeyName: key.name })
-          setState({ ptt: { ...state.ptt, keyName: key.name } })
+        result = await captureNextKey()
+        if ('key' in result) {
+          settings.patch({ pttKeyCode: result.key.code, pttKeyName: result.key.name })
+          setState({ ptt: { ...state.ptt, keyName: result.key.name } })
         }
       } finally {
         // re-sample intent: the user may have toggled PTT OFF while the
@@ -571,7 +571,7 @@ if (primary) app.whenReady().then(async () => {
           setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
         }
       }
-      return key
+      return result
     },
     unlockPassthrough: async () => {
       const r = await runInputUnlock(execAsync)

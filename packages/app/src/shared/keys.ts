@@ -1,5 +1,9 @@
 export interface PttKey { code: number; name: string }
 
+export type PttCaptureResult =
+  | { key: PttKey }
+  | { reason: 'timeout' | 'cancelled' | 'unavailable' }
+
 // evdev keycodes from linux input-event-codes.h — the curated picker set.
 export const PTT_KEY_CHOICES: PttKey[] = [
   ...Array.from({ length: 10 }, (_, i) => ({ code: 59 + i, name: `F${i + 1}` })),

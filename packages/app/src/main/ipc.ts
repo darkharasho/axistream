@@ -1,5 +1,5 @@
 import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
-import type { PttKey } from '../shared/keys.js'
+import type { PttKey, PttCaptureResult } from '../shared/keys.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
@@ -37,7 +37,7 @@ export interface IpcHandlers {
   recordAudioTest(): Promise<AudioTestResult>
   setPttEnabled(enabled: boolean): Promise<void>
   setPttKey(key: PttKey): Promise<void>
-  capturePttKey(): Promise<PttKey | null>
+  capturePttKey(): Promise<PttCaptureResult>
   unlockPassthrough(): Promise<{ ok: boolean; error?: string }>
   setMasksVisible(visible: boolean): Promise<void>
   appVersion(): Promise<string>
