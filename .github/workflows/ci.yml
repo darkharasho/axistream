@@ -41,32 +41,10 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Plain-node spawn probe
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          node .github/node-spawn-probe.mjs
-          taskkill /F /IM obs64.exe 2>$null
-          exit 0
-      - name: Run smoke boot (with live sampler)
-        shell: pwsh
+      - name: Run smoke boot
+        shell: bash
         timeout-minutes: 10
-        run: |
-          $sampler = Start-Job -ScriptBlock {
-            for ($i = 0; $i -lt 40; $i++) {
-              $t = Get-Date -Format HH:mm:ss
-              $obs = Get-Process obs64 -ErrorAction SilentlyContinue
-              $ports = if ($obs) { Get-NetTCPConnection -State Listen -OwningProcess $obs.Id -ErrorAction SilentlyContinue | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort)" } }
-              "$t obs=$($obs -ne $null) title='$($obs.MainWindowTitle)' listen=[$($ports -join ',')]" | Out-File -Append $env:GITHUB_WORKSPACE\sampler.log
-              Start-Sleep -Seconds 3
-            }
-          }
-          npx electron packages/app --smoke
-          $code = $LASTEXITCODE
-          Stop-Job $sampler; Remove-Job $sampler -Force
-          Write-Host "=== sampler ==="
-          Get-Content $env:GITHUB_WORKSPACE\sampler.log -ErrorAction SilentlyContinue
-          exit $code
+        run: npx electron packages/app --smoke
       - name: Upload OBS logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
