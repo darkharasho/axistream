@@ -676,14 +676,20 @@ if (primary) app.whenReady().then(async () => {
   // provisioning needs no portal approval, so this carries the boot all the
   // way to READY/NEEDS_KEY (the smoke success states).
   if (smokeMode) {
-    let kicked = false
-    const kick = setInterval(() => {
-      if (state.phase !== 'SETTING_UP' || kicked) return
-      kicked = true
-      clearInterval(kick)
-      console.log('[smoke] auto-triggering capture provisioning')
-      void handlers.provision().catch((e) => console.error('[smoke] provision failed:', e))
-    }, 1000)
+    // Boot pushes SETTING_UP before capture.start() finishes constructing
+    // the provisioner — retry until the call survives.
+    let inFlight = false
+    const kick = setInterval(async () => {
+      if (state.phase !== 'SETTING_UP' || inFlight) return
+      inFlight = true
+      try {
+        console.log('[smoke] auto-triggering capture provisioning')
+        await handlers.provision()
+        clearInterval(kick)
+      } catch (e) {
+        console.error('[smoke] provision attempt failed (will retry):', e instanceof Error ? e.message : e)
+      } finally { inFlight = false }
+    }, 2000)
   }
 
   // Wire quit-while-live guard and engine teardown before booting OBS,
