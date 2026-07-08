@@ -41,28 +41,25 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Bisect launcher args (cold OBS)
+      - name: Run smoke boot (with live sampler)
         shell: pwsh
-        run: |
-          $exe = "C:\Program Files\obs-studio\bin\64bit\obs64.exe"
-          $wd = "C:\Program Files\obs-studio\bin\64bit"
-          New-Item -ItemType Directory -Force -Path "$env:APPDATA\obs-studio\plugin_config\obs-websocket" | Out-Null
-          '{"server_enabled": true}' | Set-Content "$env:APPDATA\obs-studio\plugin_config\obs-websocket\config.json"
-          function Probe($label, $argList) {
-            Start-Process -FilePath $exe -WorkingDirectory $wd -ArgumentList $argList
-            Start-Sleep -Seconds 20
-            $listen = (Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -eq 4460) -ne $null
-            Write-Host "PROBE [$label] port-listening: $listen"
-            taskkill /F /IM obs64.exe 2>$null
-            Start-Sleep -Seconds 3
-          }
-          Probe "exact launcher args" @("--minimize-to-tray","--websocket_port","4460","--websocket_password","x","--websocket_debug","--multi","--disable-shutdown-check","--collection","AxiStream")
-          Probe "without minimize-to-tray" @("--websocket_port","4460","--websocket_password","x","--websocket_debug","--multi","--disable-shutdown-check","--collection","AxiStream")
-          exit 0
-      - name: Run smoke boot
-        shell: bash
         timeout-minutes: 10
-        run: npx electron packages/app --smoke
+        run: |
+          $sampler = Start-Job -ScriptBlock {
+            for ($i = 0; $i -lt 40; $i++) {
+              $t = Get-Date -Format HH:mm:ss
+              $obs = Get-Process obs64 -ErrorAction SilentlyContinue
+              $ports = if ($obs) { Get-NetTCPConnection -State Listen -OwningProcess $obs.Id -ErrorAction SilentlyContinue | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort)" } }
+              "$t obs=$($obs -ne $null) title='$($obs.MainWindowTitle)' listen=[$($ports -join ',')]" | Out-File -Append $env:GITHUB_WORKSPACE\sampler.log
+              Start-Sleep -Seconds 3
+            }
+          }
+          npx electron packages/app --smoke
+          $code = $LASTEXITCODE
+          Stop-Job $sampler; Remove-Job $sampler -Force
+          Write-Host "=== sampler ==="
+          Get-Content $env:GITHUB_WORKSPACE\sampler.log -ErrorAction SilentlyContinue
+          exit $code
       - name: Upload OBS logs on failure
         if: failure()
         uses: actions/upload-artifact@v4

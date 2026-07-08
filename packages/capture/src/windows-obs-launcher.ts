@@ -78,7 +78,10 @@ export class WindowsObsLauncher implements ObsLauncher {
     // obs-websocket's server dead while the identical Start-Process launch
     // worked — found by CI bisect on the windows smoke harness. GUI OBS
     // writes nothing to stdout on Windows anyway.
-    const proc = spawn(exe, ['--minimize-to-tray', ...args], { cwd, stdio: 'ignore', detached: true })
+    // --websocket_ipv4_only: Windows binds the websocket IPv6-only by default
+    // (IPV6_V6ONLY), so 127.0.0.1 connects never succeed even though the
+    // port shows as listening.
+    const proc = spawn(exe, ['--minimize-to-tray', '--websocket_ipv4_only', ...args], { cwd, stdio: 'ignore', detached: true })
     proc.on('error', (e) => console.error('[obs] spawn failed:', e.message))
     return {
       kill: () => { try { proc.kill() } catch { /* ignore */ } },
