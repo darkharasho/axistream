@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PTT_KEY_CHOICES, keyName, PTT_KEY_GROUPS, MODIFIER_CODES, bindingLabel } from '../src/shared/keys.js'
+import { PTT_KEY_CHOICES, keyName, PTT_KEY_GROUPS, MODIFIER_CODES, bindingLabel, evdevToVk, MODIFIER_VKS } from '../src/shared/keys.js'
 
 describe('PTT key table', () => {
   it('pins the codes that matter', () => {
@@ -54,5 +54,71 @@ describe('key groups and bindings', () => {
   it('bindingLabel renders with and without modifier', () => {
     expect(bindingLabel({ key: { code: 188, name: 'F18' }, modifier: null })).toBe('F18')
     expect(bindingLabel({ key: { code: 188, name: 'F18' }, modifier: 'ctrl' })).toBe('Ctrl + F18')
+  })
+})
+
+describe('evdevToVk', () => {
+  it('maps F18 (evdev 188) to VK 0x81', () => {
+    expect(evdevToVk(188)).toBe(0x81)
+  })
+  it('maps V (evdev 47) to VK 0x56', () => {
+    expect(evdevToVk(47)).toBe(0x56)
+  })
+  it("maps digit '1' (evdev 2) to VK 0x31", () => {
+    expect(evdevToVk(2)).toBe(0x31)
+  })
+  it('maps PageUp (evdev 104) to VK 0x21', () => {
+    expect(evdevToVk(104)).toBe(0x21)
+  })
+  it('maps BTN_SIDE (evdev 275) to VK 0x05', () => {
+    expect(evdevToVk(275)).toBe(0x05)
+  })
+  it('returns null for an unknown evdev code (999)', () => {
+    expect(evdevToVk(999)).toBeNull()
+  })
+  it('maps all F-keys in range F1–F24', () => {
+    // F1–F10: evdev 59–68 → VK 0x70–0x79
+    expect(evdevToVk(59)).toBe(0x70)  // F1
+    expect(evdevToVk(68)).toBe(0x79)  // F10
+    expect(evdevToVk(87)).toBe(0x7A)  // F11
+    expect(evdevToVk(88)).toBe(0x7B)  // F12
+    expect(evdevToVk(183)).toBe(0x7C) // F13
+    expect(evdevToVk(194)).toBe(0x87) // F24
+  })
+  it('maps all digit keys', () => {
+    expect(evdevToVk(2)).toBe(0x31)   // '1'
+    expect(evdevToVk(10)).toBe(0x39)  // '9'
+    expect(evdevToVk(11)).toBe(0x30)  // '0'
+  })
+  it('maps navigation keys', () => {
+    expect(evdevToVk(110)).toBe(0x2D) // Insert
+    expect(evdevToVk(102)).toBe(0x24) // Home
+    expect(evdevToVk(107)).toBe(0x23) // End
+    expect(evdevToVk(109)).toBe(0x22) // PageDown
+    expect(evdevToVk(119)).toBe(0x13) // Pause
+    expect(evdevToVk(70)).toBe(0x91)  // ScrollLock
+    expect(evdevToVk(41)).toBe(0xC0)  // Grave
+    expect(evdevToVk(43)).toBe(0xDC)  // Backslash
+  })
+  it('maps mouse buttons', () => {
+    expect(evdevToVk(272)).toBe(0x01) // BTN_LEFT
+    expect(evdevToVk(273)).toBe(0x02) // BTN_RIGHT
+    expect(evdevToVk(274)).toBe(0x04) // BTN_MIDDLE
+    expect(evdevToVk(276)).toBe(0x06) // BTN_EXTRA
+  })
+})
+
+describe('MODIFIER_VKS', () => {
+  it('ctrl maps to [0x11]', () => {
+    expect(MODIFIER_VKS.ctrl).toEqual([0x11])
+  })
+  it('shift maps to [0x10]', () => {
+    expect(MODIFIER_VKS.shift).toEqual([0x10])
+  })
+  it('alt maps to [0x12]', () => {
+    expect(MODIFIER_VKS.alt).toEqual([0x12])
+  })
+  it('super maps to [0x5B, 0x5C]', () => {
+    expect(MODIFIER_VKS.super).toEqual([0x5B, 0x5C])
   })
 })
