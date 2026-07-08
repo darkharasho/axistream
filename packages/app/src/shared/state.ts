@@ -39,7 +39,7 @@ export interface AppState {
   gameAudioPlugin: GameAudioPluginView
   blurPlugin: GameAudioPluginView
   maskStyle: 'box' | 'blur'
-  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string }
+  ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string; keyCode: number; modifier: import('./keys.js').PttModifier | null }
   windowFitted: boolean
   masksVisible: boolean
 }
@@ -53,7 +53,7 @@ export const INITIAL_STATE: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
-  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18' },
+  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null },
   windowFitted: false,
   masksVisible: true,
 }

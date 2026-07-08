@@ -254,3 +254,28 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .audio-test { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .audio-test audio { width: 100%; height: 32px; }
 .audio-test-err { font-size: 12px; font-weight: 600; color: #f85149; }
+
+/* PTT key picker (combo builder) */
+.keypicker { display: flex; flex-direction: column; gap: 8px; margin: 6px 0; }
+.keypicker-combo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.keypicker-chip { display: inline-flex; align-items: center; gap: 7px; background: rgba(38,211,238,.12); border: 1px solid rgba(38,211,238,.45); color: #26d3ee; border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+.keypicker-x { background: none; border: 0; color: inherit; opacity: .7; cursor: pointer; font-size: 13px; padding: 0; }
+.keypicker-x:hover { opacity: 1; }
+.keypicker-plus { color: #8b98a5; font-weight: 800; }
+.keypicker-key { background: #1f2732; border: 1px solid #3a4552; color: #e6edf3; border-radius: 9px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
+.keypicker-key:hover { border-color: #26d3ee; }
+.keypicker-menu { position: relative; }
+.keypicker-addmod { background: #1a222c; border: 1px dashed #2a323b; color: #8b98a5; border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.keypicker-addmod:hover { color: #e6edf3; border-color: #3a4552; }
+.keypicker-menulist { position: absolute; top: 110%; left: 0; background: #161c26; border: 1px solid #2a323b; border-radius: 10px; padding: 6px; z-index: 5; min-width: 120px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.keypicker-menulist button { display: block; width: 100%; text-align: left; background: none; border: 0; color: #e6edf3; font-size: 12px; padding: 6px 10px; border-radius: 7px; cursor: pointer; }
+.keypicker-menulist button:hover { background: #222c38; }
+.keypicker-grid { background: #161c26; border: 1px solid #2a323b; border-radius: 12px; padding: 12px; }
+.keypicker-grid input { width: 100%; box-sizing: border-box; background: #0f141b; border: 1px solid #2a323b; border-radius: 8px; color: #e6edf3; padding: 7px 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
+.keypicker-grid input:focus { border-color: #26d3ee; }
+.keypicker-group { margin-bottom: 8px; }
+.keypicker-glabel { color: #8b98a5; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 6px; }
+.keypicker-keys { display: flex; flex-wrap: wrap; gap: 5px; }
+.keypicker-k { background: #1a222c; border: 1px solid #2a323b; color: #c7d0d9; border-radius: 7px; padding: 4px 9px; font-size: 11px; font-weight: 600; cursor: pointer; min-width: 28px; }
+.keypicker-k:hover { background: #222c38; border-color: #3a4552; }
+.keypicker-k.sel { background: rgba(38,211,238,.15); border-color: #26d3ee; color: #26d3ee; }

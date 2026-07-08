@@ -538,19 +538,19 @@ if (primary) app.whenReady().then(async () => {
       settings.patch({ pttEnabled: enabled })
       if (enabled) {
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(loadBinding()) } })
+        const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
       } else {
         await ptt.disable()
-        setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null, mode: null, keyName: bindingLabel(loadBinding()) } })
+        const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null, mode: null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
       }
     },
     setPttBinding: async (b: PttBinding) => {
       settings.patch({ pttKeyCode: b.key.code, pttKeyName: b.key.name, pttModifier: b.modifier ?? '' })
-      setState({ ptt: { ...state.ptt, keyName: bindingLabel(b) } })
+      setState({ ptt: { ...state.ptt, keyName: bindingLabel(b), keyCode: b.key.code, modifier: b.modifier } })
       if (ptt.isEnabled()) {
         await ptt.disable()
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(b) } })
+        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(b), keyCode: b.key.code, modifier: b.modifier } })
       }
     },
     capturePttKey: async (): Promise<PttCaptureResult> => {
@@ -565,14 +565,14 @@ if (primary) app.whenReady().then(async () => {
         result = await captureNextKey()
         if ('key' in result) {
           settings.patch({ pttKeyCode: result.key.code, pttKeyName: result.key.name, pttModifier: '' })
-          setState({ ptt: { ...state.ptt, keyName: bindingLabel({ key: result.key, modifier: null }) } })
+          setState({ ptt: { ...state.ptt, keyName: bindingLabel({ key: result.key, modifier: null }), keyCode: result.key.code, modifier: null } })
         }
       } finally {
         // re-sample intent: the user may have toggled PTT OFF while the
         // capture window was open — never resurrect an explicit disable
         if (wasEnabled && settings.load().pttEnabled) {
           const r = await ptt.enable()
-          setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null } })
+          const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyCode: lb.key.code, modifier: lb.modifier } })
         }
       }
       return result
@@ -583,7 +583,7 @@ if (primary) app.whenReady().then(async () => {
         // upgrade in place: closing the portal binding releases F18 to Discord
         await ptt.disable()
         const en = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: en.ok, active: false, error: en.ok ? null : (en.error ?? 'failed'), mode: en.ok ? pttMode : null, keyName: bindingLabel(loadBinding()) } })
+        const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: en.ok, active: false, error: en.ok ? null : (en.error ?? 'failed'), mode: en.ok ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
       }
       return r
     },
@@ -699,10 +699,10 @@ if (primary) app.whenReady().then(async () => {
       })
       await ptt.restore()
       const pttAvailable = await ptt.available()
-      setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: bindingLabel(loadBinding()) } })
+      const lbInit = loadBinding(); setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: bindingLabel(lbInit), keyCode: lbInit.key.code, modifier: lbInit.modifier } })
       if (pttAvailable && a.pttEnabled) {
         const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(loadBinding()) } })
+        const lbEn = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lbEn), keyCode: lbEn.key.code, modifier: lbEn.modifier } })
       }
       setState({ masks: a.masks, masksVisible: a.masksVisible })
       pushFitted()
