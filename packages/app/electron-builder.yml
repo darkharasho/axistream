@@ -18,7 +18,7 @@ files:
   - out/**
   - build/icon.png
 asar: true
-npmRebuild: false            # everything is bundled by electron-vite; no native deps
+npmRebuild: false            # koffi (the one native dep) ships prebuilds — nothing to rebuild
 electronLanguages: [en-US]
 # Windows + macOS builds are CI-wired (release.yml matrix) but runtime is
 # still experimental — WindowsObsLauncher is untested on real hardware and
