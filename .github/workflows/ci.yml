@@ -23,3 +23,34 @@ jobs:
         run: npx tsc --noEmit -p packages/app/tsconfig.json
       - name: Build
         run: npm run build
+
+  # Windows runtime smoke: proves WindowsObsLauncher -> obs-websocket ->
+  # provisioning reaches a ready phase on real Windows. No GPU/audio-device
+  # assertions (runner hardware) — fail-soft paths count as success.
+  smoke-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install OBS Studio
+        run: choco install obs-studio -y --no-progress
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run smoke boot
+        shell: bash
+        timeout-minutes: 10
+        run: npx electron packages/app --smoke
+      - name: Upload OBS logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-logs
+          path: |
+            ~/AppData/Roaming/obs-studio/logs/
+            ~/AppData/Roaming/@axistream/
+          if-no-files-found: ignore

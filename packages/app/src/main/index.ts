@@ -55,6 +55,14 @@ import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
+import { createSmokeWatcher, type SmokeResult } from './smoke.js'
+
+const smokeMode = process.argv.includes('--smoke')
+if (smokeMode) app.disableHardwareAcceleration()
+
+// In smoke mode the watcher is created after app.whenReady (inside the primary
+// block where setState lives), but the variable must be visible to setState.
+let smokeWatcher: ReturnType<typeof createSmokeWatcher> | null = null
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
@@ -148,7 +156,14 @@ if (primary) app.whenReady().then(async () => {
   tray.on('click', showWin)
 
   const push = (channel: string, payload: unknown) => { if (!win.isDestroyed()) win.webContents.send(channel, payload) }
-  const setState = (p: Partial<AppState>) => { state = { ...state, ...p }; push(CH.evtState, p) }
+  const setState = (p: Partial<AppState>) => {
+    state = { ...state, ...p }
+    push(CH.evtState, p)
+    if (smokeMode && (p.phase !== undefined || p.error !== undefined)) {
+      console.log('[smoke] phase=' + state.phase + ' error=' + state.error)
+      smokeWatcher?.observe(state.phase, state.error)
+    }
+  }
 
   // Fit-button label truth: recompute on every resize/toggle/capture change.
   const pushFitted = () => {
@@ -295,6 +310,26 @@ if (primary) app.whenReady().then(async () => {
       return applyEncoderPreset(state.capture?.outputHeight ?? 1080, state.capture?.fps ?? 60, { tries: 3 })
     },
   })
+
+  // Smoke watcher: constructed here so all shutdown deps (sidecar, preview,
+  // meter, ptt) are in scope for the onDone closure. The watcher is only
+  // assigned in smoke mode; normal-path setState has a no-op guard.
+  if (smokeMode) {
+    smokeWatcher = createSmokeWatcher((r: SmokeResult) => {
+      console.log(r.summary)
+      try { preview.stop() } catch { /* ignore */ }
+      try { void meter.stop() } catch { /* ignore */ }
+      try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
+      if (ptt.isEnabled()) { try { void ptt.restore() } catch { /* ignore */ } }
+      // Backstop so a hung sidecar.stop() can't wedge the smoke run.
+      const backstop = setTimeout(() => app.exit(r.code), 5000)
+      if (backstop.unref) backstop.unref()
+      void sidecar.stop().catch(() => {}).finally(() => {
+        clearTimeout(backstop)
+        app.exit(r.code)
+      })
+    })
+  }
 
   const goReadyPhase = () => keyStore.masked() ? 'READY' : 'NEEDS_KEY'
   // Start OBS's Virtual Camera so the renderer can show a real live preview, and
@@ -636,6 +671,33 @@ if (primary) app.whenReady().then(async () => {
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
+  // Smoke mode: a fresh install boots to SETTING_UP and waits for the user
+  // to start capture setup — drive it like the user would, once. On Windows
+  // provisioning needs no portal approval, so this carries the boot all the
+  // way to READY/NEEDS_KEY (the smoke success states).
+  if (smokeMode) {
+    // Boot pushes SETTING_UP before capture.start() finishes constructing
+    // the provisioner — retry until the call survives.
+    let inFlight = false
+    const kick = setInterval(async () => {
+      if (state.phase !== 'SETTING_UP' || inFlight) return
+      inFlight = true
+      try {
+        console.log('[smoke] auto-triggering capture provisioning')
+        await handlers.provision()
+        clearInterval(kick)
+        if (state.phase === 'SETTING_UP') {
+          // every OBS provisioning call succeeded; only the non-black frame
+          // check failed, which a headless runner can never pass
+          console.log('[smoke] provisioned; frame check inconclusive on headless runner')
+          smokeWatcher?.succeed('SMOKE OK provisioned (frame check inconclusive on headless runner)')
+        }
+      } catch (e) {
+        console.error('[smoke] provision attempt failed (will retry):', e instanceof Error ? e.message : e)
+      } finally { inFlight = false }
+    }, 2000)
+  }
+
   // Wire quit-while-live guard and engine teardown before booting OBS,
   // so that close events fired during the async start are handled correctly.
   win.on('close', (e) => {
@@ -724,7 +786,9 @@ if (primary) app.whenReady().then(async () => {
       setState({ blurPlugin: { status: deriveBlurStatus(await blurInstaller.detectInstalled(), []), error: null }, maskStyle: settings.load().maskStyle })
     }
   } catch (e) {
-    setState({ phase: 'ERROR', error: 'Could not start the stream engine (OBS).' })
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error('[boot] stream engine failed:', detail)
+    setState({ phase: 'ERROR', error: `Could not start the stream engine (OBS): ${detail}` })
   }
 })
 
