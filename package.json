@@ -10,5 +10,13 @@
     "dev": "npm -w @axistream/app run dev",
     "build": "npm -ws --if-present run build",
     "dist": "npm -w @axistream/app run dist"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "4.62.2",
+    "@rollup/rollup-darwin-x64": "4.62.2",
+    "@rollup/rollup-win32-x64-msvc": "4.62.2",
+    "@esbuild/darwin-arm64": "0.21.5",
+    "@esbuild/darwin-x64": "0.21.5",
+    "@esbuild/win32-x64": "0.21.5"
   }
 }
