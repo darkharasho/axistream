@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createSmokeWatcher } from '../src/main/smoke.js'
+import { createSmokeWatcher, type SmokeResult } from '../src/main/smoke.js'
 import type { SmokeResult } from '../src/main/smoke.js'
 
 describe('createSmokeWatcher', () => {
@@ -89,5 +89,28 @@ describe('createSmokeWatcher', () => {
     const r = onDone.mock.calls[0][0]
     expect(r.code).toBe(1)
     expect(r.summary).toContain('5000')
+  })
+})
+
+describe('succeed()', () => {
+  it('settles code 0 once and blocks later observations', () => {
+    vi.useFakeTimers()
+    const results: SmokeResult[] = []
+    const w = createSmokeWatcher((r) => results.push(r), 1000)
+    w.succeed('SMOKE OK custom')
+    w.observe('ERROR', 'boom')
+    vi.advanceTimersByTime(2000)
+    expect(results).toEqual([{ code: 0, summary: 'SMOKE OK custom' }])
+    vi.useRealTimers()
+  })
+  it('is ignored after a prior settle', () => {
+    vi.useFakeTimers()
+    const results: SmokeResult[] = []
+    const w = createSmokeWatcher((r) => results.push(r), 1000)
+    w.observe('ERROR', 'boom')
+    w.succeed('too late')
+    expect(results).toHaveLength(1)
+    expect(results[0].code).toBe(1)
+    vi.useRealTimers()
   })
 })
