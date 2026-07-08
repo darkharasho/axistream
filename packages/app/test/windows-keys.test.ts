@@ -124,7 +124,8 @@ describe('createWindowsKeys — press/release edges (no modifier)', () => {
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
-    // Several polls while key is held — should NOT fire (poll state starts "up")
+    // Several polls while key is held — should NOT fire (keyWasDown seeds from
+    // the live state, so a held key produces no down-edge until it cycles)
     vi.advanceTimersByTime(100)
     expect(seq).toEqual([])
 
@@ -329,5 +330,31 @@ describe('evdevToVk (via windows-keys import)', () => {
   })
   it('maps V to 0x56', () => {
     expect(evdevToVk(47)).toBe(0x56)
+  })
+})
+
+describe('createWindowsKeys — key AND modifier held at arm time', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('key AND modifier both held at arm time produce no activation until key cycles', async () => {
+    const { backend, held } = makeHarness()
+    // Both key and modifier are already held before bind
+    held.add(VK_CTRL)
+    held.add(VK_F18)
+    const sc = await backend.bind('ptt', 'Push to talk', BINDING_CF18)
+    const seq: string[] = []
+    sc.onActivated(() => seq.push('down'))
+
+    // Several polls — keyWasDown seeds from live state, so no down-edge fires
+    vi.advanceTimersByTime(100)
+    expect(seq).toEqual([])
+
+    // Release only the key (modifier still held), then re-press — should fire
+    held.delete(VK_F18); vi.advanceTimersByTime(25)
+    held.add(VK_F18); vi.advanceTimersByTime(25)
+    expect(seq).toEqual(['down'])
+
+    await sc.close()
   })
 })

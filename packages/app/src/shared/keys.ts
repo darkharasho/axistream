@@ -89,20 +89,9 @@ export function isKnownKey(code: number): boolean {
 
 const _evdevToVk = new Map<number, number>()
 
-// Letters — evdev code → VK (A=0x41 … Z=0x5A, alphabetical by letter)
-const _LETTER_VK: Record<string, number> = {
-  A: 0x41, B: 0x42, C: 0x43, D: 0x44, E: 0x45, F: 0x46, G: 0x47, H: 0x48,
-  I: 0x49, J: 0x4A, K: 0x4B, L: 0x4C, M: 0x4D, N: 0x4E, O: 0x4F, P: 0x50,
-  Q: 0x51, R: 0x52, S: 0x53, T: 0x54, U: 0x55, V: 0x56, W: 0x57, X: 0x58,
-  Y: 0x59, Z: 0x5A,
-}
-const _LETTER_EVDEV: Record<string, number> = {
-  A: 30, B: 48, C: 46, D: 32, E: 18, F: 33, G: 34, H: 35, I: 23, J: 36,
-  K: 37, L: 38, M: 50, N: 49, O: 24, P: 25, Q: 16, R: 19, S: 31, T: 20,
-  U: 22, V: 47, W: 17, X: 45, Y: 21, Z: 44,
-}
-for (const letter of Object.keys(_LETTER_EVDEV)) {
-  _evdevToVk.set(_LETTER_EVDEV[letter], _LETTER_VK[letter])
+// Letters — built from LETTER_CODES (evdev) and the A-Z VK range (A=0x41…Z=0x5A).
+for (const letter of Object.keys(LETTER_CODES)) {
+  _evdevToVk.set(LETTER_CODES[letter], 0x41 + letter.charCodeAt(0) - 'A'.charCodeAt(0))
 }
 
 // Digits 1–9 (evdev 2–10 → VK 0x31–0x39) and 0 (evdev 11 → VK 0x30)
