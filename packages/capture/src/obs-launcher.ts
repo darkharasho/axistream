@@ -8,7 +8,7 @@ export interface ObsLaunchHandle {
 
 export interface ObsLauncher {
   launch(args: string[]): ObsLaunchHandle
-  killApp(): void
+  killApp(): void | Promise<void>
 }
 
 export async function findFreePort(): Promise<number> {

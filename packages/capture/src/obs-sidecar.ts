@@ -69,7 +69,10 @@ export class ObsSidecar {
   }
 
   async start(): Promise<void> {
-    this.opts.launcher.killApp() // clear any orphaned OBS before launching
+    // AWAIT the orphan cleanup: an unawaited taskkill snapshots processes
+    // ~100ms later and murders the OBS we are about to spawn (Windows smoke
+    // harness found OBS exiting code 1 pre-log on every boot).
+    await this.opts.launcher.killApp()
     this._port = await findFreePort()
     this.expectExit = false
     const args = [

@@ -99,7 +99,13 @@ export class WindowsObsLauncher implements ObsLauncher {
       onExit: (cb) => proc.on('exit', cb),
     }
   }
-  killApp(): void {
-    try { spawn('taskkill', ['/F', '/IM', 'obs64.exe'], { stdio: 'ignore' }) } catch { /* ignore */ }
+  killApp(): Promise<void> {
+    return new Promise((resolve) => {
+      try {
+        const p = spawn('taskkill', ['/F', '/IM', 'obs64.exe'], { stdio: 'ignore' })
+        p.on('exit', () => resolve())
+        p.on('error', () => resolve())
+      } catch { resolve() }
+    })
   }
 }
