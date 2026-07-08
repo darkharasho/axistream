@@ -203,9 +203,16 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           {ptt.enabled && ptt.mode === 'passthrough' && (
             <>
               <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
+              <label className="muted">Push-to-talk key
+                <select value={ptt.keyName}
+                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttKey(k) }}>
+                  {!PTT_KEY_CHOICES.some((k) => k.name === ptt.keyName) && <option value={ptt.keyName}>{ptt.keyName}</option>}
+                  {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.name}>{k.name}</option>)}
+                </select>
+              </label>
               {capturing
                 ? <span className="muted">Press any key… {captureLeft}s (Esc cancels)</span>
-                : <button className="btn ghost xs" onClick={rebind}>Rebind</button>}
+                : <button className="btn ghost xs" onClick={rebind}>…or press the key: Rebind</button>}
               {captureMsg && !capturing && <p className="muted">{captureMsg}</p>}
             </>
           )}
