@@ -42,6 +42,8 @@ import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
 import { PttController } from './PttController.js'
+import { createWin32MuteOps } from './win32-mute-ops.js'
+import { createWindowsKeys } from './windows-keys.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
 import { setupUpdater } from './updater.js'
 import { createPortalShortcuts } from './portal-shortcuts.js'
@@ -222,37 +224,52 @@ if (primary) app.whenReady().then(async () => {
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
 
-  // Thin void exec for PTT's pactl calls (flatpakExec below captures output
+  // Thin void exec for pactl calls (flatpakExec below captures output
   // for installer flows — different job).
   const execAsync = (cmd: string, args: string[]) => new Promise<void>((resolve, reject) => {
     execFile(cmd, args, (err) => (err ? reject(err) : resolve()))
   })
+  const warn = (...args: unknown[]) => console.warn(...args)
   const portalBackend = createPortalShortcuts()
   const evdevBackend = createEvdevShortcuts()
+  const windowsBackend = createWindowsKeys()
   let pttMode: 'passthrough' | 'exclusive' | null = null
   // Probed at every enable (not boot-cached) so the pkexec unlock upgrades
   // the running app without a restart.
-  const selectBackend = async () => (await evdevBackend.available())
-    ? { backend: evdevBackend, mode: 'passthrough' as const }
-    : { backend: portalBackend, mode: 'exclusive' as const }
+  const selectBackend = async () => {
+    if (process.platform === 'win32') return { backend: windowsBackend, mode: 'passthrough' as const }
+    return (await evdevBackend.available())
+      ? { backend: evdevBackend, mode: 'passthrough' as const }
+      : { backend: portalBackend, mode: 'exclusive' as const }
+  }
   const loadBinding = (): PttBinding => {
     const s = settings.load()
     return { key: { code: s.pttKeyCode, name: s.pttKeyName }, modifier: s.pttModifier === '' ? null : s.pttModifier }
   }
+  // Platform-specific mute ops: Linux gates the PipeWire source via pactl;
+  // Windows gates the OBS input (SetInputMute on 'AxiStream Mic') — no Core Audio COM needed.
+  const currentSourceId = () => {
+    const dev = settings.load().micDevice
+    return dev && dev !== 'default' ? dev : '@DEFAULT_SOURCE@'
+  }
+  const pttMuteOps = process.platform === 'win32'
+    ? createWin32MuteOps({ call: (req, data) => sidecar.client().call(req as never, data as never) })
+    : {
+        mute: (m: boolean) => execAsync('pactl', ['set-source-mute', currentSourceId(), m ? '1' : '0']).catch(warn),
+        unmuteById: (id: string) => execAsync('pactl', ['set-source-mute', id, '0']).catch(warn),
+      }
   const ptt = new PttController({
     portal: {
-      available: async () => (await evdevBackend.available()) || (await portalBackend.available()),
+      available: process.platform === 'win32'
+        ? () => windowsBackend.available()
+        : async () => (await evdevBackend.available()) || (await portalBackend.available()),
       bind: async (id, description, binding) => {
         const sel = await selectBackend()
         pttMode = sel.mode
         return sel.backend.bind(id, description, binding)
       },
     },
-    exec: execAsync,
-    sourceId: () => {
-      const dev = settings.load().micDevice
-      return dev && dev !== 'default' ? dev : '@DEFAULT_SOURCE@'
-    },
+    muteOps: pttMuteOps,
     onActive: (active) => setState({ ptt: { ...state.ptt, active } }),
     binding: loadBinding,
   })

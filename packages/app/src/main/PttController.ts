@@ -5,13 +5,17 @@ export interface PortalDeps {
   available(): Promise<boolean>
   bind(id: string, description: string, binding: PttBinding): Promise<PortalShortcut>
 }
-export type ExecLike = (cmd: string, args: string[]) => Promise<void>
-export interface PttDeps { portal: PortalDeps; exec: ExecLike; sourceId(): string; onActive(active: boolean): void; binding(): PttBinding }
+export interface MuteOps {
+  mute(muted: boolean): Promise<void>
+  unmuteById(id: string): Promise<void>
+}
+export interface PttDeps { portal: PortalDeps; muteOps: MuteOps; onActive(active: boolean): void; binding(): PttBinding }
 
 // App-owned push-to-talk: a GlobalShortcuts-portal key gates the mic at the
-// PipeWire SOURCE level, so Discord (on voice activity) and the stream both
-// follow one mute point. Failure mode is always "mic hot" — disable/restore
-// unmute; nothing here may block boot or go-live.
+// PipeWire SOURCE level (Linux) or OBS input level (Windows), so Discord (on
+// voice activity) and the stream both follow one mute point. Failure mode is
+// always "mic hot" — disable/restore unmute; nothing here may block boot or
+// go-live.
 export class PttController {
   private shortcut: PortalShortcut | null = null
   constructor(private readonly d: PttDeps) {}
@@ -23,8 +27,8 @@ export class PttController {
   }
 
   private async setMute(muted: boolean): Promise<void> {
-    try { await this.d.exec('pactl', ['set-source-mute', this.d.sourceId(), muted ? '1' : '0']) }
-    catch (e) { console.warn('[ptt] set-source-mute failed', e instanceof Error ? e.message : e) }
+    try { await this.d.muteOps.mute(muted) }
+    catch (e) { console.warn('[ptt] set-mute failed', e instanceof Error ? e.message : e) }
   }
 
   async enable(): Promise<{ ok: boolean; error?: string }> {
@@ -39,7 +43,7 @@ export class PttController {
     }
     this.shortcut = sc
     // onActive fires before the async unmute completes on purpose — instant
-    // UI feedback; the mic follows within the pactl round-trip.
+    // UI feedback; the mic follows within the mute-op round-trip.
     sc.onActivated(() => { void this.setMute(false); this.d.onActive(true) })
     sc.onDeactivated(() => { void this.setMute(true); this.d.onActive(false) })
     await this.setMute(true)
@@ -58,10 +62,10 @@ export class PttController {
 
   // The mic device changed while PTT is enabled: the baseline mute lives on
   // the OLD source — unmute it (never strand it) and baseline-mute the new
-  // one (sourceId() already resolves to it). No-op when disabled.
+  // one. No-op when disabled.
   async rearmSource(previousSourceId: string): Promise<void> {
     if (!this.shortcut) return
-    try { await this.d.exec('pactl', ['set-source-mute', previousSourceId, '0']) }
+    try { await this.d.muteOps.unmuteById(previousSourceId) }
     catch (e) { console.warn('[ptt] unmuting previous source failed', e instanceof Error ? e.message : e) }
     await this.setMute(true)
   }

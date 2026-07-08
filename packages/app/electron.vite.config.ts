@@ -11,7 +11,7 @@ import { resolve } from 'node:path'
 // optional 'x11' require can't be safely externalized (rollup hoists it into a
 // top-level import that crashes at load) — it's aliased to a bundled stub in
 // the main config below instead.
-const optionalNatives = ['bufferutil', 'utf-8-validate', 'usocket']
+const optionalNatives = ['bufferutil', 'utf-8-validate', 'usocket', 'koffi']
 
 export default defineConfig({
   main: {
