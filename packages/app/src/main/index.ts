@@ -55,6 +55,14 @@ import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
+import { createSmokeWatcher, type SmokeResult } from './smoke.js'
+
+const smokeMode = process.argv.includes('--smoke')
+if (smokeMode) app.disableHardwareAcceleration()
+
+// In smoke mode the watcher is created after app.whenReady (inside the primary
+// block where setState lives), but the variable must be visible to setState.
+let smokeWatcher: ReturnType<typeof createSmokeWatcher> | null = null
 
 const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
@@ -148,7 +156,14 @@ if (primary) app.whenReady().then(async () => {
   tray.on('click', showWin)
 
   const push = (channel: string, payload: unknown) => { if (!win.isDestroyed()) win.webContents.send(channel, payload) }
-  const setState = (p: Partial<AppState>) => { state = { ...state, ...p }; push(CH.evtState, p) }
+  const setState = (p: Partial<AppState>) => {
+    state = { ...state, ...p }
+    push(CH.evtState, p)
+    if (smokeMode && (p.phase !== undefined || p.error !== undefined)) {
+      console.log('[smoke] phase=' + state.phase + ' error=' + state.error)
+      smokeWatcher?.observe(state.phase, state.error)
+    }
+  }
 
   // Fit-button label truth: recompute on every resize/toggle/capture change.
   const pushFitted = () => {
@@ -295,6 +310,26 @@ if (primary) app.whenReady().then(async () => {
       return applyEncoderPreset(state.capture?.outputHeight ?? 1080, state.capture?.fps ?? 60, { tries: 3 })
     },
   })
+
+  // Smoke watcher: constructed here so all shutdown deps (sidecar, preview,
+  // meter, ptt) are in scope for the onDone closure. The watcher is only
+  // assigned in smoke mode; normal-path setState has a no-op guard.
+  if (smokeMode) {
+    smokeWatcher = createSmokeWatcher((r: SmokeResult) => {
+      console.log(r.summary)
+      try { preview.stop() } catch { /* ignore */ }
+      try { void meter.stop() } catch { /* ignore */ }
+      try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
+      if (ptt.isEnabled()) { try { void ptt.restore() } catch { /* ignore */ } }
+      // Backstop so a hung sidecar.stop() can't wedge the smoke run.
+      const backstop = setTimeout(() => app.exit(r.code), 5000)
+      if (backstop.unref) backstop.unref()
+      void sidecar.stop().catch(() => {}).finally(() => {
+        clearTimeout(backstop)
+        app.exit(r.code)
+      })
+    })
+  }
 
   const goReadyPhase = () => keyStore.masked() ? 'READY' : 'NEEDS_KEY'
   // Start OBS's Virtual Camera so the renderer can show a real live preview, and
