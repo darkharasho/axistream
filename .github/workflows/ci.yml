@@ -44,6 +44,33 @@ jobs:
       - name: Verify OBS install location
         shell: bash
         run: ls -la "/c/Program Files/obs-studio/bin/64bit/obs64.exe"
+      - name: OBS direct-launch diagnostic
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "C:\Program Files\obs-studio\bin\64bit\obs64.exe" -WorkingDirectory "C:\Program Files\obs-studio\bin\64bit" -ArgumentList "--websocket_port","4460","--websocket_password","smokediag","--multi","--disable-shutdown-check"
+          Start-Sleep -Seconds 25
+          Write-Host "=== obs64 processes ==="
+          Get-Process obs64 -ErrorAction SilentlyContinue | Format-List Name,Id,MainWindowTitle,Responding
+          Write-Host "=== obs-studio appdata exists: $(Test-Path "$env:APPDATA\obs-studio") ==="
+          Get-ChildItem "$env:APPDATA\obs-studio" -Recurse -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName -First 20
+          Write-Host "=== port 4460 listening ==="
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -eq 4460 | Format-Table
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+          $bmp.Save("$env:GITHUB_WORKSPACE\desktop.png")
+          taskkill /F /IM obs64.exe 2>$null
+          exit 0
+      - name: Upload desktop screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-screenshot
+          path: desktop.png
+          if-no-files-found: ignore
       - name: Run smoke boot
         shell: bash
         timeout-minutes: 10
