@@ -41,6 +41,13 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Plain-node spawn probe
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          node .github/node-spawn-probe.mjs
+          taskkill /F /IM obs64.exe 2>$null
+          exit 0
       - name: Run smoke boot (with live sampler)
         shell: pwsh
         timeout-minutes: 10

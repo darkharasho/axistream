@@ -82,7 +82,9 @@ export class WindowsObsLauncher implements ObsLauncher {
     // (IPV6_V6ONLY), so 127.0.0.1 connects never succeed even though the
     // port shows as listening.
     const proc = spawn(exe, ['--minimize-to-tray', '--websocket_ipv4_only', ...args], { cwd, stdio: 'ignore', detached: true })
+    console.info(`[obs] spawned pid=${proc.pid ?? 'NONE'} exe=${exe}`)
     proc.on('error', (e) => console.error('[obs] spawn failed:', e.message))
+    proc.on('exit', (code, sig) => console.error(`[obs] exited code=${code} sig=${sig}`))
     return {
       kill: () => { try { proc.kill() } catch { /* ignore */ } },
       onExit: (cb) => proc.on('exit', cb),
