@@ -1,5 +1,4 @@
 import type { AppState, AxiApi } from '../../shared/state.js'
-import { KeyInput } from './KeyInput.js'
 import { YouTubeSettings } from './YouTubeSettings.js'
 import { AudioSettings } from './AudioSettings.js'
 import { UpdatesSettings } from './UpdatesSettings.js'
@@ -21,18 +20,6 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
 
           <section className="setting">
             <UpdatesSettings />
-          </section>
-
-          <section className="setting">
-            <h3>Stream key (advanced fallback)</h3>
-            {state.keyMasked ? (
-              <div className="keyrow saved">
-                <span className="pill mono">🔑 {state.keyMasked}</span>
-                <button className="btn ghost" onClick={() => axi.forgetKey()}>Forget</button>
-              </div>
-            ) : (
-              <KeyInput onSave={(k) => axi.saveKey(k)} />
-            )}
           </section>
 
           <section className="setting">

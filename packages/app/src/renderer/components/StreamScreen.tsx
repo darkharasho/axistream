@@ -1,22 +1,16 @@
 import { useState } from 'react'
-import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2, Shield, Scan } from 'lucide-react'
+import { MonitorPlay, Radio, Square, RefreshCw, Loader2, Shield, Scan } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
 import { StatChips } from './StatChips.js'
-import { KeyInput } from './KeyInput.js'
 import { PreviewVideo } from './PreviewVideo.js'
 import { TitlePromptModal } from './TitlePromptModal.js'
 import { MaskEditor } from './MaskEditor.js'
 import { LiveBadge } from './LiveBadge.js'
 
-function fmt(ms: number): string {
-  const s = Math.floor(ms / 1000); const m = Math.floor(s / 60)
-  return `${m}:${String(s % 60).padStart(2, '0')}`
-}
-
 export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
-  const { phase, capture, keyMasked, stats } = state
+  const { phase, capture, stats } = state
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
   const [editingMasks, setEditingMasks] = useState(false)
 
@@ -71,13 +65,14 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
                 <Scan size={12} /> {state.windowFitted ? 'Unfit' : 'Fit'}
               </button>
             : null}
-          {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />
         </div>
 
-        {phase === 'NEEDS_KEY' ? (
-          <KeyInput onSave={(k) => axi.saveKey(k)} />
+        {phase === 'NEEDS_YOUTUBE' ? (
+          <button className="btn primary action" onClick={() => axi.connectYouTube()}>
+            <Radio size={15} /> Connect YouTube to go live
+          </button>
         ) : live ? (
           <button className="btn danger action" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
         ) : (

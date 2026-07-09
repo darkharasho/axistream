@@ -10,9 +10,8 @@ describe('store', () => {
     const s = createStore()
     const sub = vi.fn()
     s.subscribe(sub)
-    s.applyState({ phase: 'READY', keyMasked: '····7f3a' })
+    s.applyState({ phase: 'READY' })
     expect(s.getState().phase).toBe('READY')
-    expect(s.getState().keyMasked).toBe('····7f3a')
     expect(sub).toHaveBeenCalledOnce()
   })
   it('applyStats updates stats slice', () => {

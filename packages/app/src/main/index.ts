@@ -27,7 +27,6 @@ import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, W
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
-import { KeyStore } from './KeyStore.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, type StreamSettingsData } from './StreamSettings.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
@@ -71,7 +70,6 @@ const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
 const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
-const YT_RTMPS = 'rtmps://a.rtmps.youtube.com/live2'
 const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage })
 let state: AppState = { ...INITIAL_STATE }
 
@@ -179,7 +177,6 @@ if (primary) app.whenReady().then(async () => {
   win.on('resize', () => pushFitted())
 
   const userData = app.getPath('userData')
-  const keyStore = new KeyStore(join(userData, 'key.bin'), safeStorage)
   const tokenStore = new TokenStore(join(userData, 'yt-tokens.bin'), safeStorage)
   const settings = new StreamSettings(join(userData, 'stream.json'))
   const auth = new YouTubeAuth({
@@ -350,7 +347,7 @@ if (primary) app.whenReady().then(async () => {
     })
   }
 
-  const goReadyPhase = () => keyStore.masked() ? 'READY' : 'NEEDS_KEY'
+  const goReadyPhase = () => auth.isConnected() ? 'READY' : 'NEEDS_YOUTUBE'
   // Start OBS's Virtual Camera so the renderer can show a real live preview, and
   // tell the renderer to (re)acquire it. After an OBS restart the v4l2 device
   // node can persist while its feed stops, so the renderer's stream freezes black
@@ -387,17 +384,9 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
-    saveKey: async (key) => { keyStore.save(key); setState({ keyMasked: keyStore.masked(), phase: state.phase === 'NEEDS_KEY' ? 'READY' : state.phase }) },
-    forgetKey: async () => { keyStore.forget(); setState({ keyMasked: null, phase: state.phase === 'READY' ? 'NEEDS_KEY' : state.phase }) },
+    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
     goLive: async (titleOverride?: string) => {
-      if (!auth.isConnected()) {
-        // Manual-key mode: use the saved stream key
-        const key = keyStore.load()
-        if (!key) { setState({ phase: 'NEEDS_KEY' }); return }
-        await stream.goLive({ server: YT_RTMPS, key })
-        return
-      }
+      if (!auth.isConnected()) { setState({ phase: 'NEEDS_YOUTUBE' }); return }
       // OAuth mode
       let session: import('./YouTubeLive.js').LiveSession | null = null
       try {
@@ -454,7 +443,7 @@ if (primary) app.whenReady().then(async () => {
       }
     },
     stopStream: async () => { liveWatchStop = true; setState({ liveUnconfirmed: false }); await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -466,17 +455,17 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
     },
     connectYouTube: async () => {
       await auth.connect()
       const title = await live.channelTitle().catch(() => null)
       auth.setChannelTitle(title)
-      setState({ youtube: { connected: true, channel: title } })
+      setState({ youtube: { connected: true, channel: title }, phase: state.phase === 'NEEDS_YOUTUBE' ? 'READY' : state.phase })
     },
     disconnectYouTube: async () => {
       auth.disconnect()
-      setState({ youtube: { connected: false, channel: null } })
+      setState({ youtube: { connected: false, channel: null }, phase: state.phase === 'READY' ? 'NEEDS_YOUTUBE' : state.phase })
     },
     getSettings: async () => viewOf(settings.load()),
     saveSettings: async (p) => {
@@ -706,7 +695,7 @@ if (primary) app.whenReady().then(async () => {
   // Smoke mode: a fresh install boots to SETTING_UP and waits for the user
   // to start capture setup — drive it like the user would, once. On Windows
   // provisioning needs no portal approval, so this carries the boot all the
-  // way to READY/NEEDS_KEY (the smoke success states).
+  // way to READY/NEEDS_YOUTUBE (the smoke success states).
   if (smokeMode) {
     // Boot pushes SETTING_UP before capture.start() finishes constructing
     // the provisioner — retry until the call survives.
@@ -774,7 +763,7 @@ if (primary) app.whenReady().then(async () => {
     if (provisioned) {
       const capture_ = await applyResolution()
       await applyEncoderPreset(capture_.outputHeight, capture_.fps)
-      setState({ phase: keyStore.masked() ? 'READY' : 'NEEDS_KEY', keyMasked: keyStore.masked(), capture: capture_ })
+      setState({ phase: goReadyPhase(), capture: capture_ })
       startVirtualCam()
       // Self-heal audio inputs on every boot — installs provisioned before the
       // audio feature never ran buildCollection again, so the inputs would be

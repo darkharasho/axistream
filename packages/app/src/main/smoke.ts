@@ -22,7 +22,7 @@ export function createSmokeWatcher(
     observe(phase: string, error: string | null) {
       if (settled) return
       lastPhase = phase
-      if (phase === 'READY' || phase === 'NEEDS_KEY' || phase === 'NEEDS_TITLE') {
+      if (phase === 'READY' || phase === 'NEEDS_YOUTUBE' || phase === 'NEEDS_TITLE') {
         settle({ code: 0, summary: `SMOKE OK phase=${phase}` })
       } else if (phase === 'ERROR') {
         settle({ code: 1, summary: `SMOKE FAIL phase=ERROR error=${error}` })
