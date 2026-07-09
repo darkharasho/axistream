@@ -204,3 +204,37 @@ describe('StreamController', () => {
     expect(stats[0].droppedPct).toBe(0)
   })
 })
+
+function client(states: any[]) {
+  let i = 0
+  return {
+    call: vi.fn(async (req: string) => {
+      if (req === 'GetStreamStatus') return states[Math.min(i++, states.length - 1)]
+      return {}
+    }),
+  }
+}
+
+describe('StreamController LIVE gating', () => {
+  it('does not emit LIVE while onIngestActive is pending, then emits after it resolves', async () => {
+    const phases: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((r) => { release = r })
+    const c = client([{ outputActive: true, outputBytes: 1, outputTotalFrames: 1 }])
+    const sc = new StreamController({
+      client: () => c as any,
+      onStats: () => {},
+      onPhase: (p) => { phases.push(p) },
+      pollMs: 5,
+      startTries: 1,
+    })
+    await sc.goLive({ server: 's', key: 'k' }, { onIngestActive: async () => { await gate } })
+    // Let several ticks fire while onIngestActive is still pending.
+    await new Promise((r) => setTimeout(r, 40))
+    expect(phases).not.toContain('LIVE')
+    release()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(phases).toContain('LIVE')
+    await sc.stop()
+  })
+})

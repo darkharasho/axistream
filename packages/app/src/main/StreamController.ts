@@ -68,9 +68,10 @@ export class StreamController {
         try { await this.hooks.onIngestActive?.() }
         catch { await this.failStart(c, target, false); return }
         this.live = true
-        this.d.onPhase('LIVE')
       }
-      this.d.onPhase(st.outputReconnecting ? 'RECONNECTING' : 'LIVE')
+      // Only claim LIVE once onIngestActive has resolved (this.live). Stats still
+      // flow during the wait so the UI can show a real bitrate immediately.
+      if (this.live) this.d.onPhase(st.outputReconnecting ? 'RECONNECTING' : 'LIVE')
       this.d.onStats(this.mapStats(st, pollMs))
     }, pollMs)
   }
