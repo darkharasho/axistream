@@ -60,6 +60,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # Baked into the main bundle at build time (electron.vite.config.ts define).
+          AXI_YT_CLIENT_ID: ${{ secrets.AXI_YT_CLIENT_ID }}
+          AXI_YT_CLIENT_SECRET: ${{ secrets.AXI_YT_CLIENT_SECRET }}
 
   # macOS is signed + notarized with the Developer ID Application cert;
   # electron-builder reads the CSC_*/APPLE_* values from the environment.
@@ -88,6 +91,9 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Baked into the main bundle at build time (electron.vite.config.ts define).
+          AXI_YT_CLIENT_ID: ${{ secrets.AXI_YT_CLIENT_ID }}
+          AXI_YT_CLIENT_SECRET: ${{ secrets.AXI_YT_CLIENT_SECRET }}
 
   publish:
     needs: [build, build-mac]

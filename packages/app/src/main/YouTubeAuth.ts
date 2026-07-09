@@ -36,6 +36,13 @@ export class YouTubeAuth {
   disconnect(): void { this.d.store.forget() }
 
   async connect(): Promise<void> {
+    if (!this.d.config.clientId) {
+      // Packaged builds bake AXI_YT_CLIENT_ID in at build time; if it's blank
+      // the build was made without the credential and Google returns a 400
+      // "Missing required parameter: client_id" on a broken consent page.
+      // Fail loudly here instead of launching that dead-end.
+      throw new Error('YouTube sign-in is not configured in this build (missing OAuth client_id).')
+    }
     if (this.connecting) throw new Error('OAuth already in progress')
     this.connecting = true
     try {

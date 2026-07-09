@@ -38,6 +38,23 @@ describe('YouTubeAuth.connect', () => {
     expect(u.searchParams.get('code_challenge')).toBeTruthy()
   })
 
+  it('throws /not configured/i and never opens a browser when clientId is empty', async () => {
+    const openExternal = vi.fn(async () => {})
+    const listen = vi.fn(async () => ({} as any))
+    const auth = new YouTubeAuth({
+      store,
+      config: { clientId: '', clientSecret: 'sec' },
+      fetchFn: vi.fn() as any,
+      openExternal,
+      listen,
+    })
+    await expect(auth.connect()).rejects.toThrow(/not configured/i)
+    // Guard must fire before we bind a loopback listener or launch a broken
+    // Google page (the "Missing required parameter: client_id" 400).
+    expect(openExternal).not.toHaveBeenCalled()
+    expect(listen).not.toHaveBeenCalled()
+  })
+
   it('rejects with /timed out/i when waitForCode never resolves', async () => {
     const closeFn = vi.fn()
     const lb: any = {
