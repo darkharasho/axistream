@@ -405,17 +405,19 @@ if (primary) app.whenReady().then(async () => {
         pendingOAuthBump = true
         await stream.goLive(session.ingest, {
           onIngestActive: async () => {
+            liveWatchStop = false
             setState({ phase: 'STARTING_ON_YOUTUBE', liveUnconfirmed: false })
             const confirmed = await pollForLive({
               confirm: () => live.confirmLive(session!.broadcastId),
               pollMs: 3000,
               maxAttempts: 15, // ~45s
+              shouldStop: () => liveWatchStop,
             })
+            if (liveWatchStop) return
             setState({ liveUnconfirmed: !confirmed })
             if (!confirmed) {
               // Keep checking in the background; clear the warning if YouTube
               // starts the broadcast late. Cancelled by stopStream().
-              liveWatchStop = false
               void pollForLive({
                 confirm: () => live.confirmLive(session!.broadcastId),
                 pollMs: 5000,

@@ -237,4 +237,24 @@ describe('StreamController LIVE gating', () => {
     expect(phases).toContain('LIVE')
     await sc.stop()
   })
+
+  it('does not emit LIVE if stop() happens while onIngestActive is pending', async () => {
+    const phases: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((r) => { release = r })
+    const c = client([{ outputActive: true, outputBytes: 1, outputTotalFrames: 1 }])
+    const sc = new StreamController({
+      client: () => c as any,
+      onStats: () => {},
+      onPhase: (p) => { phases.push(p) },
+      pollMs: 5,
+      startTries: 1,
+    })
+    await sc.goLive({ server: 's', key: 'k' }, { onIngestActive: async () => { await gate } })
+    await new Promise((r) => setTimeout(r, 20))
+    await sc.stop()
+    release()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(phases).not.toContain('LIVE')
+  })
 })

@@ -53,6 +53,7 @@ export class StreamController {
     this.firstSample = true
     const pollMs = this.d.pollMs ?? 1000
     const deadline = (this.d.goLiveTimeoutMs ?? 15000) / pollMs
+    const gen = this.generation
     let ticks = 0
     let becameLive = false
     this.timer = setInterval(async () => {
@@ -67,6 +68,9 @@ export class StreamController {
         becameLive = true
         try { await this.hooks.onIngestActive?.() }
         catch { await this.failStart(c, target, false); return }
+        // A stop()/goLive() during the (possibly long) onIngestActive hook bumped
+        // the generation and tore the stream down — don't resurrect LIVE.
+        if (gen !== this.generation) return
         this.live = true
       }
       // Only claim LIVE once onIngestActive has resolved (this.live). Stats still
