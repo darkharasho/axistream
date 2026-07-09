@@ -46,6 +46,7 @@ import { createWin32MuteOps } from './win32-mute-ops.js'
 import { createWindowsKeys } from './windows-keys.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
 import { setupUpdater } from './updater.js'
+import { pollForLive } from './pollForLive.js'
 import { createPortalShortcuts } from './portal-shortcuts.js'
 import { createEvdevShortcuts, captureNextKey } from './evdev-keys.js'
 import { runInputUnlock } from './input-unlock.js'
@@ -296,6 +297,7 @@ if (primary) app.whenReady().then(async () => {
   }
 
   let pendingOAuthBump = false
+  let liveWatchStop = false
   // Persist preferSoftware only if the x264 retry actually reaches LIVE —
   // a live retry proves the pipe was fine and the hardware encoder was the
   // problem. A retry that also fails (network outage) must not permanently
@@ -414,13 +416,26 @@ if (primary) app.whenReady().then(async () => {
         pendingOAuthBump = true
         await stream.goLive(session.ingest, {
           onIngestActive: async () => {
-            try { await live.confirmLive(session!.broadcastId) } catch { /* best-effort */ }
+            setState({ phase: 'STARTING_ON_YOUTUBE', liveUnconfirmed: false })
+            const confirmed = await pollForLive({
+              confirm: () => live.confirmLive(session!.broadcastId),
+              pollMs: 3000,
+              maxAttempts: 15, // ~45s
+            })
+            setState({ liveUnconfirmed: !confirmed })
+            if (!confirmed) {
+              // Keep checking in the background; clear the warning if YouTube
+              // starts the broadcast late. Cancelled by stopStream().
+              liveWatchStop = false
+              void pollForLive({
+                confirm: () => live.confirmLive(session!.broadcastId),
+                pollMs: 5000,
+                maxAttempts: Infinity,
+                shouldStop: () => liveWatchStop,
+              }).then((late) => { if (late) setState({ liveUnconfirmed: false }) })
+            }
             const cfg = settings.load()
             if (cfg.discordWebhookUrl.trim()) {
-              // Fire-and-forget: onIngestActive is awaited on the go-live
-              // critical path (StreamController flips to LIVE only after it
-              // resolves), so a slow webhook must not delay the LIVE
-              // transition. announce swallows its own errors; void detaches it.
               void announce({
                 webhookUrl: cfg.discordWebhookUrl,
                 title,
@@ -438,7 +453,7 @@ if (primary) app.whenReady().then(async () => {
         if (session) { try { await live.complete(session.broadcastId) } catch { /* best-effort */ } }
       }
     },
-    stopStream: async () => { await stream.stop() },
+    stopStream: async () => { liveWatchStop = true; setState({ liveUnconfirmed: false }); await stream.stop() },
     repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), keyMasked: keyStore.masked(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop

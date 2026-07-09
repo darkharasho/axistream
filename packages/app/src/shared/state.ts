@@ -2,7 +2,7 @@ import type { PttBinding, PttCaptureResult } from './keys.js'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
-  | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
+  | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
 
 export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
 
@@ -29,6 +29,7 @@ export interface AppState {
   capture: CaptureMeta | null
   keyMasked: string | null
   stats: LiveStats | null
+  liveUnconfirmed: boolean
   error: string | null
   encoder: string
   videoBitrateKbps: number | null
@@ -44,7 +45,7 @@ export interface AppState {
   masksVisible: boolean
 }
 export const INITIAL_STATE: AppState = {
-  phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
+  phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, liveUnconfirmed: false, error: null,
   encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' },
