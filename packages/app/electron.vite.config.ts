@@ -1,6 +1,19 @@
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import { existsSync } from 'node:fs'
+import { config as loadEnv } from 'dotenv'
+
+// Bake the YouTube OAuth credentials into the packaged main bundle. Google
+// treats the client_secret of a Desktop-app client as non-confidential (PKCE
+// protects the flow), so embedding it in the distributed app is expected. For
+// local `npm run dist` we read the repo-root .env here at build time; CI passes
+// AXI_YT_CLIENT_ID / AXI_YT_CLIENT_SECRET straight in via the environment. If
+// neither is present the values inline to '' and the app's connect() guard
+// surfaces a clear "not configured" error instead of a broken consent page.
+for (const candidate of [resolve(process.cwd(), '.env'), resolve(__dirname, '../../.env')]) {
+  if (existsSync(candidate)) { loadEnv({ path: candidate, quiet: true }); break }
+}
 
 // `ws` (pulled in transitively via @axistream/capture -> obs-websocket-js)
 // optionally requires these native addons; they aren't installed and ws works
@@ -15,6 +28,10 @@ const optionalNatives = ['bufferutil', 'utf-8-validate', 'usocket', 'koffi']
 
 export default defineConfig({
   main: {
+    define: {
+      'process.env.AXI_YT_CLIENT_ID': JSON.stringify(process.env.AXI_YT_CLIENT_ID ?? ''),
+      'process.env.AXI_YT_CLIENT_SECRET': JSON.stringify(process.env.AXI_YT_CLIENT_SECRET ?? ''),
+    },
     resolve: {
       alias: { x11: resolve(__dirname, 'src/main/x11-stub.ts') },
     },
