@@ -1,21 +1,16 @@
 import { useState } from 'react'
-import { MonitorPlay, Key, Radio, Square, RefreshCw, Loader2, Shield, Scan } from 'lucide-react'
+import { MonitorPlay, Radio, Square, RefreshCw, Loader2, Shield, Scan } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
 import { StatChips } from './StatChips.js'
-import { KeyInput } from './KeyInput.js'
 import { PreviewVideo } from './PreviewVideo.js'
 import { TitlePromptModal } from './TitlePromptModal.js'
 import { MaskEditor } from './MaskEditor.js'
-
-function fmt(ms: number): string {
-  const s = Math.floor(ms / 1000); const m = Math.floor(s / 60)
-  return `${m}:${String(s % 60).padStart(2, '0')}`
-}
+import { LiveBadge } from './LiveBadge.js'
 
 export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
-  const { phase, capture, keyMasked, stats } = state
+  const { phase, capture, stats } = state
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
   const [editingMasks, setEditingMasks] = useState(false)
 
@@ -35,8 +30,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
       <PreviewVideo />
       <div className="hero-top">
         <span className="hero-title">Stream</span>
-        {live ? <span className="badge live"><span aria-hidden>● </span>LIVE</span> : <span className="badge">● PREVIEW</span>}
-        {live && stats ? <span className="pill mono">{fmt(stats.durationMs)}</span> : null}
+        <LiveBadge phase={phase} liveUnconfirmed={state.liveUnconfirmed} durationMs={stats?.durationMs ?? 0} />
         {capture ? <span className="pill mono">{`${capture.sourceLabel} · ${capture.width}×${capture.height} · ${capture.fps}fps`}</span> : null}
       </div>
 
@@ -59,7 +53,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
       <div className="hero-bottom">
         <div className="statusrow">
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
-          {live || phase === 'GOING_LIVE' ? null
+          {live || phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE' ? null
             : phase === 'AWAITING_APPROVAL'
             ? <button className="btn ghost xs" disabled><Loader2 size={12} className="spin" /> Switching…</button>
             : <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
@@ -71,18 +65,23 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
                 <Scan size={12} /> {state.windowFitted ? 'Unfit' : 'Fit'}
               </button>
             : null}
-          {keyMasked ? <span className="pill mono"><Key size={12} /> {keyMasked} <button className="link" onClick={() => axi.forgetKey()}>Forget</button></span> : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />
         </div>
 
-        {phase === 'NEEDS_KEY' ? (
-          <KeyInput onSave={(k) => axi.saveKey(k)} />
+        {phase === 'NEEDS_YOUTUBE' ? (
+          <button className="btn primary action" onClick={() => axi.connectYouTube()}>
+            <Radio size={15} /> Connect YouTube to go live
+          </button>
         ) : live ? (
           <button className="btn danger action" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
         ) : (
-          <button className="btn primary action" disabled={phase === 'GOING_LIVE'} onClick={() => axi.goLive()}>
-            {phase === 'GOING_LIVE' ? 'Starting…' : <><Radio size={15} /> Go Live</>}
+          <button className="btn primary action"
+            disabled={phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE'}
+            onClick={() => axi.goLive()}>
+            {phase === 'GOING_LIVE' ? 'Starting…'
+              : phase === 'STARTING_ON_YOUTUBE' ? 'Starting on YouTube…'
+              : <><Radio size={15} /> Go Live</>}
           </button>
         )}
       </div>

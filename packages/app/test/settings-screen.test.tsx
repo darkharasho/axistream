@@ -4,8 +4,6 @@ import { SettingsScreen } from '../src/renderer/components/SettingsScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
 const axi = {
-  forgetKey: vi.fn(),
-  saveKey: vi.fn(),
   repairCapture: vi.fn(),
   connectYouTube: vi.fn(async () => {}),
   disconnectYouTube: vi.fn(async () => {}),
@@ -33,7 +31,6 @@ beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 const base: AppState = {
   phase: 'READY',
   capture: null,
-  keyMasked: '····7f3a',
   stats: null,
   error: null,
   encoder: 'x264',
@@ -45,7 +42,7 @@ const base: AppState = {
   gameAudioPlugin: { status: 'missing', error: null },
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
-  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true,
+  ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, liveUnconfirmed: false,
 }
 
 describe('SettingsScreen', () => {
@@ -55,18 +52,6 @@ describe('SettingsScreen', () => {
     expect(screen.getByText(/NVENC · 24 Mbps — chosen automatically for 1440p60/)).toBeInTheDocument()
   })
 
-  it('shows the saved key with a Forget action', async () => {
-    render(<SettingsScreen state={base} axi={axi as any} />)
-    expect(screen.getByText(/····7f3a/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /forget/i }))
-    expect(axi.forgetKey).toHaveBeenCalledOnce()
-    await waitFor(() => expect(axi.getSettings).toHaveBeenCalled())
-  })
-  it('shows a key input when no key is saved', async () => {
-    render(<SettingsScreen state={{ ...base, keyMasked: null }} axi={axi as any} />)
-    expect(screen.getByPlaceholderText(/stream key/i)).toBeInTheDocument()
-    await waitFor(() => expect(axi.getSettings).toHaveBeenCalled())
-  })
   it('offers Re-set up capture', async () => {
     render(<SettingsScreen state={base} axi={axi as any} />)
     fireEvent.click(screen.getByRole('button', { name: /re-set up capture/i }))

@@ -18,13 +18,13 @@ describe('createSmokeWatcher', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
-  it('NEEDS_KEY phase → code 0 (expected on fresh runner)', () => {
+  it('NEEDS_YOUTUBE phase → code 0 (expected on fresh runner)', () => {
     const onDone = vi.fn<(r: SmokeResult) => void>()
     const w = createSmokeWatcher(onDone)
-    w.observe('NEEDS_KEY', null)
+    w.observe('NEEDS_YOUTUBE', null)
     expect(onDone).toHaveBeenCalledTimes(1)
     const r = onDone.mock.calls[0][0]
-    expect(r).toEqual({ code: 0, summary: 'SMOKE OK phase=NEEDS_KEY' })
+    expect(r).toEqual({ code: 0, summary: 'SMOKE OK phase=NEEDS_YOUTUBE' })
   })
 
   it('NEEDS_TITLE phase → code 0', () => {

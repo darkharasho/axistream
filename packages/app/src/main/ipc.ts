@@ -4,8 +4,6 @@ import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
   provision(): Promise<void>
-  saveKey(key: string): Promise<void>
-  forgetKey(): Promise<void>
   goLive(titleOverride?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
@@ -55,8 +53,6 @@ export function registerIpc(d: IpcDeps): void {
   const { ipcMain, handlers } = d
   ipcMain.handle(CH.getInitialState, () => handlers.getInitialState())
   ipcMain.handle(CH.provision, () => handlers.provision())
-  ipcMain.handle(CH.saveKey, (_e: unknown, key: string) => handlers.saveKey(key))
-  ipcMain.handle(CH.forgetKey, () => handlers.forgetKey())
   ipcMain.handle(CH.goLive, (_e: unknown, title?: string) => handlers.goLive(title))
   ipcMain.handle(CH.stopStream, () => handlers.stopStream())
   ipcMain.handle(CH.repairCapture, () => handlers.repairCapture())

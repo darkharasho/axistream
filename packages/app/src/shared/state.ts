@@ -1,8 +1,8 @@
 import type { PttBinding, PttCaptureResult } from './keys.js'
 
 export type StreamPhase =
-  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_KEY' | 'NEEDS_TITLE' | 'READY'
-  | 'GOING_LIVE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
+  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_YOUTUBE' | 'NEEDS_TITLE' | 'READY'
+  | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
 
 export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
 
@@ -27,8 +27,8 @@ export interface LiveStats {
 export interface AppState {
   phase: StreamPhase
   capture: CaptureMeta | null
-  keyMasked: string | null
   stats: LiveStats | null
+  liveUnconfirmed: boolean
   error: string | null
   encoder: string
   videoBitrateKbps: number | null
@@ -44,7 +44,7 @@ export interface AppState {
   masksVisible: boolean
 }
 export const INITIAL_STATE: AppState = {
-  phase: 'SETTING_UP', capture: null, keyMasked: null, stats: null, error: null,
+  phase: 'SETTING_UP', capture: null, stats: null, liveUnconfirmed: false, error: null,
   encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' },
@@ -76,8 +76,6 @@ export interface AudioTestResult { ok: boolean; clip?: Uint8Array; mime?: string
 export const CH = {
   getInitialState: 'axi:getInitialState',
   provision: 'axi:provision',
-  saveKey: 'axi:saveKey',
-  forgetKey: 'axi:forgetKey',
   goLive: 'axi:goLive',
   stopStream: 'axi:stopStream',
   repairCapture: 'axi:repairCapture',
@@ -128,8 +126,6 @@ export const CH = {
 export interface AxiApi {
   getInitialState(): Promise<AppState>
   provision(): Promise<void>
-  saveKey(key: string): Promise<void>
-  forgetKey(): Promise<void>
   goLive(title?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>

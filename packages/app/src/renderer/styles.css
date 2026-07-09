@@ -100,7 +100,9 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
 .badge { color: #9fd8ff; font: 700 10px/1 ui-monospace, monospace; border: 1px solid rgba(34,211,238,.5); padding: 6px 9px; border-radius: 20px; background: rgba(0,0,0,.3); }
 .badge.live { color: #fff; background: #e23a52; border: 0; box-shadow: 0 0 16px rgba(226,58,82,.55); }
+.badge.starting { color: #22d3ee; border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.08); }
 .pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
+.pill.warn { color: #fbbf24; border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
 .overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: #dfe7ef; z-index: 3; }
@@ -138,10 +140,6 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Key input row (NEEDS_KEY + Settings) */
-.keyrow { display: flex; gap: 10px; }
-.keyinput { flex: 1; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 11px; padding: 14px; color: #e6edf3; font-size: 14px; }
-
 /* Settings screen */
 .settings-panel { display: block; background: #0c0f15; overflow: auto; }
 .settings-panel::before { display: none; }
@@ -154,7 +152,6 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .settings-inner h2 { margin: 0 0 18px; }
 .setting { background: #0e131a; border: 1px solid #1d2530; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
 .setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }
-.keyrow.saved { display: flex; align-items: center; gap: 12px; }
 .muted { color: #768390; font-size: 13px; margin: 0 0 12px; }
 .ok { color: #7be3a0; font-size: 13px; }
 

@@ -20,7 +20,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
   // every setPttEnabled result, so a FAILED enable (enabled stays false)
   // still fires this and corrects the optimistic checkbox.
   useEffect(() => { setPttEnabledLocal(ptt.enabled) }, [ptt])
-  const canTest = phase === 'READY' || phase === 'NEEDS_KEY' || phase === 'NEEDS_TITLE'
+  const canTest = phase === 'READY' || phase === 'NEEDS_YOUTUBE' || phase === 'NEEDS_TITLE'
 
   const runTest = async () => {
     if (test.url) URL.revokeObjectURL(test.url)
