@@ -15,6 +15,17 @@ for (const candidate of [resolve(process.cwd(), '.env'), resolve(__dirname, '../
   if (existsSync(candidate)) { loadEnv({ path: candidate, quiet: true }); break }
 }
 
+// CI injects AXI_YT_CLIENT_ID / AXI_YT_CLIENT_SECRET straight from GitHub secrets
+// with no dotenv pass to strip quotes. If a secret value was stored WITH its
+// surrounding quotes (e.g. copied from a quoted `.env` line), those quotes get
+// baked verbatim into the bundle and Google rejects the client with
+// "invalid_client / The OAuth client was not found". Strip one balanced pair of
+// surrounding quotes so the flow works regardless of how the value was provided.
+const unquote = (v: string): string =>
+  (v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))
+    ? v.slice(1, -1)
+    : v
+
 // `ws` (pulled in transitively via @axistream/capture -> obs-websocket-js)
 // optionally requires these native addons; they aren't installed and ws works
 // without them. Mark them external so the bundle leaves them as runtime requires
@@ -29,8 +40,8 @@ const optionalNatives = ['bufferutil', 'utf-8-validate', 'usocket', 'koffi']
 export default defineConfig({
   main: {
     define: {
-      'process.env.AXI_YT_CLIENT_ID': JSON.stringify(process.env.AXI_YT_CLIENT_ID ?? ''),
-      'process.env.AXI_YT_CLIENT_SECRET': JSON.stringify(process.env.AXI_YT_CLIENT_SECRET ?? ''),
+      'process.env.AXI_YT_CLIENT_ID': JSON.stringify(unquote(process.env.AXI_YT_CLIENT_ID ?? '')),
+      'process.env.AXI_YT_CLIENT_SECRET': JSON.stringify(unquote(process.env.AXI_YT_CLIENT_SECRET ?? '')),
     },
     resolve: {
       alias: { x11: resolve(__dirname, 'src/main/x11-stub.ts') },
