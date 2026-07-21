@@ -402,6 +402,7 @@ if (primary) app.whenReady().then(async () => {
         setState({ phase: 'GOING_LIVE' })
         session = await live.startSession({ title, privacy: s.privacy, reuseStreamId: s.streamId, now: new Date() })
         settings.patch({ streamId: session.streamId })
+        setState({ watchUrl: watchUrlFor(session.broadcastId) })
         pendingOAuthBump = true
         await stream.goLive(session.ingest, {
           onIngestActive: async () => {

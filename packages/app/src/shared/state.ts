@@ -42,6 +42,7 @@ export interface AppState {
   ptt: { available: boolean; enabled: boolean; active: boolean; error: string | null; mode: 'passthrough' | 'exclusive' | null; keyName: string; keyCode: number; modifier: import('./keys.js').PttModifier | null }
   windowFitted: boolean
   masksVisible: boolean
+  watchUrl: string | null
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, stats: null, liveUnconfirmed: false, error: null,
@@ -56,6 +57,7 @@ export const INITIAL_STATE: AppState = {
   ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null },
   windowFitted: false,
   masksVisible: true,
+  watchUrl: null,
 }
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
