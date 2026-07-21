@@ -30,7 +30,7 @@ import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, type StreamSettingsData } from './StreamSettings.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
-import { YouTubeLive } from './YouTubeLive.js'
+import { YouTubeLive, watchUrlFor } from './YouTubeLive.js'
 import { renderTitle } from './TitleTemplate.js'
 import { createLoopback } from './loopback.js'
 import { shell } from 'electron'
@@ -402,6 +402,7 @@ if (primary) app.whenReady().then(async () => {
         setState({ phase: 'GOING_LIVE' })
         session = await live.startSession({ title, privacy: s.privacy, reuseStreamId: s.streamId, now: new Date() })
         settings.patch({ streamId: session.streamId })
+        setState({ watchUrl: watchUrlFor(session.broadcastId) })
         pendingOAuthBump = true
         await stream.goLive(session.ingest, {
           onIngestActive: async () => {
@@ -430,7 +431,7 @@ if (primary) app.whenReady().then(async () => {
               void announce({
                 webhookUrl: cfg.discordWebhookUrl,
                 title,
-                watchUrl: `https://www.youtube.com/watch?v=${session!.broadcastId}`,
+                watchUrl: watchUrlFor(session!.broadcastId),
                 message: cfg.discordMessage,
               }, realFetch).catch(() => {})
             }
@@ -440,7 +441,7 @@ if (primary) app.whenReady().then(async () => {
       } catch (e) {
         const humanMessage = e instanceof Error ? e.message : String(e)
         pendingOAuthBump = false
-        setState({ phase: 'ERROR', error: humanMessage })
+        setState({ phase: 'ERROR', error: humanMessage, watchUrl: null })
         if (session) { try { await live.complete(session.broadcastId) } catch { /* best-effort */ } }
       }
     },

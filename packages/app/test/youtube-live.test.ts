@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { YouTubeLive } from '../src/main/YouTubeLive.js'
+import { YouTubeLive, watchUrlFor } from '../src/main/YouTubeLive.js'
 
 // Minimal fake fetch router keyed by method+path fragment.
 function fakeFetch(routes: Record<string, any>) {
@@ -48,5 +48,11 @@ describe('YouTubeLive.confirmLive', () => {
     const fn = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items: [{ status: { lifeCycleStatus: 'live' } }] }), text: async () => '' }))
     const yt = new YouTubeLive({ accessToken: token, fetchFn: fn as any })
     expect(await yt.confirmLive('B1')).toBe(true)
+  })
+})
+
+describe('watchUrlFor', () => {
+  it('builds a YouTube watch URL from a broadcast id', () => {
+    expect(watchUrlFor('abc123')).toBe('https://www.youtube.com/watch?v=abc123')
   })
 })

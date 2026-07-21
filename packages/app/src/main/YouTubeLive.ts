@@ -5,6 +5,10 @@ const BASE = 'https://www.googleapis.com/youtube/v3'
 export interface Ingest { server: string; key: string }
 export interface LiveSession { broadcastId: string; streamId: string; ingest: Ingest }
 
+export function watchUrlFor(broadcastId: string): string {
+  return `https://www.youtube.com/watch?v=${broadcastId}`
+}
+
 export interface YouTubeLiveDeps {
   accessToken(): Promise<string>
   fetchFn?: typeof fetch
