@@ -16,9 +16,10 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
   const [copied, setCopied] = useState(false)
   const copyLink = () => {
     if (!state.watchUrl) return
-    void navigator.clipboard.writeText(state.watchUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    navigator.clipboard.writeText(state.watchUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }).catch(() => {})
   }
 
   if (phase === 'SETTING_UP') {
