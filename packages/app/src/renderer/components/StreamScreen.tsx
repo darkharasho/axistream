@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MonitorPlay, Radio, Square, RefreshCw, Loader2, Shield, Scan } from 'lucide-react'
+import { MonitorPlay, Radio, Square, RefreshCw, Loader2, Shield, Scan, Link, Check } from 'lucide-react'
 import type { AppState } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
@@ -13,6 +13,13 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
   const { phase, capture, stats } = state
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
   const [editingMasks, setEditingMasks] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const copyLink = () => {
+    if (!state.watchUrl) return
+    void navigator.clipboard.writeText(state.watchUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   if (phase === 'SETTING_UP') {
     return (
@@ -84,6 +91,11 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
               : <><Radio size={15} /> Go Live</>}
           </button>
         )}
+        {state.watchUrl ? (
+          <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
+            {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
+          </button>
+        ) : null}
       </div>
     </div>
   )
