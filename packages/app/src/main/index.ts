@@ -30,7 +30,7 @@ import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, type StreamSettingsData } from './StreamSettings.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
-import { YouTubeLive } from './YouTubeLive.js'
+import { YouTubeLive, watchUrlFor } from './YouTubeLive.js'
 import { renderTitle } from './TitleTemplate.js'
 import { createLoopback } from './loopback.js'
 import { shell } from 'electron'
@@ -430,7 +430,7 @@ if (primary) app.whenReady().then(async () => {
               void announce({
                 webhookUrl: cfg.discordWebhookUrl,
                 title,
-                watchUrl: `https://www.youtube.com/watch?v=${session!.broadcastId}`,
+                watchUrl: watchUrlFor(session!.broadcastId),
                 message: cfg.discordMessage,
               }, realFetch).catch(() => {})
             }
