@@ -29,3 +29,29 @@ The runtime log confirmed that `linux-pipewire-audio.so` and `obs-composite-blur
 Unit and integration tests cover portable extraction, archive traversal rejection, install verification, private configuration, Job Object containment, monitor enumeration/selection, frame verification, and refusal to discover or stop a personal OBS process. The Windows GitHub Actions smoke job additionally seeds and hashes a personal OBS profile (including resolution, YouTube service metadata, and scene collection), starts an unrelated `obs64.exe` process, runs the owned sidecar, and verifies both remain untouched.
 
 A real Windows runner was not available in this Linux development environment, so the Windows workflow and manual physical-monitor acceptance remain the platform-specific release gates.
+
+## Post-merge review follow-ups
+
+A five-dimension parallel code review ran after merge. Fixes applied:
+
+- **Stale capture target no longer loops.** A persisted target (e.g. an unplugged
+  monitor) that is gone now clears itself and falls back to auto-select/chooser
+  instead of throwing an error the Retry button could never escape.
+- **Windows OBS hash single-sourced.** App main reads `resources/obs-runtime/manifest.json`
+  (fail-closed to an all-zero hash) rather than carrying a duplicate literal that
+  could drift on a version bump; an isolation-gate test forbids re-duplicating it.
+- **Linux owned-orphan cleanup.** `LinuxOwnedObsRuntime.prepare()` kills only the
+  dedicated `link.axi.AxiStream.OBS` app id before launch, clearing an instance
+  leaked by a prior hard crash without ever touching personal OBS.
+
+Reviewed and accepted without change:
+
+- **Linux `expectedOrigin: obs-origin`** is confirmed by the packaged smoke above
+  (a real `flatpak info --show-origin` returned `obs-origin`) and is deterministic
+  per bundle; the CI smoke re-verifies it against a live install, so a wrong value
+  would fail closed there rather than reach users.
+- **Windows Job Object assignment** (`spawn` then `assign`) carries a theoretical
+  PID-recycle race; deferred as a low-severity Windows-only follow-up
+  (`CREATE_SUSPENDED` → assign → resume), not fixed blind without a Windows runner.
+- **New `packages/capture` deps** (`extract-zip`, `koffi`) are validated by the
+  release build/`dist` pipeline itself.
