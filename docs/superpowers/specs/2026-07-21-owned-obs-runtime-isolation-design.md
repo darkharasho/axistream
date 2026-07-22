@@ -1,7 +1,7 @@
 # Owned OBS Runtime Isolation — Design
 
-**Date:** 2026-07-21  
-**Status:** Approved for planning  
+**Date:** 2026-07-21
+**Status:** Approved for planning
 **Scope:** Replace every shared/personal OBS integration on Windows and Linux with an AxiStream-owned OBS runtime, make Windows monitor setup functional and observable, and prove that AxiStream cannot modify or terminate the user's personal OBS installation.
 
 ## Incident and root cause
