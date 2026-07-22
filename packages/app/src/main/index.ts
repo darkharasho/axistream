@@ -5,25 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSyn
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
 
-// Disable OBS's own system-tray icon so only AxiStream's tray shows. Stopgap
-// while OBS shares the user's config; the bundled-isolated OBS will own this.
-function hideObsTray(): void {
-  if (process.platform !== 'linux') return
-  // OBS 30+ keeps user prefs in user.ini; older OBS used global.ini. Write both.
-  const dir = join(homedir(), '.var/app/com.obsproject.Studio/config/obs-studio')
-  for (const name of ['user.ini', 'global.ini']) {
-    try {
-      const ini = join(dir, name)
-      if (!existsSync(ini)) continue
-      let txt = readFileSync(ini, 'utf8')
-      if (/^SysTrayEnabled\s*=.*$/m.test(txt)) txt = txt.replace(/^SysTrayEnabled\s*=.*$/m, 'SysTrayEnabled=false')
-      else if (/\[BasicWindow\]/.test(txt)) txt = txt.replace('[BasicWindow]', '[BasicWindow]\nSysTrayEnabled=false')
-      else txt += '\n[BasicWindow]\nSysTrayEnabled=false\n'
-      writeFileSync(ini, txt)
-    } catch { /* best-effort */ }
-  }
-}
-import { ObsSidecar, Provisioner, FlatpakObsLauncher, HeadlessCageObsLauncher, WindowsObsLauncher, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps } from '@axistream/capture'
+import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -52,14 +34,15 @@ import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
-import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type MaskRect, type StreamSettingsView } from '../shared/state.js'
+import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
 import { createSmokeWatcher, type SmokeResult } from './smoke.js'
 
-const smokeMode = process.argv.includes('--smoke')
+const runtimeOnlySmokeMode = process.argv.includes('--smoke-runtime')
+const smokeMode = process.argv.includes('--smoke') || runtimeOnlySmokeMode
 if (smokeMode) app.disableHardwareAcceleration()
 
 // In smoke mode the watcher is created after app.whenReady (inside the primary
@@ -186,15 +169,49 @@ if (primary) app.whenReady().then(async () => {
     listen: createLoopback,
   })
   const live = new YouTubeLive({ accessToken: () => auth.accessToken() })
-  const config = new CaptureConfig(join(userData, 'capture.json'))
-  const visibleLauncher = new FlatpakObsLauncher()
-  const useHeadless = process.platform === 'linux' && !process.env.AXISTREAM_OBS_VISIBLE
-  // win32 gets the native OBS launcher (fails fast with a clear message when
-  // OBS isn't installed — no flatpak, no 30s port-wait hang).
-  const launcher = process.platform === 'win32'
-    ? new WindowsObsLauncher()
-    : useHeadless ? new HeadlessCageObsLauncher(visibleLauncher) : visibleLauncher
-  const sidecar = new ObsSidecar({ launcher, collection: 'AxiStream' })
+  const runtimeAssetRoot = app.isPackaged
+    ? join(process.resourcesPath, 'obs-runtime')
+    : join(import.meta.dirname, '../../../../resources/obs-runtime')
+  const linuxManifest = (): LinuxObsRuntimeManifest => {
+    const safeFailure: LinuxObsRuntimeManifest = {
+      engineId: 'axistream-obs-linux-32.1.2', obsVersion: '32.1.2',
+      appId: 'link.axi.AxiStream.OBS', bundleSha256: '0'.repeat(64),
+      expectedRef: 'app/link.axi.AxiStream.OBS/x86_64/stable',
+      expectedCommit: 'unavailable', expectedOrigin: 'unavailable',
+    }
+    try {
+      const parsed = JSON.parse(readFileSync(join(runtimeAssetRoot, 'linux', 'runtime-manifest.json'), 'utf8')) as LinuxObsRuntimeManifest
+      if (
+        parsed.engineId !== safeFailure.engineId || parsed.obsVersion !== safeFailure.obsVersion ||
+        parsed.appId !== safeFailure.appId || !/^[a-f0-9]{64}$/.test(parsed.bundleSha256) ||
+        parsed.expectedRef !== safeFailure.expectedRef || !parsed.expectedCommit || !parsed.expectedOrigin
+      ) return safeFailure
+      return parsed
+    } catch { return safeFailure }
+  }
+  const runtime: OwnedObsRuntime = process.platform === 'win32'
+    ? new WindowsOwnedObsRuntime({
+        manifest: {
+          engineId: 'axistream-obs-windows-32.1.2',
+          obsVersion: '32.1.2',
+          archiveSha256: '8d97e4563bd8d22d03e63042aa7dccede1d555c9bd35ce8a9e5019b0d0201bf6',
+          executableRelativePath: 'bin/64bit/obs64.exe',
+        },
+        archivePath: join(runtimeAssetRoot, 'windows', 'OBS-Studio-32.1.2-Windows-x64.zip'),
+        installRoot: join(process.env.LOCALAPPDATA ?? userData, 'AxiStream', 'obs-runtime'),
+      })
+    : process.platform === 'linux'
+      ? new LinuxOwnedObsRuntime({
+          manifest: linuxManifest(),
+          bundlePath: join(runtimeAssetRoot, 'linux', 'AxiStream-OBS-32.1.2-x86_64.flatpak'),
+          headless: !process.env.AXISTREAM_OBS_VISIBLE,
+        })
+      : {
+          engineId: 'axistream-obs-unsupported', configIdentity: 'unavailable',
+          prepare: async () => { throw new Error('Capture is not supported on this platform') },
+        }
+  const config = new CaptureConfig(join(userData, 'capture.json'), runtime.engineId)
+  const sidecar = new OwnedObsSidecar({ runtime, collection: 'AxiStream' })
 
   const preview = new PreviewPump({ client: () => sidecar.client(), sourceName: CAPTURE_SOURCE, emit: (d) => push(CH.evtPreview, d) })
   const meter = new AudioLevelMeter({ info: () => sidecar.wsInfo(), onLevels: (l) => push(CH.evtAudioLevels, l) })
@@ -207,6 +224,7 @@ if (primary) app.whenReady().then(async () => {
     sidecar,
     makeProvisioner: () => new Provisioner({ sidecar, config, platform: process.platform }),
     onApprovalNeeded: () => setState({ phase: 'AWAITING_APPROVAL' }),
+    onTargets: (captureTargets) => setState({ captureTargets }),
     onPhase: (p, error) => setState({ phase: p, error: error ?? null }),
     onCrashed: () => setState({ phase: 'ERROR', error: 'Stream engine crashed — restart AxiStream.' }),
   })
@@ -384,7 +402,9 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async () => { const ok = await capture.provision(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
+    provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
+    getCaptureTargets: async () => capture.captureTargets(),
+    cancelCaptureSelection: async () => capture.cancelSelection(),
     goLive: async (titleOverride?: string) => {
       if (!auth.isConnected()) { setState({ phase: 'NEEDS_YOUTUBE' }); return }
       // OAuth mode
@@ -755,8 +775,11 @@ if (primary) app.whenReady().then(async () => {
 
   // Boot the engine, then derive the initial phase.
   try {
-    hideObsTray()
     await capture.start()
+    if (runtimeOnlySmokeMode) {
+      smokeWatcher?.succeed(`SMOKE OK owned runtime platform=${process.platform}`)
+      return
+    }
     // Move onto an AxiStream-owned profile with no external YouTube auth — a
     // profile carrying that auth makes OBS route go-live through its broadcast
     // flow, which silently no-ops headless and never pushes RTMP. Persists across

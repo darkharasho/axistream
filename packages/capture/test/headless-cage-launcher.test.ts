@@ -3,7 +3,7 @@ import { HeadlessCageObsLauncher } from '../src/headless-cage-launcher.js'
 
 function fakeLauncher() {
   const handle = { kill: vi.fn(), onExit: vi.fn() }
-  return { launch: vi.fn(() => handle), killApp: vi.fn(), handle }
+  return { launch: vi.fn(() => handle), stopOwned: vi.fn(), handle }
 }
 
 describe('HeadlessCageObsLauncher', () => {
@@ -14,10 +14,10 @@ describe('HeadlessCageObsLauncher', () => {
       captured = { cmd, args, env }
       return { kill: vi.fn(), onExit: vi.fn() }
     })
-    const l = new HeadlessCageObsLauncher(fallback as any, { isCageAvailable: () => true, spawnProcess })
+    const l = new HeadlessCageObsLauncher(fallback as any, 'link.axi.AxiStream.OBS', { isCageAvailable: () => true, spawnProcess })
     l.launch(['--websocket_port', '4455', '--collection', 'AxiStream'])
     expect(captured.cmd).toBe('cage')
-    expect(captured.args).toEqual(['--', 'flatpak', 'run', 'com.obsproject.Studio', '--websocket_port', '4455', '--collection', 'AxiStream'])
+    expect(captured.args).toEqual(['--', 'flatpak', 'run', 'link.axi.AxiStream.OBS', '--websocket_port', '4455', '--collection', 'AxiStream'])
     expect(captured.env.WLR_BACKENDS).toBe('headless')
     expect(captured.env.WLR_HEADLESS_OUTPUTS).toBe('1')
     expect(captured.env.WLR_LIBINPUT_NO_DEVICES).toBe('1')
@@ -27,17 +27,17 @@ describe('HeadlessCageObsLauncher', () => {
   it('delegates launch to the fallback when cage is unavailable', () => {
     const fallback = fakeLauncher()
     const spawnProcess = vi.fn()
-    const l = new HeadlessCageObsLauncher(fallback as any, { isCageAvailable: () => false, spawnProcess })
+    const l = new HeadlessCageObsLauncher(fallback as any, 'link.axi.AxiStream.OBS', { isCageAvailable: () => false, spawnProcess })
     const h = l.launch(['--websocket_port', '4455'])
     expect(fallback.launch).toHaveBeenCalledWith(['--websocket_port', '4455'])
     expect(spawnProcess).not.toHaveBeenCalled()
     expect(h).toBe(fallback.handle)
   })
 
-  it('killApp delegates to the fallback (flatpak kill)', () => {
+  it('stopOwned delegates to the fallback (flatpak kill)', () => {
     const fallback = fakeLauncher()
-    const l = new HeadlessCageObsLauncher(fallback as any, { isCageAvailable: () => true })
-    l.killApp()
-    expect(fallback.killApp).toHaveBeenCalledOnce()
+    const l = new HeadlessCageObsLauncher(fallback as any, 'link.axi.AxiStream.OBS', { isCageAvailable: () => true })
+    l.stopOwned()
+    expect(fallback.stopOwned).toHaveBeenCalledOnce()
   })
 })

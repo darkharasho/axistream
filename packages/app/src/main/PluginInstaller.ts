@@ -1,7 +1,7 @@
 import type { GameAudioPluginStatus } from '../shared/state.js'
 
-export const GAME_AUDIO_PLUGIN_REF = 'com.obsproject.Studio.Plugin.PipeWireAudioCapture'
-export const BLUR_PLUGIN_REF = 'com.obsproject.Studio.Plugin.CompositeBlur'
+export const GAME_AUDIO_PLUGIN_REF = 'bundled:pipewire-audio-capture'
+export const BLUR_PLUGIN_REF = 'bundled:composite-blur'
 
 export type { GameAudioPluginStatus }
 export type FlatpakState = 'missing' | 'installed' | 'unsupported'
@@ -15,14 +15,14 @@ export interface InstallerDeps {
 const DETECT_TIMEOUT_MS = 15000
 const INSTALL_TIMEOUT_MS = 600000
 
-/** Detects and installs the OBS PipeWire audio-capture flatpak extension.
- *  User-level install first (no password; flatpak resolves extensions across
- *  installations), one system-level retry (polkit dialog). Best-effort:
- *  install() never rejects. */
+/** Bundled plugin refs are already part of the verified owned runtime and must
+ * never cause a Flatpak extension operation. Generic refs retain the legacy
+ * installer behavior for compatibility and tests. install() never rejects. */
 export class PluginInstaller {
   constructor(private readonly d: InstallerDeps) {}
 
   async detectInstalled(): Promise<FlatpakState> {
+    if (this.d.ref.startsWith('bundled:')) return 'installed'
     try {
       const r = await this.d.exec('flatpak', ['info', this.d.ref], DETECT_TIMEOUT_MS)
       return r.code === 0 ? 'installed' : 'missing'
@@ -32,6 +32,7 @@ export class PluginInstaller {
   }
 
   async install(): Promise<{ ok: boolean; error?: string }> {
+    if (this.d.ref.startsWith('bundled:')) return { ok: true }
     let last = ''
     for (const scope of ['--user', '--system']) {
       try {

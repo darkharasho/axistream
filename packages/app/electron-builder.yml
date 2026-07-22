@@ -18,6 +18,7 @@ files:
   - out/**
   - build/icon.png
 asar: true
+beforePack: ../../scripts/electron-builder-before-pack.cjs
 npmRebuild: false            # koffi (the one native dep) ships prebuilds — nothing to rebuild
 electronLanguages: [en-US]
 # Windows + macOS builds are CI-wired (release.yml matrix) but runtime is
@@ -27,6 +28,9 @@ win:
   target: [nsis]
   icon: build/icon.ico
   artifactName: ${productName}-Setup-${version}.${ext}
+  extraResources:
+    - from: ../../resources/obs-runtime/windows
+      to: obs-runtime/windows
 mac:
   # zip is required alongside dmg — electron-updater's mac feed updates
   # from the zip. Signed with the Developer ID Application cert (CSC_LINK/
@@ -48,3 +52,6 @@ linux:
   icon: build/icon.png
   synopsis: Get live on YouTube in three clicks
   maintainer: AxiStream <project96@gmail.com>
+  extraResources:
+    - from: ../../resources/obs-runtime/linux
+      to: obs-runtime/linux

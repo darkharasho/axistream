@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PLUGIN_REF, BLUR_PLUGIN_REF } from '../src/main/PluginInstaller.js'
 
+const TEST_REF = 'example.Plugin'
+
 function fakeExec(script: (cmd: string, args: string[]) => { code: number; output: string } | Error) {
   const calls: { cmd: string; args: string[]; timeoutMs: number }[] = []
   const exec = vi.fn(async (cmd: string, args: string[], timeoutMs: number) => {
@@ -15,42 +17,42 @@ function fakeExec(script: (cmd: string, args: string[]) => { code: number; outpu
 describe('PluginInstaller.detectInstalled', () => {
   it('exit 0 → installed', async () => {
     const f = fakeExec(() => ({ code: 0, output: 'Ref: ...' }))
-    expect(await new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).detectInstalled()).toBe('installed')
-    expect(f.calls[0]).toEqual({ cmd: 'flatpak', args: ['info', GAME_AUDIO_PLUGIN_REF], timeoutMs: 15000 })
+    expect(await new PluginInstaller({ ...f, ref: TEST_REF }).detectInstalled()).toBe('installed')
+    expect(f.calls[0]).toEqual({ cmd: 'flatpak', args: ['info', TEST_REF], timeoutMs: 15000 })
   })
   it('nonzero exit → missing', async () => {
     const f = fakeExec(() => ({ code: 1, output: 'error: not installed' }))
-    expect(await new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).detectInstalled()).toBe('missing')
+    expect(await new PluginInstaller({ ...f, ref: TEST_REF }).detectInstalled()).toBe('missing')
   })
   it('spawn failure (no flatpak) → unsupported', async () => {
     const f = fakeExec(() => new Error('ENOENT'))
-    expect(await new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).detectInstalled()).toBe('unsupported')
+    expect(await new PluginInstaller({ ...f, ref: TEST_REF }).detectInstalled()).toBe('unsupported')
   })
 })
 
 describe('PluginInstaller.install', () => {
   it('user-level success issues the exact argv', async () => {
     const f = fakeExec(() => ({ code: 0, output: 'ok' }))
-    expect(await new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).install()).toEqual({ ok: true })
+    expect(await new PluginInstaller({ ...f, ref: TEST_REF }).install()).toEqual({ ok: true })
     expect(f.calls).toHaveLength(1)
-    expect(f.calls[0]).toEqual({ cmd: 'flatpak', args: ['install', '--user', '--noninteractive', 'flathub', GAME_AUDIO_PLUGIN_REF], timeoutMs: 600000 })
+    expect(f.calls[0]).toEqual({ cmd: 'flatpak', args: ['install', '--user', '--noninteractive', 'flathub', TEST_REF], timeoutMs: 600000 })
   })
   it('user failure retries system-level once', async () => {
     const f = fakeExec((_c, args) => args.includes('--user') ? { code: 1, output: 'denied' } : { code: 0, output: 'ok' })
-    expect(await new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).install()).toEqual({ ok: true })
+    expect(await new PluginInstaller({ ...f, ref: TEST_REF }).install()).toEqual({ ok: true })
     expect(f.calls).toHaveLength(2)
-    expect(f.calls[1].args).toEqual(['install', '--system', '--noninteractive', 'flathub', GAME_AUDIO_PLUGIN_REF])
+    expect(f.calls[1].args).toEqual(['install', '--system', '--noninteractive', 'flathub', TEST_REF])
   })
   it('both fail → ok:false with output tail', async () => {
     const f = fakeExec(() => ({ code: 1, output: 'x'.repeat(600) + 'TAIL' }))
-    const r = await new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).install()
+    const r = await new PluginInstaller({ ...f, ref: TEST_REF }).install()
     expect(r.ok).toBe(false)
     expect(r.error).toHaveLength(500)
     expect(r.error!.endsWith('TAIL')).toBe(true)
   })
   it('spawn throw → ok:false, never rejects', async () => {
     const f = fakeExec(() => new Error('ENOENT'))
-    await expect(new PluginInstaller({ ...f, ref: GAME_AUDIO_PLUGIN_REF }).install()).resolves.toMatchObject({ ok: false })
+    await expect(new PluginInstaller({ ...f, ref: TEST_REF }).install()).resolves.toMatchObject({ ok: false })
   })
 })
 
@@ -70,11 +72,23 @@ describe('deriveGameAudioStatus', () => {
 describe('ref parameterization', () => {
   it('detect and install use the constructor ref', async () => {
     const f = fakeExec(() => ({ code: 0, output: 'ok' }))
-    const inst = new PluginInstaller({ ...f, ref: BLUR_PLUGIN_REF })
+    const inst = new PluginInstaller({ ...f, ref: TEST_REF })
     await inst.detectInstalled()
-    expect(f.calls[0].args).toEqual(['info', BLUR_PLUGIN_REF])
+    expect(f.calls[0].args).toEqual(['info', TEST_REF])
     await inst.install()
-    expect(f.calls[1].args).toEqual(['install', '--user', '--noninteractive', 'flathub', BLUR_PLUGIN_REF])
+    expect(f.calls[1].args).toEqual(['install', '--user', '--noninteractive', 'flathub', TEST_REF])
+  })
+})
+
+describe('owned bundled plugins', () => {
+  it('never probes or installs a Flatpak extension', async () => {
+    const f = fakeExec(() => new Error('must not execute'))
+    for (const ref of [GAME_AUDIO_PLUGIN_REF, BLUR_PLUGIN_REF]) {
+      const inst = new PluginInstaller({ ...f, ref })
+      expect(await inst.detectInstalled()).toBe('installed')
+      expect(await inst.install()).toEqual({ ok: true })
+    }
+    expect(f.calls).toHaveLength(0)
   })
 })
 

@@ -5,7 +5,7 @@ import type { ObsLauncher, ObsLaunchHandle } from '../src/obs-launcher.js'
 function fakeLauncher(): { launcher: ObsLauncher; exit: (code: number | null) => void } {
   let exitCb: (code: number | null) => void = () => {}
   const handle: ObsLaunchHandle = { kill: vi.fn(), onExit: (cb) => { exitCb = cb } }
-  const launcher: ObsLauncher = { launch: vi.fn(() => handle), killApp: vi.fn() }
+  const launcher: ObsLauncher = { launch: vi.fn(() => handle), stopOwned: vi.fn() }
   return { launcher, exit: (c) => exitCb(c) }
 }
 
@@ -24,6 +24,7 @@ describe('ObsSidecar', () => {
     expect(args).toContain('--collection')
     expect(args).toContain('AxiStream')
     expect(args).toContain('--websocket_port')
+    expect(args).not.toContain('--disable-shutdown-check')
     const portIdx = args.indexOf('--websocket_port')
     expect(Number(args[portIdx + 1])).toBeGreaterThan(0)
     expect(fakeClient.connect).toHaveBeenCalledOnce()
@@ -44,7 +45,7 @@ describe('ObsSidecar', () => {
     expect(onCrash).toHaveBeenCalledOnce()
   })
 
-  it('stop() kills the app via the launcher', async () => {
+  it('stop() stops only the owned app via the launcher', async () => {
     const { launcher } = fakeLauncher()
     const fakeClient = { connect: vi.fn().mockResolvedValue({}), disconnect: vi.fn().mockResolvedValue(undefined) }
     const sidecar = new ObsSidecar({
@@ -54,7 +55,7 @@ describe('ObsSidecar', () => {
     } as any)
     await sidecar.start()
     await sidecar.stop()
-    expect(launcher.killApp).toHaveBeenCalled()
+    expect(launcher.stopOwned).toHaveBeenCalledOnce()
   })
 
   it('stop() suppresses the "crashed" event when OBS exits after intentional teardown', async () => {
@@ -95,7 +96,7 @@ describe('ObsSidecar robustness', () => {
   function setup(overrides: any = {}) {
     let exitCb: (c: number | null) => void = () => {}
     const handle = { kill: vi.fn(), onExit: (cb: any) => { exitCb = cb } }
-    const launcher = { launch: vi.fn(() => handle), killApp: vi.fn() }
+    const launcher = { launch: vi.fn(() => handle), stopOwned: vi.fn() }
     const client = {
       connect: vi.fn().mockResolvedValue({}),
       disconnect: vi.fn().mockResolvedValue(undefined),
@@ -110,10 +111,10 @@ describe('ObsSidecar robustness', () => {
     return { sidecar, launcher, client, exit: (c: number | null) => exitCb(c) }
   }
 
-  it('kills orphans before launching', async () => {
+  it('does not perform global orphan cleanup before launching', async () => {
     const { sidecar, launcher } = setup()
     await sidecar.start()
-    expect(launcher.killApp).toHaveBeenCalled() // pre-launch cleanup
+    expect(launcher.stopOwned).not.toHaveBeenCalled()
   })
 
   it('throws ObsVersionMismatchError when version differs', async () => {

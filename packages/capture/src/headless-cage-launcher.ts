@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ObsLauncher, ObsLaunchHandle } from './obs-launcher.js'
+import { OWNED_OBS_APP_ID, type ObsLauncher, type ObsLaunchHandle } from './obs-launcher.js'
 
-const APP_ID = 'com.obsproject.Studio'
 const HEADLESS_ENV = {
   WLR_BACKENDS: 'headless',
   WLR_HEADLESS_OUTPUTS: '1',
@@ -42,18 +41,21 @@ function defaultSpawn(cmd: string, args: string[], env: NodeJS.ProcessEnv): ObsL
 export class HeadlessCageObsLauncher implements ObsLauncher {
   constructor(
     private readonly fallback: ObsLauncher,
+    private readonly appId = OWNED_OBS_APP_ID,
     private readonly opts: HeadlessCageOptions = {},
-  ) {}
+  ) {
+    if (appId !== OWNED_OBS_APP_ID) throw new Error(`Refusing non-owned OBS Flatpak identity: ${appId}`)
+  }
 
   launch(args: string[]): ObsLaunchHandle {
     const available = (this.opts.isCageAvailable ?? cageOnPath)()
     if (!available) return this.fallback.launch(args)
     const env = { ...process.env, ...HEADLESS_ENV }
-    const cageArgs = ['--', 'flatpak', 'run', APP_ID, ...args]
+    const cageArgs = ['--', 'flatpak', 'run', this.appId, ...args]
     return (this.opts.spawnProcess ?? defaultSpawn)('cage', cageArgs, env)
   }
 
-  killApp(): void {
-    this.fallback.killApp()
+  stopOwned(): void {
+    this.fallback.stopOwned()
   }
 }
