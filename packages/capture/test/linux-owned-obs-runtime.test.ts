@@ -66,11 +66,13 @@ describe('LinuxOwnedObsRuntime', () => {
     expect(exec.mock.calls[3]).toEqual(['flatpak', [
       'install', '--user', '--noninteractive', bundlePath,
     ]])
-    expect(exec.mock.calls.slice(4)).toEqual([
+    expect(exec.mock.calls.slice(4, 7)).toEqual([
       ['flatpak', ['info', '--user', '--show-ref', manifest.appId]],
       ['flatpak', ['info', '--user', '--show-commit', manifest.appId]],
       ['flatpak', ['info', '--user', '--show-origin', manifest.appId]],
     ])
+    // The owned OBS orphan is cleared before the launcher is handed back.
+    expect(exec.mock.calls[7]).toEqual(['flatpak', ['kill', manifest.appId]])
     expect(makeLauncher).toHaveBeenCalledWith('link.axi.AxiStream.OBS')
     expect(configureWebsocket).toHaveBeenCalledOnce()
     expect(configureWebsocket.mock.calls[0][0]).toMatch(/\.var[/\\]app[/\\]link\.axi\.AxiStream\.OBS[/\\]config$/)
@@ -86,9 +88,25 @@ describe('LinuxOwnedObsRuntime', () => {
 
     await runtime.prepare()
 
-    expect(exec.mock.calls).toHaveLength(3)
+    // 3 identity probes + 1 owned-orphan kill; no install/reinstall.
+    expect(exec.mock.calls).toHaveLength(4)
     expect(exec.mock.calls.some(([, args]) => args[0] === 'install')).toBe(false)
+    expect(exec.mock.calls[3]).toEqual(['flatpak', ['kill', manifest.appId]])
     expect(configureWebsocket).toHaveBeenCalledOnce()
+  })
+
+  it('clears an owned OBS orphan but never targets a non-owned app id', async () => {
+    const exec = successfulExec()
+    const runtime = new LinuxOwnedObsRuntime({
+      manifest, bundlePath, exec, makeLauncher: vi.fn(() => ({}) as never), configureWebsocket: vi.fn(),
+    })
+
+    await runtime.prepare()
+
+    const killCalls = exec.mock.calls.filter(([, args]) => args[0] === 'kill')
+    expect(killCalls).toEqual([['flatpak', ['kill', 'link.axi.AxiStream.OBS']]])
+    // Belt and suspenders: no kill ever names the standard personal OBS id.
+    expect(exec.mock.calls.some(([, args]) => args.includes('com.obsproject.Studio'))).toBe(false)
   })
 
   it.each([

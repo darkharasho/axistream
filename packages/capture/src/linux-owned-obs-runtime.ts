@@ -98,6 +98,11 @@ export class LinuxOwnedObsRuntime implements OwnedObsRuntime {
     if (!identity || !this.identityMatches(identity)) {
       throw new Error('The installed AxiStream OBS identity does not match the verified packaged runtime')
     }
+    // A prior AxiStream session that died hard (SIGKILL/OOM/power loss) can leave
+    // its owned OBS running; with --multi the next launch would spawn a second
+    // instance and leak the first. Clear only the dedicated app id — never personal
+    // OBS — before handing back a launcher. Best-effort: a no-op when none is running.
+    await this.exec('flatpak', ['kill', manifest.appId]).catch(() => { /* nothing to clean */ })
     this.configureWebsocket(join(homedir(), '.var', 'app', manifest.appId, 'config'))
     return {
       launcher: this.makeLauncher(manifest.appId),
