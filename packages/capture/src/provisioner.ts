@@ -58,18 +58,26 @@ export class Provisioner {
     let captureTarget: CaptureTarget | undefined
     if (this.deps.platform === 'win32') {
       const targets = await this.listWindowsTargets(c())
-      const requested = selectedTarget ?? this.deps.config.load().target
-      if (requested) {
-        captureTarget = targets.find((target) =>
-          target.property === requested.property &&
-          target.value === requested.value,
-        )
-        if (!captureTarget) throw new Error('The selected display is no longer available')
-      } else if (targets.length === 1) {
-        captureTarget = targets[0]
+      const persisted = this.deps.config.load().target
+      const requested = selectedTarget ?? persisted
+      const match = requested && targets.find((target) =>
+        target.property === requested.property &&
+        target.value === requested.value,
+      )
+      if (match) {
+        captureTarget = match
       } else {
-        this.state = 'CHOOSING_TARGET'
-        return { ok: false, status: 'CHOOSING_TARGET', targets }
+        // The requested display is gone (e.g. an unplugged monitor persisted in
+        // capture.json). Never throw: a no-target retry would re-read the same
+        // stale target and loop forever. Drop the stale persisted target, then
+        // auto-select the sole display or fall back to the chooser.
+        if (persisted && !selectedTarget) this.clearPersistedTarget()
+        if (targets.length === 1) {
+          captureTarget = targets[0]
+        } else {
+          this.state = 'CHOOSING_TARGET'
+          return { ok: false, status: 'CHOOSING_TARGET', targets }
+        }
       }
       if (!captureTarget) throw new Error('No display was selected')
       const target = captureTarget
@@ -117,6 +125,11 @@ export class Provisioner {
     }
     this.state = 'AWAITING_APPROVAL'
     return { ok: false, status: 'AWAITING_APPROVAL' }
+  }
+
+  private clearPersistedTarget(): void {
+    const { target: _gone, ...rest } = this.deps.config.load()
+    this.deps.config.save(rest)
   }
 
   private async listWindowsTargets(client: ReturnType<ProvisionerSidecar['client']>): Promise<CaptureTarget[]> {

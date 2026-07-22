@@ -28,6 +28,11 @@ describe('owned OBS runtime manifest', () => {
     const flatpak = readFileSync(join(root, 'packaging/flatpak/link.axi.AxiStream.OBS.json'), 'utf8')
     expect(flatpak).toContain('78935e15be876ea667df946c91145a6a6c2b4254')
     expect(flatpak).toContain('adaeef80f8216e0852e2dace66abb51606ad6373')
+
+    // The pinned archive hash lives only in the manifest — app main must read it,
+    // never hardcode a second copy that could silently drift on a version bump.
+    const appMain = readFileSync(join(root, 'packages/app/src/main/index.ts'), 'utf8')
+    expect(appMain).not.toContain(manifest.windows.archiveSha256)
   })
 })
 

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { Provisioner } from '../src/provisioner.js'
-import { CaptureConfig } from '../src/capture-config.js'
+import { CaptureConfig, DEFAULT_CONFIG } from '../src/capture-config.js'
 
 // A fake obs-websocket client whose `call` is scripted per request type.
 function fakeClient(handlers: Record<string, (data?: any) => any>) {
@@ -325,6 +325,60 @@ describe('Provisioner (Windows + repair)', () => {
     await expect(p.provision()).resolves.toEqual({ ok: true, status: 'READY' })
     expect(requestedProperties).toEqual(['monitor_id', 'monitor'])
     expect(config.load().target).toEqual({ property: 'monitor', value: 7, label: 'Legacy display' })
+  })
+
+  it('recovers to the chooser instead of an error loop when the persisted target is gone', async () => {
+    // Persisted target from a now-unplugged monitor.
+    config.save({
+      ...DEFAULT_CONFIG('win32', ''), provisioned: true,
+      target: { property: 'monitor_id', value: '{GONE-GUID}', label: 'Unplugged monitor' },
+    })
+    const client = fakeClient({
+      GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
+      GetInputList: () => ({ inputs: [] }),
+      CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+      RemoveScene: () => ({}), CreateInput: () => ({}),
+      GetInputPropertiesListPropertyItems: () => ({ propertyItems: [
+        { itemName: 'Left monitor', itemValue: '{LEFT-GUID}', itemEnabled: true },
+        { itemName: 'Right monitor', itemValue: '{RIGHT-GUID}', itemEnabled: true },
+      ] }),
+      SetInputSettings: () => ({}), SetInputMute: () => ({}), SetProfileParameter: () => ({}),
+    })
+    const p = new Provisioner({ sidecar: { client: () => client as any, restart: vi.fn() }, config, platform: 'win32' })
+
+    const res = await p.provision()
+
+    expect(res.status).toBe('CHOOSING_TARGET')
+    // The stale target must be cleared, otherwise a no-target retry re-reads it and loops forever.
+    expect(config.load().target).toBeUndefined()
+    expect(client.call).not.toHaveBeenCalledWith('SetInputSettings', expect.anything())
+  })
+
+  it('auto-selects the sole remaining display when the persisted target is gone', async () => {
+    config.save({
+      ...DEFAULT_CONFIG('win32', ''), provisioned: true,
+      target: { property: 'monitor_id', value: '{GONE-GUID}', label: 'Unplugged monitor' },
+    })
+    const client = fakeClient({
+      GetSceneCollectionList: () => ({ currentSceneCollectionName: 'AxiStream', sceneCollections: ['AxiStream'] }),
+      GetInputList: () => ({ inputs: [] }),
+      CreateScene: () => ({}), SetCurrentProgramScene: () => ({}),
+      RemoveScene: () => ({}), CreateInput: () => ({}),
+      GetInputPropertiesListPropertyItems: () => ({ propertyItems: [
+        { itemName: 'Only monitor', itemValue: '{ONLY-GUID}', itemEnabled: true },
+      ] }),
+      SetInputSettings: () => ({}), GetSourceScreenshot: () => ({ imageData: bigVariedB64 }),
+      SetInputMute: () => ({}), SetProfileParameter: () => ({}),
+    })
+    const p = new Provisioner({
+      sidecar: { client: () => client as any, restart: vi.fn() }, config, platform: 'win32',
+      approvalPollTries: 1, approvalPollDelayMs: 0,
+    })
+
+    const res = await p.provision()
+
+    expect(res).toEqual({ ok: true, status: 'READY' })
+    expect(config.load().target).toEqual({ property: 'monitor_id', value: '{ONLY-GUID}', label: 'Only monitor' })
   })
 
   it('fails clearly when OBS reports no usable capture target', async () => {

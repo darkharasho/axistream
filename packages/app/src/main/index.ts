@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSyn
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
 
-import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest } from '@axistream/capture'
+import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -189,17 +189,41 @@ if (primary) app.whenReady().then(async () => {
       return parsed
     } catch { return safeFailure }
   }
+  const windowsRuntime = (): WindowsOwnedObsRuntime => {
+    // The pinned runtime is defined once, in resources/obs-runtime/manifest.json.
+    // Fail closed: a missing/corrupt manifest yields an all-zero hash so the runtime
+    // rejects every archive and disables capture rather than trusting an unpinned build.
+    const safeManifest: WindowsObsRuntimeManifest = {
+      engineId: 'axistream-obs-windows-32.1.2', obsVersion: '32.1.2',
+      archiveSha256: '0'.repeat(64), executableRelativePath: 'bin/64bit/obs64.exe',
+    }
+    let manifest = safeManifest
+    let archiveFile = 'OBS-Studio-32.1.2-Windows-x64.zip'
+    try {
+      const parsed = JSON.parse(readFileSync(join(runtimeAssetRoot, 'manifest.json'), 'utf8')) as { windows?: Record<string, unknown> }
+      const w = parsed.windows
+      if (
+        w && typeof w['engineId'] === 'string' && w['engineId'] &&
+        typeof w['obsVersion'] === 'string' && w['obsVersion'] &&
+        typeof w['archiveSha256'] === 'string' && /^[a-f0-9]{64}$/.test(w['archiveSha256']) &&
+        typeof w['executableRelativePath'] === 'string' && w['executableRelativePath'] &&
+        typeof w['archiveFile'] === 'string' && w['archiveFile']
+      ) {
+        manifest = {
+          engineId: w['engineId'], obsVersion: w['obsVersion'],
+          archiveSha256: w['archiveSha256'], executableRelativePath: w['executableRelativePath'],
+        }
+        archiveFile = w['archiveFile']
+      }
+    } catch { /* keep fail-closed safeManifest */ }
+    return new WindowsOwnedObsRuntime({
+      manifest,
+      archivePath: join(runtimeAssetRoot, 'windows', archiveFile),
+      installRoot: join(process.env.LOCALAPPDATA ?? userData, 'AxiStream', 'obs-runtime'),
+    })
+  }
   const runtime: OwnedObsRuntime = process.platform === 'win32'
-    ? new WindowsOwnedObsRuntime({
-        manifest: {
-          engineId: 'axistream-obs-windows-32.1.2',
-          obsVersion: '32.1.2',
-          archiveSha256: '8d97e4563bd8d22d03e63042aa7dccede1d555c9bd35ce8a9e5019b0d0201bf6',
-          executableRelativePath: 'bin/64bit/obs64.exe',
-        },
-        archivePath: join(runtimeAssetRoot, 'windows', 'OBS-Studio-32.1.2-Windows-x64.zip'),
-        installRoot: join(process.env.LOCALAPPDATA ?? userData, 'AxiStream', 'obs-runtime'),
-      })
+    ? windowsRuntime()
     : process.platform === 'linux'
       ? new LinuxOwnedObsRuntime({
           manifest: linuxManifest(),
