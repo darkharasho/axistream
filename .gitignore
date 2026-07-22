@@ -11,3 +11,10 @@ out/
 .obs-test-config/
 .superpowers
 .sai/
+.cache/obs-flatpak-build/
+.flatpak-builder/
+resources/obs-runtime/windows/*.zip
+resources/obs-runtime/linux/*.flatpak
+resources/obs-runtime/linux/runtime-manifest.json
+resources/obs-runtime/notices/*.tar.gz
+resources/obs-runtime/notices/*.tar.xz

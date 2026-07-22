@@ -46,6 +46,18 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
+      - name: Install Linux OBS build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      - name: Prepare owned Windows OBS runtime
+        if: runner.os == 'Windows'
+        run: npm run prepare:obs-runtime -- --platform=windows
+      - name: Prepare owned Linux OBS runtime
+        if: runner.os == 'Linux'
+        run: npm run prepare:obs-runtime -- --platform=linux
       - name: Sync package version from tag
         shell: bash
         run: |
@@ -63,6 +75,15 @@ jobs:
           # Baked into the main bundle at build time (electron.vite.config.ts define).
           AXI_YT_CLIENT_ID: ${{ secrets.AXI_YT_CLIENT_ID }}
           AXI_YT_CLIENT_SECRET: ${{ secrets.AXI_YT_CLIENT_SECRET }}
+      - name: Preserve OBS corresponding source and recipe
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-corresponding-source
+          path: |
+            resources/obs-runtime/notices/obs-studio-32.1.2-axistream-corresponding-source.tar.xz
+            packaging/flatpak/link.axi.AxiStream.OBS.json
+          if-no-files-found: error
 
   # macOS is signed + notarized with the Developer ID Application cert;
   # electron-builder reads the CSC_*/APPLE_* values from the environment.
@@ -100,6 +121,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: obs-corresponding-source
+          path: obs-corresponding-source
+      - name: Upload OBS source compliance assets
+        run: gh release upload "$GITHUB_REF_NAME" obs-corresponding-source/* --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish the release
         run: gh release edit "$GITHUB_REF_NAME" --draft=false
         env:

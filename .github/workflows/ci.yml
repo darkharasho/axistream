@@ -24,9 +24,8 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Windows runtime smoke: proves WindowsObsLauncher -> obs-websocket ->
-  # provisioning reaches a ready phase on real Windows. No GPU/audio-device
-  # assertions (runner hardware) — fail-soft paths count as success.
+  # Proves the verified portable runtime, websocket, monitor selection, and
+  # provisioning work on real Windows without touching the standard OBS tree.
   smoke-windows:
     runs-on: windows-latest
     steps:
@@ -35,22 +34,98 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install OBS Studio
-        run: choco install obs-studio -y --no-progress
       - name: Install
         run: npm ci
+      - name: Prepare owned Windows OBS runtime
+        run: npm run prepare:obs-runtime -- --platform=windows
+      - name: Seed personal OBS isolation sentinel
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:APPDATA 'obs-studio'
+          New-Item -ItemType Directory -Force (Join-Path $root 'basic/profiles/Personal') | Out-Null
+          New-Item -ItemType Directory -Force (Join-Path $root 'basic/scenes') | Out-Null
+          Set-Content (Join-Path $root 'global.ini') '[General]`nCurrentProfile=Personal'
+          Set-Content (Join-Path $root 'basic/profiles/Personal/basic.ini') '[Video]`nBaseCX=3440`nBaseCY=1440'
+          Set-Content (Join-Path $root 'basic/profiles/Personal/service.json') '{"type":"rtmp_common","service":"YouTube - RTMPS"}'
+          Set-Content (Join-Path $root 'basic/scenes/Personal.json') '{"name":"Personal"}'
+          Get-ChildItem $root -Recurse -File | Sort-Object FullName | ForEach-Object {
+            "$($_.FullName.Substring($root.Length)):$((Get-FileHash $_.FullName -Algorithm SHA256).Hash)"
+          } | Set-Content (Join-Path $env:RUNNER_TEMP 'personal-obs-before.txt')
+          $sentinelExe = Join-Path $env:RUNNER_TEMP 'obs64.exe'
+          Copy-Item (Join-Path $env:SystemRoot 'System32/ping.exe') $sentinelExe
+          $sentinel = Start-Process $sentinelExe -ArgumentList '-t','127.0.0.1' -WindowStyle Hidden -PassThru
+          Set-Content (Join-Path $env:RUNNER_TEMP 'personal-obs-pid.txt') $sentinel.Id
       - name: Build
         run: npm run build
       - name: Run smoke boot
         shell: bash
         timeout-minutes: 10
         run: npx electron packages/app --smoke
+      - name: Verify personal OBS was untouched
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:APPDATA 'obs-studio'
+          $after = Get-ChildItem $root -Recurse -File | Sort-Object FullName | ForEach-Object {
+            "$($_.FullName.Substring($root.Length)):$((Get-FileHash $_.FullName -Algorithm SHA256).Hash)"
+          }
+          $difference = Compare-Object (Get-Content (Join-Path $env:RUNNER_TEMP 'personal-obs-before.txt')) $after
+          if ($difference) { $difference | Out-String | Write-Error; throw 'AxiStream changed personal OBS data' }
+          $sentinelPid = [int](Get-Content (Join-Path $env:RUNNER_TEMP 'personal-obs-pid.txt'))
+          $sentinel = Get-Process -Id $sentinelPid -ErrorAction Stop
+          Stop-Process -Id $sentinel.Id
       - name: Upload OBS logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: obs-logs
           path: |
-            ~/AppData/Roaming/obs-studio/logs/
+            ~/AppData/Local/AxiStream/obs-runtime/config/obs-studio/logs/
             ~/AppData/Roaming/@axistream/
+          if-no-files-found: ignore
+
+  # Linux portal approval cannot be automated on a hosted runner. This still
+  # proves the dedicated bundle installs under its own ID, launches, reports
+  # the pinned OBS version over websocket, and leaves standard OBS data intact.
+  smoke-linux-owned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install build and display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder xvfb
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      - name: Install
+        run: npm ci
+      - name: Prepare owned Linux OBS runtime
+        run: npm run prepare:obs-runtime -- --platform=linux
+      - name: Seed personal OBS isolation sentinel
+        run: |
+          root="$HOME/.var/app/com.obsproject.Studio/config/obs-studio"
+          mkdir -p "$root/basic/profiles/Personal" "$root/basic/scenes"
+          printf '[General]\nCurrentProfile=Personal\n' > "$root/global.ini"
+          printf '[Video]\nBaseCX=3440\nBaseCY=1440\n' > "$root/basic/profiles/Personal/basic.ini"
+          printf '%s\n' '{"type":"rtmp_common","service":"YouTube - RTMPS"}' > "$root/basic/profiles/Personal/service.json"
+          printf '%s\n' '{"name":"Personal"}' > "$root/basic/scenes/Personal.json"
+          (cd "$root" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/personal-obs-before.txt"
+      - name: Build
+        run: npm run build
+      - name: Run owned-runtime smoke boot
+        run: xvfb-run -a env AXISTREAM_OBS_VISIBLE=1 npx electron packages/app --smoke-runtime
+      - name: Verify personal OBS was untouched
+        run: |
+          root="$HOME/.var/app/com.obsproject.Studio/config/obs-studio"
+          (cd "$root" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/personal-obs-after.txt"
+          diff -u "$RUNNER_TEMP/personal-obs-before.txt" "$RUNNER_TEMP/personal-obs-after.txt"
+      - name: Upload owned OBS logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owned-obs-linux-logs
+          path: ~/.var/app/link.axi.AxiStream.OBS/config/obs-studio/logs/
           if-no-files-found: ignore

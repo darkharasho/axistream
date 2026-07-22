@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSyn
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
 
-import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime } from '@axistream/capture'
+import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -41,7 +41,8 @@ import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
 import { createSmokeWatcher, type SmokeResult } from './smoke.js'
 
-const smokeMode = process.argv.includes('--smoke')
+const runtimeOnlySmokeMode = process.argv.includes('--smoke-runtime')
+const smokeMode = process.argv.includes('--smoke') || runtimeOnlySmokeMode
 if (smokeMode) app.disableHardwareAcceleration()
 
 // In smoke mode the watcher is created after app.whenReady (inside the primary
@@ -171,6 +172,23 @@ if (primary) app.whenReady().then(async () => {
   const runtimeAssetRoot = app.isPackaged
     ? join(process.resourcesPath, 'obs-runtime')
     : join(import.meta.dirname, '../../../../resources/obs-runtime')
+  const linuxManifest = (): LinuxObsRuntimeManifest => {
+    const safeFailure: LinuxObsRuntimeManifest = {
+      engineId: 'axistream-obs-linux-32.1.2', obsVersion: '32.1.2',
+      appId: 'link.axi.AxiStream.OBS', bundleSha256: '0'.repeat(64),
+      expectedRef: 'app/link.axi.AxiStream.OBS/x86_64/stable',
+      expectedCommit: 'unavailable', expectedOrigin: 'unavailable',
+    }
+    try {
+      const parsed = JSON.parse(readFileSync(join(runtimeAssetRoot, 'linux', 'runtime-manifest.json'), 'utf8')) as LinuxObsRuntimeManifest
+      if (
+        parsed.engineId !== safeFailure.engineId || parsed.obsVersion !== safeFailure.obsVersion ||
+        parsed.appId !== safeFailure.appId || !/^[a-f0-9]{64}$/.test(parsed.bundleSha256) ||
+        parsed.expectedRef !== safeFailure.expectedRef || !parsed.expectedCommit || !parsed.expectedOrigin
+      ) return safeFailure
+      return parsed
+    } catch { return safeFailure }
+  }
   const runtime: OwnedObsRuntime = process.platform === 'win32'
     ? new WindowsOwnedObsRuntime({
         manifest: {
@@ -182,13 +200,16 @@ if (primary) app.whenReady().then(async () => {
         archivePath: join(runtimeAssetRoot, 'windows', 'OBS-Studio-32.1.2-Windows-x64.zip'),
         installRoot: join(process.env.LOCALAPPDATA ?? userData, 'AxiStream', 'obs-runtime'),
       })
-    : {
-        engineId: process.platform === 'linux' ? 'axistream-obs-linux-32.1.2' : 'axistream-obs-unsupported',
-        configIdentity: 'unavailable',
-        prepare: async () => { throw new Error(process.platform === 'linux'
-          ? 'The dedicated AxiStream OBS Flatpak runtime is not packaged in this build'
-          : 'Capture is not supported on this platform') },
-      }
+    : process.platform === 'linux'
+      ? new LinuxOwnedObsRuntime({
+          manifest: linuxManifest(),
+          bundlePath: join(runtimeAssetRoot, 'linux', 'AxiStream-OBS-32.1.2-x86_64.flatpak'),
+          headless: !process.env.AXISTREAM_OBS_VISIBLE,
+        })
+      : {
+          engineId: 'axistream-obs-unsupported', configIdentity: 'unavailable',
+          prepare: async () => { throw new Error('Capture is not supported on this platform') },
+        }
   const config = new CaptureConfig(join(userData, 'capture.json'), runtime.engineId)
   const sidecar = new OwnedObsSidecar({ runtime, collection: 'AxiStream' })
 
@@ -755,6 +776,10 @@ if (primary) app.whenReady().then(async () => {
   // Boot the engine, then derive the initial phase.
   try {
     await capture.start()
+    if (runtimeOnlySmokeMode) {
+      smokeWatcher?.succeed(`SMOKE OK owned runtime platform=${process.platform}`)
+      return
+    }
     // Move onto an AxiStream-owned profile with no external YouTube auth — a
     // profile carrying that auth makes OBS route go-live through its broadcast
     // flow, which silently no-ops headless and never pushes RTMP. Persists across

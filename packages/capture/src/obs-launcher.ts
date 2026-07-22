@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn as nodeSpawn } from 'node:child_process'
 import { createServer } from 'node:net'
 
 export interface ObsLaunchHandle {
@@ -28,15 +28,22 @@ export async function findFreePort(): Promise<number> {
   })
 }
 
-const APP_ID = 'com.obsproject.Studio'
+export const OWNED_OBS_APP_ID = 'link.axi.AxiStream.OBS'
 
-// Dev launcher: the developer's Flatpak OBS. The bundled portable OBS will be a
-// separate launcher behind this same interface.
+// Launches only the dedicated Flatpak identity installed from AxiStream's
+// verified bundle. Constructor validation prevents accidental personal-OBS use.
 export class FlatpakObsLauncher implements ObsLauncher {
+  constructor(
+    private readonly appId = OWNED_OBS_APP_ID,
+    private readonly spawnProcess: typeof nodeSpawn = nodeSpawn,
+  ) {
+    if (appId !== OWNED_OBS_APP_ID) throw new Error(`Refusing non-owned OBS Flatpak identity: ${appId}`)
+  }
+
   launch(args: string[]): ObsLaunchHandle {
-    const proc = spawn('flatpak', ['run', APP_ID, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
-    proc.stdout.on('data', (d) => process.stdout.write(`[obs] ${d}`))
-    proc.stderr.on('data', (d) => process.stderr.write(`[obs] ${d}`))
+    const proc = this.spawnProcess('flatpak', ['run', this.appId, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
+    proc.stdout?.on('data', (d) => process.stdout.write(`[obs] ${d}`))
+    proc.stderr?.on('data', (d) => process.stderr.write(`[obs] ${d}`))
     return {
       kill: () => { try { proc.kill() } catch { /* ignore */ } },
       onExit: (cb) => proc.on('exit', cb),
@@ -44,6 +51,6 @@ export class FlatpakObsLauncher implements ObsLauncher {
   }
   // Flatpak reparents the app out of the `flatpak run` child; kill the app itself.
   stopOwned(): void {
-    try { spawn('flatpak', ['kill', APP_ID], { stdio: 'ignore' }) } catch { /* ignore */ }
+    try { this.spawnProcess('flatpak', ['kill', this.appId], { stdio: 'ignore' }) } catch { /* ignore */ }
   }
 }

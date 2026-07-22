@@ -19,9 +19,10 @@ const realConfigDeps: WebsocketConfigDeps = {
 export function enableOwnedObsWebsocketServer(
   configRoot: string,
   deps: WebsocketConfigDeps = realConfigDeps,
+  joinPath: (...paths: string[]) => string = win32.join,
 ): void {
-  const dir = win32.join(configRoot, 'obs-studio', 'plugin_config', 'obs-websocket')
-  const file = win32.join(dir, 'config.json')
+  const dir = joinPath(configRoot, 'obs-studio', 'plugin_config', 'obs-websocket')
+  const file = joinPath(dir, 'config.json')
   deps.mkdir(dir)
   let config: Record<string, unknown> = {}
   const existing = deps.read(file)

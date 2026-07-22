@@ -9,7 +9,8 @@
     "test": "npm -ws --if-present run test",
     "dev": "npm -w @axistream/app run dev",
     "build": "npm -ws --if-present run build",
-    "dist": "npm -w @axistream/app run dist"
+    "dist": "npm -w @axistream/app run dist",
+    "prepare:obs-runtime": "node scripts/prepare-obs-runtime.mjs"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "4.62.2",

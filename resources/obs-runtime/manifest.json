@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "windows": {
+    "engineId": "axistream-obs-windows-32.1.2",
+    "obsVersion": "32.1.2",
+    "archiveFile": "OBS-Studio-32.1.2-Windows-x64.zip",
+    "archiveUrl": "https://github.com/obsproject/obs-studio/releases/download/32.1.2/OBS-Studio-32.1.2-Windows-x64.zip",
+    "archiveSha256": "8d97e4563bd8d22d03e63042aa7dccede1d555c9bd35ce8a9e5019b0d0201bf6",
+    "executableRelativePath": "bin/64bit/obs64.exe"
+  },
+  "linux": {
+    "engineId": "axistream-obs-linux-32.1.2",
+    "obsVersion": "32.1.2",
+    "appId": "link.axi.AxiStream.OBS",
+    "branch": "stable",
+    "expectedOrigin": "obs-origin",
+    "bundleFile": "AxiStream-OBS-32.1.2-x86_64.flatpak",
+    "sourceUrl": "https://github.com/obsproject/obs-studio/archive/refs/tags/32.1.2.tar.gz",
+    "sourceSha256": "b4a59410cddb46d0e31df1ee13b8ec66f30862d7e980c1a8c4e3b5d16fae6053",
+    "sourceGitUrl": "https://github.com/obsproject/obs-studio.git",
+    "sourceCommit": "fb4d98bf88fae5fc85cb11fc57f7c5e309282194",
+    "pluginSources": [
+      {
+        "name": "obs-pipewire-audio-capture",
+        "url": "https://github.com/dimtpap/obs-pipewire-audio-capture.git",
+        "commit": "78935e15be876ea667df946c91145a6a6c2b4254"
+      },
+      {
+        "name": "obs-composite-blur",
+        "url": "https://github.com/FiniteSingularity/obs-composite-blur.git",
+        "commit": "adaeef80f8216e0852e2dace66abb51606ad6373"
+      }
+    ],
+    "runtime": "org.freedesktop.Platform/x86_64/25.08",
+    "sdk": "org.freedesktop.Sdk/x86_64/25.08"
+  }
+}
