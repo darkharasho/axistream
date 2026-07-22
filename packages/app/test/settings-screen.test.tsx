@@ -31,6 +31,7 @@ beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 const base: AppState = {
   phase: 'READY',
   capture: null,
+  captureTargets: [],
   stats: null,
   error: null,
   encoder: 'x264',

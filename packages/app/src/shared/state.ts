@@ -1,7 +1,8 @@
 import type { PttBinding, PttCaptureResult } from './keys.js'
 
 export type StreamPhase =
-  | 'SETTING_UP' | 'AWAITING_APPROVAL' | 'NEEDS_YOUTUBE' | 'NEEDS_TITLE' | 'READY'
+  | 'SETTING_UP' | 'PREPARING_CAPTURE' | 'CHOOSING_CAPTURE' | 'AWAITING_APPROVAL'
+  | 'NEEDS_YOUTUBE' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
 
 export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
@@ -19,6 +20,7 @@ export interface StreamSettingsView {
 }
 
 export interface AudioDevice { id: string; name: string }
+export interface CaptureTargetOption { property: string; value: string | number; label: string }
 export interface CaptureMeta { sourceLabel: string; width: number; height: number; outputWidth: number; outputHeight: number; fps: number }
 export interface LiveStats {
   bitrateKbps: number; droppedFrames: number; droppedPct: number; durationMs: number;
@@ -27,6 +29,7 @@ export interface LiveStats {
 export interface AppState {
   phase: StreamPhase
   capture: CaptureMeta | null
+  captureTargets: CaptureTargetOption[]
   stats: LiveStats | null
   liveUnconfirmed: boolean
   error: string | null
@@ -45,7 +48,7 @@ export interface AppState {
   watchUrl: string | null
 }
 export const INITIAL_STATE: AppState = {
-  phase: 'SETTING_UP', capture: null, stats: null, liveUnconfirmed: false, error: null,
+  phase: 'SETTING_UP', capture: null, captureTargets: [], stats: null, liveUnconfirmed: false, error: null,
   encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' },
@@ -78,6 +81,8 @@ export interface AudioTestResult { ok: boolean; clip?: Uint8Array; mime?: string
 export const CH = {
   getInitialState: 'axi:getInitialState',
   provision: 'axi:provision',
+  getCaptureTargets: 'axi:getCaptureTargets',
+  cancelCaptureSelection: 'axi:cancelCaptureSelection',
   goLive: 'axi:goLive',
   stopStream: 'axi:stopStream',
   repairCapture: 'axi:repairCapture',
@@ -127,7 +132,9 @@ export const CH = {
 
 export interface AxiApi {
   getInitialState(): Promise<AppState>
-  provision(): Promise<void>
+  provision(target?: CaptureTargetOption): Promise<void>
+  getCaptureTargets(): Promise<CaptureTargetOption[]>
+  cancelCaptureSelection(): Promise<void>
   goLive(title?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>

@@ -1,9 +1,11 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
-  provision(): Promise<void>
+  provision(target?: CaptureTargetOption): Promise<void>
+  getCaptureTargets(): Promise<CaptureTargetOption[]>
+  cancelCaptureSelection(): Promise<void>
   goLive(titleOverride?: string): Promise<void>
   stopStream(): Promise<void>
   repairCapture(): Promise<void>
@@ -52,7 +54,9 @@ export interface IpcDeps {
 export function registerIpc(d: IpcDeps): void {
   const { ipcMain, handlers } = d
   ipcMain.handle(CH.getInitialState, () => handlers.getInitialState())
-  ipcMain.handle(CH.provision, () => handlers.provision())
+  ipcMain.handle(CH.provision, (_e: unknown, target?: CaptureTargetOption) => handlers.provision(target))
+  ipcMain.handle(CH.getCaptureTargets, () => handlers.getCaptureTargets())
+  ipcMain.handle(CH.cancelCaptureSelection, () => handlers.cancelCaptureSelection())
   ipcMain.handle(CH.goLive, (_e: unknown, title?: string) => handlers.goLive(title))
   ipcMain.handle(CH.stopStream, () => handlers.stopStream())
   ipcMain.handle(CH.repairCapture, () => handlers.repairCapture())

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { CH } from '../src/shared/state.js'
+import { CH, INITIAL_STATE } from '../src/shared/state.js'
 import { registerIpc } from '../src/main/ipc.js'
 
 describe('ipc contract', () => {
@@ -8,6 +8,7 @@ describe('ipc contract', () => {
     const ipcMain = { handle: (ch: string) => handled.add(ch) }
     const handlers = {
       getInitialState: vi.fn(), provision: vi.fn(),
+      getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(),
       goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(),
       setMasks: vi.fn(),
       windowMinimize: vi.fn(), windowToggleMaximize: vi.fn(), windowClose: vi.fn(),
@@ -18,7 +19,7 @@ describe('ipc contract', () => {
     }
     registerIpc({ ipcMain: ipcMain as any, handlers: handlers as any, bindPush: () => {} })
     const commandChannels = [
-      CH.getInitialState, CH.provision,
+      CH.getInitialState, CH.provision, CH.getCaptureTargets, CH.cancelCaptureSelection,
       CH.goLive, CH.stopStream, CH.repairCapture,
       CH.setMasks,
       CH.windowMinimize, CH.windowToggleMaximize, CH.windowClose,
@@ -28,6 +29,25 @@ describe('ipc contract', () => {
       CH.fitWindowToCapture,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)
+  })
+
+  it('forwards the exact opaque capture target through provision IPC', async () => {
+    const registered = new Map<string, (...args: any[]) => any>()
+    const provision = vi.fn()
+    registerIpc({
+      ipcMain: { handle: (channel: string, handler: (...args: any[]) => any) => registered.set(channel, handler) } as any,
+      handlers: { provision } as any,
+      bindPush: () => {},
+    })
+    const target = { property: 'monitor_id', value: '{DISPLAY-GUID}', label: 'Display 2' }
+
+    await registered.get(CH.provision)?.({}, target)
+
+    expect(provision).toHaveBeenCalledWith(target)
+  })
+
+  it('initializes with no stale capture choices', () => {
+    expect(INITIAL_STATE.captureTargets).toEqual([])
   })
 
   it('bindPush receives a push function that targets event channels', () => {

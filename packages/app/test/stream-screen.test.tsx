@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
-const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
+const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, captureTargets: [], stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
   videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null }
-const axi = { provision: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn() }
+const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn() }
 const store = { applyState: vi.fn() }
 
 describe('StreamScreen', () => {
@@ -14,6 +14,59 @@ describe('StreamScreen', () => {
   it('SETTING_UP shows the setup CTA', () => {
     render(<StreamScreen state={{ ...base, phase: 'SETTING_UP', capture: null }} preview={null} axi={axi as any} store={store as any} />)
     expect(screen.getByRole('button', { name: /set up capture/i })).toBeInTheDocument()
+  })
+
+  it('disables setup immediately and ignores a duplicate click while the request is pending', async () => {
+    let release!: () => void
+    axi.provision.mockReturnValueOnce(new Promise<void>((resolve) => { release = resolve }))
+    render(<StreamScreen state={{ ...base, phase: 'SETTING_UP', capture: null }} preview={null} axi={axi as any} store={store as any} />)
+    const button = screen.getByRole('button', { name: /set up capture/i })
+
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    expect(axi.provision).toHaveBeenCalledOnce()
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent(/preparing capture/i)
+    release()
+    await waitFor(() => expect(button).toBeEnabled())
+  })
+
+  it('shows truthful progress while the owned runtime is preparing', () => {
+    render(<StreamScreen state={{ ...base, phase: 'PREPARING_CAPTURE', capture: null }} preview={null} axi={axi as any} store={store as any} />)
+    expect(screen.getByRole('button', { name: /preparing capture/i })).toBeDisabled()
+  })
+
+  it('renders monitor choices and forwards the exact selected option', () => {
+    const options = [
+      { property: 'monitor_id', value: '{LEFT}', label: 'Left monitor' },
+      { property: 'monitor_id', value: '{RIGHT}', label: 'Right monitor' },
+    ]
+    render(<StreamScreen state={{ ...base, phase: 'CHOOSING_CAPTURE', capture: null, captureTargets: options }} preview={null} axi={axi as any} store={store as any} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Right monitor' }))
+
+    expect(axi.provision).toHaveBeenCalledWith(options[1])
+  })
+
+  it('lets the user cancel monitor selection', () => {
+    render(<StreamScreen state={{
+      ...base, phase: 'CHOOSING_CAPTURE', capture: null,
+      captureTargets: [{ property: 'monitor_id', value: '{LEFT}', label: 'Left monitor' }],
+    }} preview={null} axi={axi as any} store={store as any} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(axi.cancelCaptureSelection).toHaveBeenCalledOnce()
+  })
+
+  it('shows the actual setup error and retries from the same panel', () => {
+    render(<StreamScreen state={{ ...base, phase: 'ERROR', capture: null, error: 'No usable displays were reported by OBS' }} preview={null} axi={axi as any} store={store as any} />)
+    expect(screen.getByText('No usable displays were reported by OBS')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /retry setup/i }))
+
+    expect(axi.provision).toHaveBeenCalledOnce()
   })
 
   it('NEEDS_YOUTUBE shows the Connect YouTube button, not Go Live', () => {

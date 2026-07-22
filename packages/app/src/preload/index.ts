@@ -10,7 +10,9 @@ const sub = <T,>(channel: string, cb: (p: T) => void) => {
 
 const api: AxiApi = {
   getInitialState: () => ipcRenderer.invoke(CH.getInitialState) as Promise<AppState>,
-  provision: () => ipcRenderer.invoke(CH.provision) as Promise<void>,
+  provision: (target) => ipcRenderer.invoke(CH.provision, target) as Promise<void>,
+  getCaptureTargets: () => ipcRenderer.invoke(CH.getCaptureTargets) as Promise<import('../shared/state.js').CaptureTargetOption[]>,
+  cancelCaptureSelection: () => ipcRenderer.invoke(CH.cancelCaptureSelection) as Promise<void>,
   goLive: (title) => ipcRenderer.invoke(CH.goLive, title) as Promise<void>,
   stopStream: () => ipcRenderer.invoke(CH.stopStream) as Promise<void>,
   repairCapture: () => ipcRenderer.invoke(CH.repairCapture) as Promise<void>,

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { MonitorPlay, Radio, Square, RefreshCw, Loader2, Shield, Scan, Link, Check } from 'lucide-react'
-import type { AppState } from '../../shared/state.js'
+import type { AppState, CaptureTargetOption } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
 import { StatChips } from './StatChips.js'
@@ -14,6 +14,20 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
   const live = phase === 'LIVE' || phase === 'RECONNECTING'
   const [editingMasks, setEditingMasks] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [setupPending, setSetupPending] = useState(false)
+  const setupInFlight = useRef(false)
+  const runSetup = (target?: CaptureTargetOption) => {
+    if (setupInFlight.current) return
+    setupInFlight.current = true
+    setSetupPending(true)
+    Promise.resolve(axi.provision(target)).catch(() => {
+      // Main publishes the human-readable ERROR state. The catch prevents an
+      // IPC rejection from becoming an unhandled renderer promise.
+    }).finally(() => {
+      setupInFlight.current = false
+      setSetupPending(false)
+    })
+  }
   const copyLink = () => {
     if (!state.watchUrl) return
     navigator.clipboard.writeText(state.watchUrl).then(() => {
@@ -22,13 +36,49 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
     }).catch(() => {})
   }
 
-  if (phase === 'SETTING_UP') {
+  const setupPhase = !capture && (
+    phase === 'SETTING_UP' || phase === 'PREPARING_CAPTURE' ||
+    phase === 'CHOOSING_CAPTURE' || phase === 'ERROR'
+  )
+  if (setupPhase) {
+    const preparing = phase === 'PREPARING_CAPTURE' || setupPending
+    if (phase === 'CHOOSING_CAPTURE') {
+      return (
+        <div className="hero setup">
+          <div className="setup-icon"><MonitorPlay size={26} /></div>
+          <h2>Choose the screen to capture</h2>
+          <p>These displays are reported directly by the private AxiStream capture engine.</p>
+          <div className="capture-target-list" role="list" aria-label="Available displays">
+            {state.captureTargets.map((target) => (
+              <button key={`${target.property}:${String(target.value)}`} className="btn target"
+                disabled={setupPending} onClick={() => runSetup(target)}>{target.label}</button>
+            ))}
+          </div>
+          <button className="btn ghost sm" disabled={setupPending}
+            onClick={() => { if (!setupInFlight.current) void axi.cancelCaptureSelection() }}>Cancel</button>
+        </div>
+      )
+    }
+    if (phase === 'ERROR') {
+      return (
+        <div className="hero setup">
+          <div className="setup-icon error"><MonitorPlay size={26} /></div>
+          <h2>Capture setup failed</h2>
+          <p className="setup-error" role="alert">{state.error ?? 'The capture engine could not be prepared.'}</p>
+          <button className="btn primary lg" disabled={setupPending} onClick={() => runSetup()}>
+            {setupPending ? <><Loader2 size={15} className="spin" /> Preparing capture…</> : 'Retry setup'}
+          </button>
+        </div>
+      )
+    }
     return (
       <div className="hero setup">
         <div className="setup-icon"><MonitorPlay size={26} /></div>
         <h2>Set up your capture</h2>
         <p>AxiStream will ask you to pick the screen showing your game. You'll only do this once.</p>
-        <button className="btn primary lg" onClick={() => axi.provision()}>Set up capture →</button>
+        <button className="btn primary lg" disabled={preparing} onClick={() => runSetup()}>
+          {preparing ? <><Loader2 size={15} className="spin" /> Preparing capture…</> : 'Set up capture →'}
+        </button>
       </div>
     )
   }
