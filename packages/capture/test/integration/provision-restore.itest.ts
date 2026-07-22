@@ -21,7 +21,7 @@ describe('Provision silent-restore (integration, real OBS, pre-approved)', () =>
     sidecar = new ObsSidecar({ launcher: new FlatpakObsLauncher(), collection: 'AxiStream' })
     await sidecar.start()
     const config = new CaptureConfig(join(dir, 'c.json'))
-    config.save({ provisioned: true, platform: 'linux', collection: 'AxiStream' })
+    config.save({ ...config.load(), provisioned: true, platform: 'linux', collection: 'AxiStream' })
 
     const p = new Provisioner({
       sidecar, config, platform: 'linux',

@@ -74,7 +74,12 @@ export class Provisioner {
         await callReady(() => c().call('SetCurrentSceneCollection', { sceneCollectionName: SCRATCH }))
         await callReady(() => c().call('SetCurrentSceneCollection', { sceneCollectionName: COLLECTION }))
       }
-      this.deps.config.save({ provisioned: true, platform: this.deps.platform, collection: COLLECTION })
+      this.deps.config.save({
+        ...this.deps.config.load(),
+        provisioned: true,
+        platform: this.deps.platform,
+        collection: COLLECTION,
+      })
       this.state = 'READY'
       return { ok: true, status: 'READY' }
     }
