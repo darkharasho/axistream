@@ -61,6 +61,24 @@ jobs:
         shell: bash
         timeout-minutes: 10
         run: npx electron packages/app --smoke
+      - name: Dump owned OBS runtime diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          $runtime = Join-Path $env:LOCALAPPDATA 'AxiStream/obs-runtime'
+          Write-Host "=== owned OBS runtime tree ($runtime) ==="
+          if (-not (Test-Path $runtime)) { Write-Host 'runtime dir does not exist'; return }
+          Get-ChildItem $runtime -Recurse -File -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty FullName | Sort-Object
+          $log = Get-ChildItem $runtime -Recurse -Filter '*.txt' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'obs-studio.logs' } |
+            Sort-Object LastWriteTime | Select-Object -Last 1
+          if ($log) {
+            Write-Host "`n=== newest OBS log: $($log.FullName) ==="
+            Get-Content $log.FullName
+          } else { Write-Host "`nNo OBS log found under obs-studio/logs" }
+          Get-ChildItem (Join-Path $runtime '*/config/obs-studio/crashes') -File -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host "`n=== crash: $($_.FullName) ==="; Get-Content $_.FullName }
       - name: Verify personal OBS was untouched
         shell: pwsh
         run: |
@@ -79,7 +97,8 @@ jobs:
         with:
           name: obs-logs
           path: |
-            ~/AppData/Local/AxiStream/obs-runtime/config/obs-studio/logs/
+            ~/AppData/Local/AxiStream/obs-runtime/*/config/obs-studio/logs/
+            ~/AppData/Local/AxiStream/obs-runtime/*/config/obs-studio/crashes/
             ~/AppData/Roaming/@axistream/
           if-no-files-found: ignore
 
