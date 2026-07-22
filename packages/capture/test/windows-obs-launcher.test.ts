@@ -1,72 +1,101 @@
-import { describe, it, expect } from 'vitest'
-import { resolveWindowsObsExe, enableObsWebsocketServer } from '../src/windows-obs-launcher.js'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  WindowsObsLauncher,
+  enableOwnedObsWebsocketServer,
+  type WindowsProcessContainer,
+} from '../src/windows-obs-launcher.js'
 
-describe('resolveWindowsObsExe', () => {
-  const env = {
-    'ProgramFiles': 'C:\\Program Files',
-    'ProgramFiles(x86)': 'C:\\Program Files (x86)',
-    'LOCALAPPDATA': 'C:\\Users\\u\\AppData\\Local',
+function child(pid = 4242) {
+  return {
+    pid,
+    kill: vi.fn(),
+    on: vi.fn(),
+    once: vi.fn(),
   }
+}
 
-  it('prefers the 64-bit Program Files install', () => {
-    const exists = (p: string) => p === 'C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe'
-    expect(resolveWindowsObsExe(env, exists)).toBe('C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe')
-  })
+describe('enableOwnedObsWebsocketServer', () => {
+  it('writes only below the explicitly owned portable config root', () => {
+    const writes: Array<{ path: string; content: string }> = []
+    const deps = {
+      mkdir: vi.fn(),
+      read: vi.fn(() => '{"auth_required":true}'),
+      write: vi.fn((path: string, content: string) => writes.push({ path, content })),
+    }
 
-  it('falls back through x86 and LOCALAPPDATA', () => {
-    const target = 'C:\\Users\\u\\AppData\\Local\\Programs\\obs-studio\\bin\\64bit\\obs64.exe'
-    const exists = (p: string) => p === target
-    expect(resolveWindowsObsExe(env, exists)).toBe(target)
-  })
+    enableOwnedObsWebsocketServer('C:\\AxiStream\\obs-runtime\\32.1.2\\config', deps)
 
-  it('returns null when OBS is not installed', () => {
-    expect(resolveWindowsObsExe(env, () => false)).toBeNull()
-  })
-
-  it('tolerates missing env vars', () => {
-    expect(resolveWindowsObsExe({}, () => false)).toBeNull()
+    expect(deps.mkdir).toHaveBeenCalledWith(
+      'C:\\AxiStream\\obs-runtime\\32.1.2\\config\\obs-studio\\plugin_config\\obs-websocket',
+    )
+    expect(writes[0].path).toContain('C:\\AxiStream\\obs-runtime\\32.1.2\\config\\obs-studio')
+    expect(JSON.parse(writes[0].content)).toEqual({ auth_required: true, server_enabled: true })
   })
 })
 
-describe('enableObsWebsocketServer', () => {
-  function harness(existing: string | null) {
-    const writes: Array<{ path: string; content: string }> = []
-    const dirs: string[] = []
-    return {
-      writes, dirs,
-      deps: {
-        mkdir: (p: string) => { dirs.push(p) },
-        read: () => existing,
-        write: (path: string, content: string) => { writes.push({ path, content }) },
-      },
+describe('WindowsObsLauncher', () => {
+  it('launches the explicit private executable with portable OBS 32 flags', () => {
+    const proc = child()
+    const container: WindowsProcessContainer = { assign: vi.fn(), close: vi.fn() }
+    const spawn = vi.fn(() => proc as never)
+    const launcher = new WindowsObsLauncher({
+      executablePath: 'C:\\AxiStream\\obs-runtime\\32.1.2\\bin\\64bit\\obs64.exe',
+      configRoot: 'C:\\AxiStream\\obs-runtime\\32.1.2\\config',
+      spawn,
+      createContainer: () => container,
+      configureWebsocket: vi.fn(),
+    })
+
+    launcher.launch(['--collection', 'AxiStream'])
+
+    expect(spawn).toHaveBeenCalledOnce()
+    const [exe, args, opts] = spawn.mock.calls[0] as unknown as [string, string[], { cwd: string }]
+    expect(exe).toBe('C:\\AxiStream\\obs-runtime\\32.1.2\\bin\\64bit\\obs64.exe')
+    expect(args).toEqual(expect.arrayContaining([
+      '--portable', '--disable-updater', '--disable-missing-files-check', '--multi',
+      '--collection', 'AxiStream',
+    ]))
+    expect(args).not.toContain('--disable-shutdown-check')
+    expect(opts.cwd).toBe('C:\\AxiStream\\obs-runtime\\32.1.2\\bin\\64bit')
+    expect(container.assign).toHaveBeenCalledWith(4242)
+  })
+
+  it('kills only the newly spawned child when containment fails', () => {
+    const proc = child()
+    const container: WindowsProcessContainer = {
+      assign: vi.fn(() => { throw new Error('AssignProcessToJobObject failed') }),
+      close: vi.fn(),
     }
-  }
+    const launcher = new WindowsObsLauncher({
+      executablePath: 'C:\\AxiStream\\owned\\obs64.exe',
+      configRoot: 'C:\\AxiStream\\owned\\config',
+      spawn: vi.fn(() => proc as never),
+      createContainer: () => container,
+      configureWebsocket: vi.fn(),
+    })
 
-  it('creates the config with server_enabled when missing', () => {
-    const h = harness(null)
-    enableObsWebsocketServer('C:\\Users\\x\\AppData\\Roaming', h.deps)
-    expect(h.dirs[0]).toBe('C:\\Users\\x\\AppData\\Roaming\\obs-studio\\plugin_config\\obs-websocket')
-    expect(h.writes).toHaveLength(1)
-    expect(JSON.parse(h.writes[0].content)).toEqual({ server_enabled: true })
+    expect(() => launcher.launch([])).toThrow('Could not contain AxiStream OBS')
+    expect(proc.kill).toHaveBeenCalledOnce()
+    expect(container.close).toHaveBeenCalledOnce()
   })
 
-  it('merges into an existing config, preserving other keys', () => {
-    const h = harness('{"server_enabled": false, "auth_required": true, "server_port": 4455}')
-    enableObsWebsocketServer('C:\\a', h.deps)
-    expect(JSON.parse(h.writes[0].content)).toEqual({ server_enabled: true, auth_required: true, server_port: 4455 })
-  })
+  it('stops only its tracked job and never performs an image-wide kill', async () => {
+    const proc = child()
+    const container: WindowsProcessContainer = { assign: vi.fn(), close: vi.fn() }
+    const spawn = vi.fn(() => proc as never)
+    const launcher = new WindowsObsLauncher({
+      executablePath: 'C:\\AxiStream\\owned\\obs64.exe',
+      configRoot: 'C:\\AxiStream\\owned\\config',
+      spawn,
+      createContainer: () => container,
+      configureWebsocket: vi.fn(),
+    })
+    launcher.launch([])
 
-  it('leaves an already-enabled config untouched', () => {
-    const h = harness('{"server_enabled": true, "server_port": 4455}')
-    enableObsWebsocketServer('C:\\a', h.deps)
-    expect(h.writes).toHaveLength(0)
-  })
+    await launcher.stopOwned()
 
-  it('no-ops without APPDATA and recovers from corrupt JSON', () => {
-    const h = harness('{nope')
-    enableObsWebsocketServer(undefined, h.deps)
-    expect(h.writes).toHaveLength(0)
-    enableObsWebsocketServer('C:\\a', h.deps)
-    expect(JSON.parse(h.writes[0].content)).toEqual({ server_enabled: true })
+    expect(container.close).toHaveBeenCalledOnce()
+    expect(proc.kill).toHaveBeenCalledOnce()
+    expect(spawn).toHaveBeenCalledOnce()
   })
 })

@@ -8,7 +8,7 @@ export interface ObsLaunchHandle {
 
 export interface ObsLauncher {
   launch(args: string[]): ObsLaunchHandle
-  killApp(): void | Promise<void>
+  stopOwned(): void | Promise<void>
 }
 
 export async function findFreePort(): Promise<number> {
@@ -43,7 +43,7 @@ export class FlatpakObsLauncher implements ObsLauncher {
     }
   }
   // Flatpak reparents the app out of the `flatpak run` child; kill the app itself.
-  killApp(): void {
+  stopOwned(): void {
     try { spawn('flatpak', ['kill', APP_ID], { stdio: 'ignore' }) } catch { /* ignore */ }
   }
 }

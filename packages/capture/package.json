@@ -1,6 +1,8 @@
 {
   "name": "@axistream/capture",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,6 +11,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "extract-zip": "^2.0.1",
+    "koffi": "^2.16.3",
     "obs-websocket-js": "^5.0.8"
   },
   "devDependencies": {

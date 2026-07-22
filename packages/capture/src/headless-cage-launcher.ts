@@ -53,7 +53,7 @@ export class HeadlessCageObsLauncher implements ObsLauncher {
     return (this.opts.spawnProcess ?? defaultSpawn)('cage', cageArgs, env)
   }
 
-  killApp(): void {
-    this.fallback.killApp()
+  stopOwned(): void {
+    this.fallback.stopOwned()
   }
 }

@@ -3,7 +3,7 @@ import { HeadlessCageObsLauncher } from '../src/headless-cage-launcher.js'
 
 function fakeLauncher() {
   const handle = { kill: vi.fn(), onExit: vi.fn() }
-  return { launch: vi.fn(() => handle), killApp: vi.fn(), handle }
+  return { launch: vi.fn(() => handle), stopOwned: vi.fn(), handle }
 }
 
 describe('HeadlessCageObsLauncher', () => {
@@ -34,10 +34,10 @@ describe('HeadlessCageObsLauncher', () => {
     expect(h).toBe(fallback.handle)
   })
 
-  it('killApp delegates to the fallback (flatpak kill)', () => {
+  it('stopOwned delegates to the fallback (flatpak kill)', () => {
     const fallback = fakeLauncher()
     const l = new HeadlessCageObsLauncher(fallback as any, { isCageAvailable: () => true })
-    l.killApp()
-    expect(fallback.killApp).toHaveBeenCalledOnce()
+    l.stopOwned()
+    expect(fallback.stopOwned).toHaveBeenCalledOnce()
   })
 })

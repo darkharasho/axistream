@@ -69,10 +69,6 @@ export class ObsSidecar {
   }
 
   async start(): Promise<void> {
-    // AWAIT the orphan cleanup: an unawaited taskkill snapshots processes
-    // ~100ms later and murders the OBS we are about to spawn (Windows smoke
-    // harness found OBS exiting code 1 pre-log on every boot).
-    await this.opts.launcher.killApp()
     this._port = await findFreePort()
     this.expectExit = false
     const args = [
@@ -80,25 +76,31 @@ export class ObsSidecar {
       '--websocket_password', this.password,
       '--websocket_debug',
       '--multi',
-      '--disable-shutdown-check',
       '--collection', this.opts.collection,
     ]
     this.handle = this.opts.launcher.launch(args)
     this.handle.onExit(() => { if (!this.expectExit) this.emitter.emit('crashed') })
 
-    const wait = this.opts._waitForPort ?? waitForPort
-    await wait(this._port, 30000)
+    try {
+      const wait = this.opts._waitForPort ?? waitForPort
+      await wait(this._port, 30000)
 
-    this.obs = (this.opts._makeClient ?? (() => new OBSWebSocket()))()
-    await this.obs.connect(`ws://127.0.0.1:${this._port}`, this.password)
+      this.obs = (this.opts._makeClient ?? (() => new OBSWebSocket()))()
+      await this.obs.connect(`ws://127.0.0.1:${this._port}`, this.password)
 
-    if (this.opts.expectedObsVersion) {
-      const ver = await this.obs.call('GetVersion')
-      if (ver.obsVersion !== this.opts.expectedObsVersion) {
-        const actual = ver.obsVersion
-        await this.stop()
-        throw new ObsVersionMismatchError(this.opts.expectedObsVersion, actual)
+      if (this.opts.expectedObsVersion) {
+        const ver = await this.obs.call('GetVersion')
+        if (ver.obsVersion !== this.opts.expectedObsVersion) {
+          throw new ObsVersionMismatchError(this.opts.expectedObsVersion, ver.obsVersion)
+        }
       }
+    } catch (error) {
+      this.expectExit = true
+      try { await this.obs?.disconnect() } catch { /* ignore */ }
+      this.obs = undefined
+      await this.opts.launcher.stopOwned()
+      this.handle = undefined
+      throw error
     }
   }
 
@@ -106,10 +108,7 @@ export class ObsSidecar {
     this.expectExit = true
     try { await this.obs?.disconnect() } catch { /* ignore */ }
     this.obs = undefined
-    // awaited for symmetry with start(): two concurrent taskkills from a
-    // tight stop()/start() must not race the fresh spawn
-    await this.opts.launcher.killApp()
-    this.handle?.kill()
+    await this.opts.launcher.stopOwned()
     this.handle = undefined
   }
 

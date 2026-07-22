@@ -1,5 +1,7 @@
-import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { win32 } from 'node:path'
 import type { ObsLauncher, ObsLaunchHandle } from './obs-launcher.js'
 
 export interface WebsocketConfigDeps {
@@ -9,90 +11,179 @@ export interface WebsocketConfigDeps {
 }
 
 const realConfigDeps: WebsocketConfigDeps = {
-  mkdir: (p) => mkdirSync(p, { recursive: true }),
-  read: (p) => { try { return readFileSync(p, 'utf8') } catch { return null } },
-  write: (p, c) => writeFileSync(p, c),
+  mkdir: (path) => mkdirSync(path, { recursive: true }),
+  read: (path) => { try { return readFileSync(path, 'utf8') } catch { return null } },
+  write: (path, content) => writeFileSync(path, content),
 }
 
-/** Windows OBS ships obs-websocket with `server_enabled: false` and the
- *  --websocket_port/--websocket_password CLI flags only OVERRIDE port and
- *  password — they never enable the server (confirmed on OBS 32.1.2: plain
- *  launch with the flags leaves the port closed; pre-writing server_enabled
- *  makes it listen). Merge-write the plugin config before launch so the
- *  sidecar's port-wait can succeed. Best-effort: any failure leaves OBS to
- *  launch anyway and the sidecar's timeout reports it. */
-export function enableObsWebsocketServer(
-  appData: string | undefined = process.env['APPDATA'],
+export function enableOwnedObsWebsocketServer(
+  configRoot: string,
   deps: WebsocketConfigDeps = realConfigDeps,
 ): void {
-  if (!appData) { console.warn('[obs] APPDATA unset — cannot enable websocket server config'); return }
-  try {
-    const dir = `${appData}\\obs-studio\\plugin_config\\obs-websocket`
-    const file = `${dir}\\config.json`
-    deps.mkdir(dir)
-    let cfg: Record<string, unknown> = {}
-    const existing = deps.read(file)
-    if (existing) {
-      try { cfg = JSON.parse(existing) as Record<string, unknown> } catch { cfg = {} }
+  const dir = win32.join(configRoot, 'obs-studio', 'plugin_config', 'obs-websocket')
+  const file = win32.join(dir, 'config.json')
+  deps.mkdir(dir)
+  let config: Record<string, unknown> = {}
+  const existing = deps.read(file)
+  if (existing) {
+    try { config = JSON.parse(existing) as Record<string, unknown> } catch { config = {} }
+  }
+  if (config['server_enabled'] === true) return
+  config['server_enabled'] = true
+  deps.write(file, JSON.stringify(config, null, 2))
+}
+
+export interface WindowsProcessContainer {
+  assign(pid: number): void
+  close(): void
+}
+
+interface WindowsJobApi {
+  createJob(): unknown
+  configureKillOnClose(job: unknown): boolean
+  openProcess(pid: number): unknown
+  assign(job: unknown, process: unknown): boolean
+  close(handle: unknown): void
+}
+
+class JobObjectContainer implements WindowsProcessContainer {
+  private readonly job: unknown
+
+  constructor(private readonly api: WindowsJobApi) {
+    this.job = api.createJob()
+    if (!this.job || !api.configureKillOnClose(this.job)) {
+      if (this.job) api.close(this.job)
+      throw new Error('Could not create AxiStream OBS process container')
     }
-    if (cfg['server_enabled'] === true) return
-    cfg['server_enabled'] = true
-    deps.write(file, JSON.stringify(cfg, null, 2))
-    console.info(`[obs] websocket server enabled in ${file}`)
-  } catch (e) {
-    console.warn('[obs] enabling websocket server config failed:', e instanceof Error ? e.message : e)
+  }
+
+  assign(pid: number): void {
+    const processHandle = this.api.openProcess(pid)
+    if (!processHandle) throw new Error('Could not open AxiStream OBS process for containment')
+    try {
+      if (!this.api.assign(this.job, processHandle)) {
+        throw new Error('AssignProcessToJobObject failed')
+      }
+    } finally {
+      this.api.close(processHandle)
+    }
+  }
+
+  close(): void { this.api.close(this.job) }
+}
+
+function createWindowsJobApi(): WindowsJobApi {
+  if (process.platform !== 'win32') throw new Error('Windows Job Objects are only available on Windows')
+  const require = createRequire(import.meta.url)
+  const koffi = require('koffi') as typeof import('koffi')
+  const kernel32 = koffi.load('kernel32.dll')
+  const BasicLimit = koffi.struct('JOBOBJECT_BASIC_LIMIT_INFORMATION', {
+    PerProcessUserTimeLimit: 'int64', PerJobUserTimeLimit: 'int64', LimitFlags: 'uint32',
+    MinimumWorkingSetSize: 'uintptr_t', MaximumWorkingSetSize: 'uintptr_t', ActiveProcessLimit: 'uint32',
+    Affinity: 'uintptr_t', PriorityClass: 'uint32', SchedulingClass: 'uint32',
+  })
+  const IoCounters = koffi.struct('IO_COUNTERS', {
+    ReadOperationCount: 'uint64', WriteOperationCount: 'uint64', OtherOperationCount: 'uint64',
+    ReadTransferCount: 'uint64', WriteTransferCount: 'uint64', OtherTransferCount: 'uint64',
+  })
+  const ExtendedLimit = koffi.struct('JOBOBJECT_EXTENDED_LIMIT_INFORMATION', {
+    BasicLimitInformation: BasicLimit,
+    IoInfo: IoCounters,
+    ProcessMemoryLimit: 'uintptr_t', JobMemoryLimit: 'uintptr_t',
+    PeakProcessMemoryUsed: 'uintptr_t', PeakJobMemoryUsed: 'uintptr_t',
+  })
+  const CreateJobObjectW = kernel32.func('void *CreateJobObjectW(void *attributes, const char16_t *name)')
+  const SetInformationJobObject = kernel32.func('bool SetInformationJobObject(void *job, int infoClass, void *info, uint32 length)')
+  const OpenProcess = kernel32.func('void *OpenProcess(uint32 access, bool inherit, uint32 pid)')
+  const AssignProcessToJobObject = kernel32.func('bool AssignProcessToJobObject(void *job, void *process)')
+  const CloseHandle = kernel32.func('bool CloseHandle(void *handle)')
+  return {
+    createJob: () => CreateJobObjectW(null, null),
+    configureKillOnClose: (job) => {
+      const info = {
+        BasicLimitInformation: {
+          PerProcessUserTimeLimit: 0, PerJobUserTimeLimit: 0, LimitFlags: 0x00002000,
+          MinimumWorkingSetSize: 0, MaximumWorkingSetSize: 0, ActiveProcessLimit: 0,
+          Affinity: 0, PriorityClass: 0, SchedulingClass: 0,
+        },
+        IoInfo: {
+          ReadOperationCount: 0, WriteOperationCount: 0, OtherOperationCount: 0,
+          ReadTransferCount: 0, WriteTransferCount: 0, OtherTransferCount: 0,
+        },
+        ProcessMemoryLimit: 0, JobMemoryLimit: 0, PeakProcessMemoryUsed: 0, PeakJobMemoryUsed: 0,
+      }
+      return Boolean(SetInformationJobObject(job, 9, koffi.as(info, ExtendedLimit), koffi.sizeof(ExtendedLimit)))
+    },
+    openProcess: (pid) => OpenProcess(0x0001 | 0x0100, false, pid),
+    assign: (job, processHandle) => Boolean(AssignProcessToJobObject(job, processHandle)),
+    close: (handle) => { CloseHandle(handle) },
   }
 }
 
-/** Locate an installed OBS Studio on Windows. Pure given env + exists —
- *  probes the standard 64-bit install, the x86 tree, and per-user installs. */
-export function resolveWindowsObsExe(
-  env: Record<string, string | undefined> = process.env,
-  exists: (p: string) => boolean = existsSync,
-): string | null {
-  const suffix = '\\obs-studio\\bin\\64bit\\obs64.exe'
-  const roots = [
-    env['ProgramFiles'],
-    env['ProgramFiles(x86)'],
-    env['LOCALAPPDATA'] ? `${env['LOCALAPPDATA']}\\Programs` : undefined,
-  ]
-  for (const root of roots) {
-    if (!root) continue
-    const p = `${root}${suffix}`
-    if (exists(p)) return p
-  }
-  return null
+export interface WindowsObsLauncherOptions {
+  executablePath: string
+  configRoot: string
+  spawn?: typeof nodeSpawn
+  createContainer?: () => WindowsProcessContainer
+  configureWebsocket?: (configRoot: string) => void
 }
 
-// UNTESTED ON WINDOWS: the spawn/kill runtime paths mirror FlatpakObsLauncher
-// but have not run on a real Windows machine yet — treat the first Windows
-// boot as a smoke test. OBS on Windows must be started from its own bin dir
-// (cwd) or it fails to find its modules.
 export class WindowsObsLauncher implements ObsLauncher {
+  private child?: ChildProcess
+  private container?: WindowsProcessContainer
+  private readonly spawn: typeof nodeSpawn
+  private readonly createContainer: () => WindowsProcessContainer
+  private readonly configureWebsocket: (configRoot: string) => void
+
+  constructor(private readonly options: WindowsObsLauncherOptions) {
+    this.spawn = options.spawn ?? nodeSpawn
+    this.createContainer = options.createContainer ?? (() => new JobObjectContainer(createWindowsJobApi()))
+    this.configureWebsocket = options.configureWebsocket ?? enableOwnedObsWebsocketServer
+  }
+
   launch(args: string[]): ObsLaunchHandle {
-    const exe = resolveWindowsObsExe()
-    if (!exe) throw new Error('OBS Studio not found — install it from obsproject.com, then relaunch AxiStream')
-    enableObsWebsocketServer()
-    const cwd = exe.slice(0, exe.lastIndexOf('\\'))
-    // detached + no stdio: a plain GUI launch; Windows OBS writes nothing to
-    // stdout anyway. --websocket_ipv4_only keeps the server reachable from
-    // the sidecar's 127.0.0.1 connect regardless of v6-only bind defaults.
-    const proc = spawn(exe, ['--minimize-to-tray', '--websocket_ipv4_only', ...args], { cwd, stdio: 'ignore', detached: true })
-    console.info(`[obs] spawned pid=${proc.pid ?? 'NONE'} exe=${exe}`)
-    proc.on('error', (e) => console.error('[obs] spawn failed:', e.message))
-    proc.on('exit', (code, sig) => console.error(`[obs] exited code=${code} sig=${sig}`))
+    if (this.child) throw new Error('AxiStream OBS is already running')
+    this.configureWebsocket(this.options.configRoot)
+    const container = this.createContainer()
+    const launchArgs = [
+      '--portable', '--disable-updater', '--disable-missing-files-check', '--multi',
+      '--minimize-to-tray', '--websocket_ipv4_only', ...args,
+    ]
+    const child = this.spawn(this.options.executablePath, launchArgs, {
+      cwd: win32.dirname(this.options.executablePath), stdio: 'ignore', detached: false,
+    })
+    try {
+      if (!child.pid) throw new Error('AxiStream OBS process did not provide a PID')
+      container.assign(child.pid)
+    } catch (error) {
+      try { child.kill() } catch { /* the child may already have exited */ }
+      container.close()
+      throw new Error(`Could not contain AxiStream OBS: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    this.child = child
+    this.container = container
+    child.once('exit', () => {
+      if (this.child === child) {
+        this.child = undefined
+        this.container = undefined
+      }
+    })
     return {
-      kill: () => { try { proc.kill() } catch { /* ignore */ } },
-      onExit: (cb) => proc.on('exit', cb),
+      kill: () => { void this.stopOwned() },
+      onExit: (callback) => child.on('exit', callback),
     }
   }
-  killApp(): Promise<void> {
-    return new Promise((resolve) => {
-      try {
-        const p = spawn('taskkill', ['/F', '/IM', 'obs64.exe'], { stdio: 'ignore' })
-        p.on('exit', () => resolve())
-        p.on('error', () => resolve())
-      } catch { resolve() }
-    })
+
+  async stopOwned(): Promise<void> {
+    const child = this.child
+    const container = this.container
+    this.child = undefined
+    this.container = undefined
+    if (container) {
+      try { container.close() } catch { /* already closed */ }
+    }
+    if (child) {
+      try { child.kill() } catch { /* already exited */ }
+    }
   }
 }
