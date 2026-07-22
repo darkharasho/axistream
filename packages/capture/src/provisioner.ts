@@ -1,6 +1,6 @@
 import { callReady } from './call-ready.js'
 import { isNonBlackPng } from './frame-check.js'
-import { CaptureConfig, type ProvisionStatus } from './capture-config.js'
+import { CaptureConfig, type CaptureTarget, type ProvisionStatus } from './capture-config.js'
 import { ensureAudioInputs } from './audio-inputs.js'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -28,7 +28,10 @@ export interface ProvisionerDeps {
   approvalPollDelayMs?: number
 }
 
-export interface ProvisionResult { ok: boolean; status: ProvisionStatus }
+export type ProvisionResult =
+  | { ok: true; status: 'READY' }
+  | { ok: false; status: 'AWAITING_APPROVAL' }
+  | { ok: false; status: 'CHOOSING_TARGET'; targets: CaptureTarget[] }
 
 export class Provisioner {
   private state: ProvisionStatus
@@ -38,12 +41,12 @@ export class Provisioner {
 
   status(): ProvisionStatus { return this.state }
 
-  async repair(onApprovalNeeded?: () => void): Promise<ProvisionResult> {
+  async repair(onApprovalNeeded?: () => void, target?: CaptureTarget): Promise<ProvisionResult> {
     this.state = 'REPAIR'
-    return this.provision(onApprovalNeeded)
+    return this.provision(onApprovalNeeded, target)
   }
 
-  async provision(onApprovalNeeded?: () => void): Promise<ProvisionResult> {
+  async provision(onApprovalNeeded?: () => void, selectedTarget?: CaptureTarget): Promise<ProvisionResult> {
     this.state = 'BUILDING'
     const c = () => this.deps.sidecar.client()
     const isWayland = this.deps.platform === 'linux'
@@ -51,6 +54,31 @@ export class Provisioner {
 
     // Build the collection structure over the socket.
     await this.buildCollection(c(), kind)
+
+    let captureTarget: CaptureTarget | undefined
+    if (this.deps.platform === 'win32') {
+      const targets = await this.listWindowsTargets(c())
+      const requested = selectedTarget ?? this.deps.config.load().target
+      if (requested) {
+        captureTarget = targets.find((target) =>
+          target.property === requested.property &&
+          target.value === requested.value,
+        )
+        if (!captureTarget) throw new Error('The selected display is no longer available')
+      } else if (targets.length === 1) {
+        captureTarget = targets[0]
+      } else {
+        this.state = 'CHOOSING_TARGET'
+        return { ok: false, status: 'CHOOSING_TARGET', targets }
+      }
+      if (!captureTarget) throw new Error('No display was selected')
+      const target = captureTarget
+      await callReady(() => c().call('SetInputSettings', {
+        inputName: CAPTURE,
+        inputSettings: { [target.property]: target.value },
+        overlay: true,
+      }))
+    }
 
     if (isWayland) {
       // Persist by switching collections (forces OBS to save), then reload.
@@ -78,13 +106,44 @@ export class Provisioner {
         ...this.deps.config.load(),
         provisioned: true,
         platform: this.deps.platform,
+        ...(captureTarget ? { target: captureTarget } : {}),
         collection: COLLECTION,
       })
       this.state = 'READY'
       return { ok: true, status: 'READY' }
     }
+    if (this.deps.platform === 'win32') {
+      throw new Error('The selected display did not produce a visible frame before setup timed out')
+    }
     this.state = 'AWAITING_APPROVAL'
     return { ok: false, status: 'AWAITING_APPROVAL' }
+  }
+
+  private async listWindowsTargets(client: ReturnType<ProvisionerSidecar['client']>): Promise<CaptureTarget[]> {
+    let property = 'monitor_id'
+    let response: { propertyItems?: unknown[] }
+    try {
+      response = await client.call('GetInputPropertiesListPropertyItems', {
+        inputName: CAPTURE, propertyName: property,
+      })
+      if (!Array.isArray(response.propertyItems)) throw new Error('monitor_id property is unavailable')
+    } catch {
+      property = 'monitor'
+      response = await client.call('GetInputPropertiesListPropertyItems', {
+        inputName: CAPTURE, propertyName: property,
+      })
+      if (!Array.isArray(response.propertyItems)) throw new Error('OBS does not expose a display capture property')
+    }
+    const targets = response.propertyItems.flatMap((value): CaptureTarget[] => {
+      if (!value || typeof value !== 'object') return []
+      const item = value as Record<string, unknown>
+      if (item['itemEnabled'] === false) return []
+      if (typeof item['itemName'] !== 'string') return []
+      if (typeof item['itemValue'] !== 'string' && typeof item['itemValue'] !== 'number') return []
+      return [{ property, value: item['itemValue'], label: item['itemName'] }]
+    })
+    if (targets.length === 0) throw new Error('No usable displays were reported by OBS')
+    return targets
   }
 
   private async buildCollection(client: ReturnType<ProvisionerSidecar['client']>, kind: string): Promise<void> {

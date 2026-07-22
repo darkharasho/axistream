@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 
 export type ProvisionStatus =
-  | 'UNPROVISIONED' | 'BUILDING' | 'AWAITING_APPROVAL' | 'READY' | 'REPAIR'
+  | 'UNPROVISIONED' | 'BUILDING' | 'CHOOSING_TARGET' | 'AWAITING_APPROVAL' | 'READY' | 'REPAIR'
 
 export const CAPTURE_CONFIG_SCHEMA = 2 as const
 
