@@ -113,7 +113,10 @@ function createWindowsJobApi(): WindowsJobApi {
         },
         ProcessMemoryLimit: 0, JobMemoryLimit: 0, PeakProcessMemoryUsed: 0, PeakJobMemoryUsed: 0,
       }
-      return Boolean(SetInformationJobObject(job, 9, koffi.as(info, ExtendedLimit), koffi.sizeof(ExtendedLimit)))
+      // SetInformationJobObject's `info` param is `void *`; koffi.as casts to a
+      // POINTER to the struct — passing the struct type itself throws
+      // "Only pointer or string types can be used for casting".
+      return Boolean(SetInformationJobObject(job, 9, koffi.as(info, koffi.pointer(ExtendedLimit)), koffi.sizeof(ExtendedLimit)))
     },
     openProcess: (pid) => OpenProcess(0x0001 | 0x0100, false, pid),
     assign: (job, processHandle) => Boolean(AssignProcessToJobObject(job, processHandle)),
