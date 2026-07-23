@@ -127,9 +127,10 @@ jobs:
           path: obs-corresponding-source
       - name: Upload OBS source compliance assets
         # The artifact preserves each file's repo-relative dir (resources/...,
-        # packaging/...), so a shallow glob would hand gh a directory. Upload
-        # the leaf files instead.
-        run: find obs-corresponding-source -type f -exec gh release upload "$GITHUB_REF_NAME" {} --clobber +
+        # packaging/...), so a shallow glob would hand gh a directory. Upload the
+        # leaf files instead. For `-exec ... +` batching, {} MUST be the final
+        # token, so --clobber goes before it: gh accepts the flag pre-positional.
+        run: find obs-corresponding-source -type f -exec gh release upload "$GITHUB_REF_NAME" --clobber {} +
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish the release
