@@ -52,6 +52,27 @@ function run(command, args, options = {}) {
   })
 }
 
+// Retry a command that pulls from the network — flatpak-builder fetches the
+// manifest sources (CEF, obs-deps) up front and a transient reset (observed:
+// "module cef: Send failure: Connection reset by peer") kills the whole build.
+// flatpak-builder caches downloads + ccache outside the --force-clean build
+// dir, so a retry resumes rather than rebuilding from scratch.
+async function runWithRetry(command, args, options = {}, { tries = 3, delayMs = 15_000, label = command } = {}) {
+  let lastErr
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      return await run(command, args, options)
+    } catch (error) {
+      lastErr = error
+      if (attempt < tries) {
+        console.warn(`[prepare-obs-runtime] ${label} failed (attempt ${attempt}/${tries}): ${error.message}. Retrying in ${delayMs / 1000}s...`)
+        await new Promise((resume) => setTimeout(resume, delayMs))
+      }
+    }
+  }
+  throw lastErr
+}
+
 async function prepareWindows() {
   const cfg = manifest.windows
   await downloadVerified(cfg.archiveUrl, join(assetRoot, 'windows', cfg.archiveFile), cfg.archiveSha256)
@@ -66,10 +87,10 @@ async function prepareLinux() {
   const buildDir = join(workRoot, 'build')
   const repo = join(workRoot, 'repo')
   mkdirSync(workRoot, { recursive: true })
-  await run('flatpak-builder', [
+  await runWithRetry('flatpak-builder', [
     '--user', '--force-clean', '--ccache', `--repo=${repo}`, buildDir,
     join(repoRoot, 'packaging', 'flatpak', 'link.axi.AxiStream.OBS.json'),
-  ])
+  ], {}, { label: 'flatpak-builder (OBS source download + build)' })
   const sourceRoot = join(workRoot, 'source')
   const sourceCheckout = join(sourceRoot, `obs-studio-${cfg.obsVersion}`)
   let checkoutCommit = ''
