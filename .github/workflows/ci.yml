@@ -135,7 +135,11 @@ jobs:
       - name: Build
         run: npm run build
       - name: Run owned-runtime smoke boot
-        run: xvfb-run -a env AXISTREAM_OBS_VISIBLE=1 npx electron packages/app --smoke-runtime
+        # --no-sandbox: the node_modules electron's chrome-sandbox is not
+        # setuid-root on hosted runners, so Chromium's SUID sandbox aborts the
+        # process (SIGTRAP) rather than run unsandboxed. The renderer sandbox is
+        # irrelevant to this OBS-runtime isolation smoke.
+        run: xvfb-run -a env AXISTREAM_OBS_VISIBLE=1 npx electron --no-sandbox packages/app --smoke-runtime
       - name: Verify personal OBS was untouched
         run: |
           root="$HOME/.var/app/com.obsproject.Studio/config/obs-studio"
