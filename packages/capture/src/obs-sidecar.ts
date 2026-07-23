@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import { OBSWebSocket } from 'obs-websocket-js'
 import { createConnection } from 'node:net'
 import { findFreePort, type ObsLauncher, type ObsLaunchHandle } from './obs-launcher.js'
+import { callReady } from './call-ready.js'
 
 export class ObsVersionMismatchError extends Error {
   constructor(expected: string, actual: string) {
@@ -89,7 +90,11 @@ export class ObsSidecar {
       await this.obs.connect(`ws://127.0.0.1:${this._port}`, this.password)
 
       if (this.opts.expectedObsVersion) {
-        const ver = await this.obs.call('GetVersion')
+        // The websocket port opens before OBS's frontend finishes loading, so
+        // the first request can return 207 NotReady. Retry until OBS is ready
+        // (callReady rides out NotReady); the version comparison stays outside
+        // the retry so a genuine mismatch fails fast.
+        const ver = await callReady(() => this.obs!.call('GetVersion'))
         if (ver.obsVersion !== this.opts.expectedObsVersion) {
           throw new ObsVersionMismatchError(this.opts.expectedObsVersion, ver.obsVersion)
         }

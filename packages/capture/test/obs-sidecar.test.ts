@@ -126,4 +126,15 @@ describe('ObsSidecar robustness', () => {
     const { sidecar } = setup({ expectedObsVersion: '32.1.2' })
     await expect(sidecar.start()).resolves.toBeUndefined()
   })
+
+  it('retries the version check while OBS is still loading (207 NotReady)', async () => {
+    // The websocket port opens before OBS finishes loading, so the first
+    // request can come back 207 NotReady. Boot must wait it out, not die.
+    const notReady = Object.assign(new Error('OBS is not ready to perform the request.'), { code: 207 })
+    const { sidecar, client } = setup({ expectedObsVersion: '32.1.2' })
+    client.call.mockReset()
+    client.call.mockRejectedValueOnce(notReady).mockResolvedValue({ obsVersion: '32.1.2' })
+    await expect(sidecar.start()).resolves.toBeUndefined()
+    expect(client.call).toHaveBeenCalledTimes(2)
+  })
 })
