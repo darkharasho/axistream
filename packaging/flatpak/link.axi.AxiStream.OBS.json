@@ -108,6 +108,7 @@
       "builddir": true,
       "config-opts": [
         "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+        "-DCMAKE_INSTALL_LIBDIR=lib",
         "-DENABLE_WAYLAND=ON",
         "-DENABLE_BROWSER=ON",
         "-DCEF_ROOT_DIR=/app/cef",
@@ -139,7 +140,7 @@
       "name": "pipewire-audio-capture",
       "buildsystem": "cmake-ninja",
       "builddir": true,
-      "config-opts": ["-DCMAKE_BUILD_TYPE=Release"],
+      "config-opts": ["-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_LIBDIR=lib"],
       "sources": [{
         "type": "git",
         "url": "https://github.com/dimtpap/obs-pipewire-audio-capture.git",
@@ -151,6 +152,7 @@
       "buildsystem": "cmake-ninja",
       "config-opts": [
         "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_INSTALL_LIBDIR=lib",
         "-DLINUX_PORTABLE=off"
       ],
       "sources": [{
