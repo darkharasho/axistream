@@ -43,6 +43,7 @@ export interface IpcHandlers {
   appVersion(): Promise<string>
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
+  copyToClipboard(text: string): Promise<boolean>
 }
 
 export interface IpcDeps {
@@ -94,5 +95,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.appVersion, () => handlers.appVersion())
   ipcMain.handle(CH.getWhatsNew, () => handlers.getWhatsNew())
   ipcMain.handle(CH.setLastSeenVersion, (_e: unknown, v: string) => handlers.setLastSeenVersion(v))
+  ipcMain.handle(CH.copyToClipboard, (_e: unknown, text: string) => handlers.copyToClipboard(text))
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

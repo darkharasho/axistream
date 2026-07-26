@@ -28,12 +28,12 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
       setSetupPending(false)
     })
   }
-  const copyLink = () => {
+  const copyLink = async () => {
     if (!state.watchUrl) return
-    navigator.clipboard.writeText(state.watchUrl).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    }).catch(() => {})
+    const ok = await axi.copyToClipboard(state.watchUrl)
+    if (!ok) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
 
   const setupPhase = !capture && (
