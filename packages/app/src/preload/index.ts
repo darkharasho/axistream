@@ -52,6 +52,7 @@ const api: AxiApi = {
   appVersion: () => ipcRenderer.invoke(CH.appVersion) as Promise<string>,
   getWhatsNew: () => ipcRenderer.invoke(CH.getWhatsNew) as Promise<{ version: string; notes: string | null }>,
   setLastSeenVersion: (v: string) => ipcRenderer.invoke(CH.setLastSeenVersion, v) as Promise<void>,
+  copyToClipboard: (text: string) => ipcRenderer.invoke(CH.copyToClipboard, text) as Promise<boolean>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),

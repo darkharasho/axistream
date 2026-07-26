@@ -5,7 +5,7 @@ import type { AppState } from '../src/shared/state.js'
 
 const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, captureTargets: [], stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
   videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null }
-const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn() }
+const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true) }
 const store = { applyState: vi.fn() }
 
 describe('StreamScreen', () => {
@@ -86,6 +86,15 @@ describe('StreamScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /switch source/i }))
     expect(axi.switchSource).toHaveBeenCalledOnce()
     expect(axi.repairCapture).not.toHaveBeenCalled()
+  })
+
+  it('Copy link copies the watch URL via the main-process clipboard, not navigator.clipboard', async () => {
+    render(<StreamScreen state={{ ...base, phase: 'LIVE', watchUrl: 'https://www.youtube.com/watch?v=abc123' }} preview={null} axi={axi as any} store={store as any} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /copy link/i }))
+
+    expect(axi.copyToClipboard).toHaveBeenCalledWith('https://www.youtube.com/watch?v=abc123')
+    await waitFor(() => expect(screen.getByRole('button', { name: /copied/i })).toBeInTheDocument())
   })
 
   it('LIVE shows End Stream and the LIVE badge', () => {

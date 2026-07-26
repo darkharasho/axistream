@@ -1,5 +1,5 @@
 import './load-env.js' // must run before any process.env read below
-import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen, clipboard } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync, promises as fsPromises } from 'node:fs'
 import { homedir } from 'node:os'
@@ -736,6 +736,13 @@ if (primary) app.whenReady().then(async () => {
       } catch { return { version, notes: null } }
     },
     setLastSeenVersion: async (v) => { settings.patch({ lastSeenVersion: v }) },
+    // Copy via the main-process clipboard module: navigator.clipboard in the
+    // renderer fails silently in Electron (denied by our permission handler,
+    // and unavailable without a secure context / transient activation).
+    copyToClipboard: async (text) => {
+      try { clipboard.writeText(text); return true }
+      catch (e) { console.warn('[clipboard] writeText failed', e); return false }
+    },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
