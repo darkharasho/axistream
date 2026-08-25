@@ -33,6 +33,8 @@ import { createEvdevShortcuts, captureNextKey } from './evdev-keys.js'
 import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
+import { createLogSink, installLogSink } from './log.js'
+import { scrubLine } from './redact.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
@@ -117,6 +119,10 @@ const primary = enforceSingleInstance({
 }, () => focusMain())
 
 if (primary) app.whenReady().then(async () => {
+  // Everything below can fail; all of it should land in the log.
+  const logSink = createLogSink({ dir: app.getPath('logs'), scrub: scrubLine })
+  installLogSink(logSink)
+
   // Allow the renderer to consume the OBS Virtual Camera for the live preview.
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'))
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
