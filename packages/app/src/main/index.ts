@@ -784,6 +784,12 @@ if (primary) app.whenReady().then(async () => {
         : { kind: 'error', message: 'Diagnostics export failed', detail: r.error })
       return r
     },
+    // TODO(Task 6): replace with real recording/summary handler implementations.
+    startRecording: async () => ({ ok: false, error: 'not implemented' }),
+    stopRecording: async () => ({ ok: false, error: 'not implemented' }),
+    chooseRecordDir: async () => ({ ok: false, error: 'not implemented' }),
+    openRecording: async () => ({ ok: false, error: 'not implemented' }),
+    dismissSummary: async () => {},
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 

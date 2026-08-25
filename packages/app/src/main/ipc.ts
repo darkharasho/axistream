@@ -1,4 +1,4 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 export interface IpcHandlers {
@@ -45,6 +45,11 @@ export interface IpcHandlers {
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
   exportDiagnostics(): Promise<DiagnosticsResult>
+  startRecording(): Promise<RecordStartResult>
+  stopRecording(): Promise<RecordStopResult>
+  chooseRecordDir(): Promise<ChooseDirResult>
+  openRecording(path: string): Promise<OpenResult>
+  dismissSummary(): Promise<void>
 }
 
 export interface IpcDeps {
@@ -98,5 +103,10 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.setLastSeenVersion, (_e: unknown, v: string) => handlers.setLastSeenVersion(v))
   ipcMain.handle(CH.copyToClipboard, (_e: unknown, text: string) => handlers.copyToClipboard(text))
   ipcMain.handle(CH.exportDiagnostics, () => handlers.exportDiagnostics())
+  ipcMain.handle(CH.startRecording, () => handlers.startRecording())
+  ipcMain.handle(CH.stopRecording, () => handlers.stopRecording())
+  ipcMain.handle(CH.chooseRecordDir, () => handlers.chooseRecordDir())
+  ipcMain.handle(CH.openRecording, (_e: unknown, path: string) => handlers.openRecording(path))
+  ipcMain.handle(CH.dismissSummary, () => handlers.dismissSummary())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }
