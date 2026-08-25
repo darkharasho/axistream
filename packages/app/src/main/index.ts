@@ -24,6 +24,7 @@ import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
 import { defaultRecordDir, validateRecordDir, RECORD_DIR_ERROR } from './record-dir.js'
 import { recordStartRejection } from './record-gate.js'
+import { createRecordingFinalizer } from './record-finalize.js'
 import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
@@ -1055,20 +1056,14 @@ if (primary) app.whenReady().then(async () => {
     }, 2000)
   }
 
-  // Quit-time recording finalization. Memoized because both the window's close
-  // handler and before-quit can reach it and OBS must only get one StopRecord;
-  // this only ever runs on the way out, so it is never reused across recordings.
-  let recordingFinalization: Promise<unknown> | null = null
-  const finalizeRecording = () => {
-    if (!recordingFinalization) {
-      stopRecordingHealthPoll()
-      recordingFinalization = Promise.race([
-        recorder.stopRecording().catch((err) => { console.warn('[record] stop on quit failed', err) }),
-        new Promise((r) => setTimeout(r, 2000)),
-      ])
-    }
-    return recordingFinalization
-  }
+  // Quit-time recording finalization. Reached only from the close handler
+  // below, and only once it has decided the app is going: the memo inside is
+  // for a second close landing during the deferral, and must never be able to
+  // outlive a quit the user cancelled.
+  const finalizeRecording = createRecordingFinalizer({
+    stopHealthPoll: stopRecordingHealthPoll,
+    stopRecording: () => recorder.stopRecording(),
+  })
 
   // Wire quit-while-live guard and engine teardown before booting OBS,
   // so that close events fired during the async start are handled correctly.
@@ -1087,17 +1082,18 @@ if (primary) app.whenReady().then(async () => {
       if (choice === 0) { e.preventDefault(); return }
     }
     closeConfirmed = true
-    // Finalize the recording BEFORE the sidecar teardown below. On the ordinary
-    // quit path the order is close -> window-all-closed -> app.quit ->
-    // before-quit, so a StopRecord issued from before-quit lands on an OBS that
-    // is already being killed and the file is left without its index. Defer the
-    // close instead, then re-close once OBS has finished the file — boxed at 2s
-    // so quitting can never hang on OBS.
+    // Finalize the recording BEFORE the sidecar teardown below: OBS must get
+    // its StopRecord and write the file's index while it is still alive.
+    // Every quit path — the window's X, tray Quit, app.quit() — reaches this
+    // handler, so this is the only place that stops a recording on the way
+    // out. Defer the close, then re-close once OBS has finished the file —
+    // boxed at 2s so quitting can never hang on OBS.
     if (state.recording.active) {
       e.preventDefault()
       void finalizeRecording().finally(() => {
         // Cleared unconditionally: the second close must not defer again, even
-        // if StopRecord timed out.
+        // if StopRecord timed out, and the UI must not keep timing a recording
+        // that OBS has already stopped.
         setState({ recording: { ...state.recording, active: false, startedAt: null } })
         win.close()
       })
@@ -1110,13 +1106,11 @@ if (primary) app.whenReady().then(async () => {
     void sidecar.stop()
   })
 
-  app.on('before-quit', () => {
-    stopRecordingHealthPoll()
-    // Backstop for quit paths that reach here first (tray Quit). Shares the
-    // memoized finalization with the close handler so OBS only ever gets one
-    // StopRecord.
-    if (state.recording.active) void finalizeRecording()
-  })
+  // No before-quit arm: it fires on quits the close handler then cancels
+  // ("Stay in AxiStream"), which would leave the app running with the
+  // recording already stopped in OBS and the finalization memo spent — the
+  // NEXT recording would then be torn down with no StopRecord at all.
+  // app.quit() closes the windows, so the close handler covers those paths.
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 
