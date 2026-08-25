@@ -118,6 +118,7 @@ export interface StreamSummary {
   durationMs: number
   avgBitrateKbps: number
   peakDroppedPct: number
+  droppedPct: number        // session total, from the last sample
   droppedFrames: number
   encoder: string
   watchUrl: string | null
@@ -233,7 +234,7 @@ Idle shows "Record"; active shows a red dot, the elapsed time, and "Stop". After
 recording finishes, `lastPath` surfaces an "Open recording" affordance. Disabled with an
 explanatory title when an audio test is running.
 
-**`StreamSummary.tsx`** — rendered by the stream screen when `phase === 'ENDED'`:
+**`StreamSummaryPanel.tsx`** — rendered by the stream screen when `phase === 'ENDED'`:
 
 - Duration, average bitrate, and dropped frames as plain figures.
 - Dropped frames get a **verdict, not a bare percentage**, matching the truthful health
@@ -304,7 +305,7 @@ sub-project may throw out into the go-live path.
 - **`record-dir.test.ts`** (new) — a path under `$HOME` validates; a sibling of `$HOME`,
   a `/mnt` path, and a `..` traversal escaping `$HOME` are all rejected with the specific
   message.
-- **`stream-summary.test.tsx`** (new) — the watch block is absent when `watchUrl` is null
+- **`stream-summary-panel.test.tsx`** (new) — the watch block is absent when `watchUrl` is null
   and present otherwise; the recording block is absent when there is no recording, shows
   Open recording when `recordingPath` is set, and shows Stop recording when
   `recordingStillActive` is true; stopping from the summary swaps the block in place

@@ -530,7 +530,7 @@ git commit -m "feat(summary): accumulate live stats into an end-of-stream snapsh
 - Test: `packages/app/test/record-controller.test.ts` (extend)
 
 **Interfaces:**
-- Consumes: `RecordStartResult`, `RecordStopResult` from `../shared/state.js`.
+- Consumes: `RecordStartResult`, `RecordStopResult` from `../shared/state.js` (imported, never redeclared).
 - Produces: `RecordFormat = 'mp4' | 'fragmented_mp4'`; `RecordController.startRecording(dir: string, format: RecordFormat): Promise<RecordStartResult>`; `.stopRecording(): Promise<RecordStopResult>`; `.isRecording(): Promise<boolean>`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -637,10 +637,15 @@ Expected: FAIL — `startRecording is not a function`.
 In `packages/app/src/main/RecordController.ts`, add the format type near the top and refactor the parameter-setting into a shared private helper. Keep `recordTestClip` behaviourally identical — it now passes `'mp4'` explicitly.
 
 ```ts
+import type { RecordStartResult, RecordStopResult } from '../shared/state.js'
+
 export type RecordFormat = 'mp4' | 'fragmented_mp4'
-export interface RecordStartResult { ok: boolean; error?: string }
-export interface RecordStopResult { ok: boolean; outputPath?: string; error?: string }
 ```
+
+Import the result types — **do not redeclare them here.** Task 1 already exports
+`RecordStartResult` and `RecordStopResult` from `src/shared/state.ts`, where `ipc.ts` and
+the preload read them from. A second definition in this file would compile but leave two
+structurally-identical types that drift the moment either gains a field.
 
 Add these methods to the class:
 
