@@ -15,3 +15,8 @@ export function createStore() {
   }
 }
 export type Store = ReturnType<typeof createStore>
+
+/** App-wide singleton. Exported (rather than constructed in App.tsx) so
+    non-React code — notably ErrorBoundary, which renders outside the
+    useSyncExternalStore tree — can read the current phase. */
+export const store = createStore()

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
@@ -59,5 +59,6 @@ const api: AxiApi = {
   onCaptureChanged: (cb) => sub<void>(CH.evtCaptureChanged, () => cb()),
   onAudioLevels: (cb) => sub<AudioLevels>(CH.evtAudioLevels, cb),
   onUpdateStatus: (cb) => sub<UpdateStatus>(CH.evtUpdateStatus, cb),
+  onToast: (cb) => sub<ToastPayload>(CH.evtToast, cb),
 }
 contextBridge.exposeInMainWorld('axi', api)

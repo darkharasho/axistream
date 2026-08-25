@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus, X, Eye, EyeOff } from 'lucide-react'
 import { MAX_MASKS, type MaskRect, type AppState } from '../../shared/state.js'
 import { containContentRect, type CoverRect } from '../cover-transform.js'
+import { useModalKeys } from '../use-modal-keys.js'
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 const newId = () => Math.random().toString(36).slice(2, 10)
@@ -34,6 +35,9 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
   const [drag, setDrag] = useState<Drag | null>(null)
   const [content, setContent] = useState<CoverRect | null>(null)
   const [blurPrompt, setBlurPrompt] = useState(false)
+
+  // Escape leaves the editor; without it the panel is exit-by-mouse only.
+  useModalKeys(boxRef, onDone)
 
   useEffect(() => {
     const measure = () => {

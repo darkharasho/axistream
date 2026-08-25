@@ -78,7 +78,7 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
               <button className="btn ghost sm" disabled={!s.discordWebhookUrl.trim()} onClick={sendDiscordTest}>
                 Send test
               </button>
-              {testMsg && <span className={testMsg.ok ? 'yt-test-ok' : 'yt-test-err'}>{testMsg.text}</span>}
+              {testMsg && <span className={testMsg.ok ? 'yt-test-ok' : 'field-err'}>{testMsg.text}</span>}
             </div>
           </div>
         </>
