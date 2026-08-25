@@ -67,6 +67,17 @@ export interface AudioLevels { desktop: number; mic: number; game: number }
 
 export interface DiscordTestResult { ok: boolean; error?: string }
 
+/** One-off notification. Discrete events only — conditions belong in AppState. */
+export type ToastKind = 'info' | 'success' | 'error'
+export interface ToastPayload {
+  kind: ToastKind
+  /** Human-readable, one line. */
+  message: string
+  /** Technical string (OBS error, HTTP status), rendered smaller beneath the message. */
+  detail?: string
+}
+export interface Toast extends ToastPayload { id: string }
+
 /** Update lifecycle pushed to the renderer for a non-intrusive banner. */
 export type UpdateStatus =
   | { state: 'checking' }
