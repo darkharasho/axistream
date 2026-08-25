@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
@@ -60,6 +60,9 @@ const api: AxiApi = {
   chooseRecordDir: () => ipcRenderer.invoke(CH.chooseRecordDir) as Promise<ChooseDirResult>,
   openRecording: (path: string) => ipcRenderer.invoke(CH.openRecording, path) as Promise<OpenResult>,
   dismissSummary: () => ipcRenderer.invoke(CH.dismissSummary) as Promise<void>,
+  setWebcam: (p) => ipcRenderer.invoke(CH.setWebcam, p) as Promise<void>,
+  getWebcamDevices: () => ipcRenderer.invoke(CH.getWebcamDevices) as Promise<AudioDevice[]>,
+  getWebcamProps: () => ipcRenderer.invoke(CH.getWebcamProps) as Promise<WebcamProps>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),
