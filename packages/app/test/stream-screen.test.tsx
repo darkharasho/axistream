@@ -114,6 +114,31 @@ describe('StreamScreen fit label', () => {
   })
 })
 
+const summary = {
+  durationMs: 5_400_000, avgBitrateKbps: 6000, peakDroppedPct: 0.02, droppedFrames: 12,
+  droppedPct: 0.02, encoder: 'NVENC H.264', watchUrl: 'https://youtu.be/abc',
+  recordingPath: null, recordingStillActive: false, endedWithError: false,
+}
+
+describe('StreamScreen ENDED phase', () => {
+  it('mounts the summary panel instead of the stream hero', () => {
+    render(<StreamScreen state={{ ...base, phase: 'ENDED', summary }} preview={null} axi={axi as never} store={store as never} />)
+
+    expect(screen.getByRole('region', { name: /stream summary/i })).toBeInTheDocument()
+    expect(screen.getByText(/stream ended/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
+    // The hero's live controls are gone while the summary is up.
+    expect(screen.queryByRole('button', { name: /go live/i })).toBeNull()
+  })
+
+  it('falls back to the stream hero when ENDED arrives without a summary', () => {
+    render(<StreamScreen state={{ ...base, phase: 'ENDED', summary: null }} preview={null} axi={axi as never} store={store as never} />)
+
+    expect(screen.queryByRole('region', { name: /stream summary/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /go live/i })).toBeInTheDocument()
+  })
+})
+
 describe('StreamScreen record button', () => {
   it('mounts an enabled Record button while nothing owns the recorder', () => {
     render(<StreamScreen state={base} preview={null} axi={axi as never} store={store as never} />)
