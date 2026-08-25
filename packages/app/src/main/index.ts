@@ -1000,6 +1000,15 @@ if (primary) app.whenReady().then(async () => {
     },
 
     openRecording: async (path: string) => {
+      // A recording the user moved or deleted takes the reveal path below,
+      // where showItemInFolder silently no-ops — so without this check the
+      // click reports success and nothing happens on screen.
+      try {
+        await fsPromises.access(path, fsConstants.R_OK)
+      } catch {
+        toast(win, { kind: 'error', message: 'Recording not found', detail: `${path} is no longer on disk.` })
+        return { ok: false, error: 'that recording is no longer on disk' }
+      }
       // openPath launches the system video player; on a machine with none
       // installed it returns a non-empty error string rather than throwing.
       const err = await shell.openPath(path)
@@ -1009,7 +1018,9 @@ if (primary) app.whenReady().then(async () => {
         shell.showItemInFolder(path)
         return { ok: true }
       } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+        const error = e instanceof Error ? e.message : String(e)
+        toast(win, { kind: 'error', message: 'Could not open the recording', detail: error })
+        return { ok: false, error }
       }
     },
 
