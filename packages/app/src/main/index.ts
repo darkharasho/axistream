@@ -282,6 +282,11 @@ if (primary) app.whenReady().then(async () => {
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
   const summaryAcc = createSummaryAccumulator()
+  // A recording that finished DURING the current stream. recording.lastPath is
+  // the last recording ever made and outlives the app's streams, so reporting
+  // it in the summary would put Monday's recording in Tuesday's stream. Reset
+  // at go-live alongside the stats accumulator.
+  let sessionRecordingPath: string | null = null
   // OBS has exactly one record output, so the six-second audio test and a VOD
   // recording cannot coexist. state.audioTestActive is the audio test's half of
   // the mutual exclusion; the VOD's half is state.recording.active. It lives in
@@ -511,6 +516,7 @@ if (primary) app.whenReady().then(async () => {
         if (!title) { setState({ phase: 'NEEDS_TITLE' }); return }
         setState({ phase: 'GOING_LIVE' })
         summaryAcc.reset()
+        sessionRecordingPath = null
         setState({ summary: null })
         session = await live.startSession({ title, privacy: s.privacy, reuseStreamId: s.streamId, now: new Date() })
         settings.patch({ streamId: session.streamId })
@@ -571,7 +577,7 @@ if (primary) app.whenReady().then(async () => {
       // the output closes, so nothing here can be recovered afterward.
       const summary = summaryAcc.snapshot({
         watchUrl: state.watchUrl,
-        recordingPath: state.recording.lastPath,
+        recordingPath: sessionRecordingPath,
         recordingStillActive: state.recording.active,
         endedWithError: state.phase === 'ERROR' || wasUnconfirmed,
       })
@@ -927,6 +933,7 @@ if (primary) app.whenReady().then(async () => {
         toast(win, { kind: 'error', message: 'Recording did not stop cleanly', detail: r.error })
         return r
       }
+      sessionRecordingPath = r.outputPath ?? null
       setState({ recording: { ...state.recording, active: false, startedAt: null, lastPath: r.outputPath ?? null, error: null } })
       // If the summary is on screen, refresh it in place so "Still recording"
       // becomes "Open recording" without dismissing the panel.
