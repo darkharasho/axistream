@@ -4,7 +4,7 @@ AxiStream is an opinionated Windows and Linux desktop app that gets a Guild Wars
 
 ## Status
 
-Shipped: isolated managed OBS runtimes on Windows and Linux, capture provisioning (including Wayland portal flow and Windows monitor selection), YouTube OAuth go-live + title templates, baseline audio with device pickers, privacy masks, encoder presets with hardware detection and software fallback, single-instance lock, auto-update, and Linux/Windows packaging. AxiStream never discovers, launches, configures, or stops a user's personal OBS installation.
+Shipped: isolated managed OBS runtimes on Windows and Linux, capture provisioning (including Wayland portal flow and Windows monitor selection), YouTube OAuth go-live + title templates, baseline audio with device pickers, privacy masks, a webcam source with corner placement, sizing, and optional mirroring, encoder presets with hardware detection and software fallback, single-instance lock, auto-update, and Linux/Windows packaging. AxiStream never discovers, launches, configures, or stops a user's personal OBS installation.
 
 ## Development
 

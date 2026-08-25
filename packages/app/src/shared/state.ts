@@ -9,6 +9,46 @@ export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 're
 
 export interface MaskRect { id: string; x: number; y: number; w: number; h: number }
 export const MAX_MASKS = 8
+
+export type WebcamCorner = 'tl' | 'tr' | 'bl' | 'br'
+export const WEBCAM_MIN_SIZE_PCT = 0.15
+export const WEBCAM_MAX_SIZE_PCT = 0.35
+
+// All three OBS v4l2 properties, set together. Picking a resolution without
+// its pixel format is what produces the 5fps YUYV case this override escapes.
+export interface WebcamMode { pixelformat: string; resolution: string; framerate: string }
+export interface WebcamOption { value: string; label: string }
+export interface WebcamProps {
+  pixelformats: WebcamOption[]
+  resolutions: WebcamOption[]
+  framerates: WebcamOption[]
+}
+
+export interface WebcamConfig {
+  enabled: boolean
+  deviceId: string | null
+  deviceLabel: string | null
+  corner: WebcamCorner
+  sizePct: number
+  mirrored: boolean
+  mode: WebcamMode | null
+}
+
+export interface WebcamView extends WebcamConfig {
+  /** Condition, not an event: drives a chip. Never persisted. */
+  available: boolean
+}
+
+export const DEFAULT_WEBCAM: WebcamConfig = {
+  enabled: false,
+  deviceId: null,
+  deviceLabel: null,
+  corner: 'br',
+  sizePct: 0.22,
+  mirrored: false,
+  mode: null,
+}
+
 export interface GameAudioPluginView { status: GameAudioPluginStatus; error: string | null }
 
 export interface StreamSettingsView {
@@ -79,6 +119,7 @@ export interface AppState {
   windowFitted: boolean
   masksVisible: boolean
   watchUrl: string | null
+  webcam: WebcamView
   recording: RecordingState
   /** The six-second audio test owns OBS's single record output while it runs,
    *  so Record must refuse. A condition, so it lives here rather than as a
@@ -100,6 +141,7 @@ export const INITIAL_STATE: AppState = {
   windowFitted: false,
   masksVisible: true,
   watchUrl: null,
+  webcam: { ...DEFAULT_WEBCAM, available: true },
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null },
   audioTestActive: false,
   summary: null,
@@ -197,6 +239,9 @@ export const CH = {
   chooseRecordDir: 'axi:chooseRecordDir',
   openRecording: 'axi:openRecording',
   dismissSummary: 'axi:dismissSummary',
+  setWebcam: 'axi:setWebcam',
+  getWebcamDevices: 'axi:getWebcamDevices',
+  getWebcamProps: 'axi:getWebcamProps',
 } as const
 
 export interface AxiApi {
@@ -251,6 +296,9 @@ export interface AxiApi {
   chooseRecordDir(): Promise<ChooseDirResult>
   openRecording(path: string): Promise<OpenResult>
   dismissSummary(): Promise<void>
+  setWebcam(p: Partial<WebcamConfig>): Promise<void>
+  getWebcamDevices(): Promise<AudioDevice[]>
+  getWebcamProps(): Promise<WebcamProps>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void

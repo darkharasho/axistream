@@ -29,6 +29,7 @@ describe('ipc contract', () => {
       CH.fitWindowToCapture,
       CH.startRecording, CH.stopRecording, CH.chooseRecordDir, CH.openRecording, CH.dismissSummary,
       CH.openExternalUrl,
+      CH.setWebcam, CH.getWebcamDevices, CH.getWebcamProps,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)
   })

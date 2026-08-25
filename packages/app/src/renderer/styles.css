@@ -326,3 +326,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .summary-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .summary-path { font-size: 11px; color: #94a3b8; user-select: text; }
 .rec-elapsed { margin-left: 6px; }
+
+/* Webcam settings: corner picker grid + manual mode selects. */
+.webcam-corners { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+.webcam-modes { display: grid; gap: 6px; margin-top: 8px; }

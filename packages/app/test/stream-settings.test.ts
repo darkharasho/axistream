@@ -2,10 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { StreamSettings, DEFAULT_SETTINGS, sanitizeMasks, sanitizeGameAudioApps } from '../src/main/StreamSettings.js'
+import { StreamSettings, DEFAULT_SETTINGS, sanitizeMasks, sanitizeGameAudioApps, sanitizeWebcam } from '../src/main/StreamSettings.js'
+import { DEFAULT_WEBCAM } from '../src/shared/state.js'
 
 let file: string
 beforeEach(() => { file = join(mkdtempSync(join(tmpdir(), 'axi-')), 'stream.json') })
+
+const tmpFile = () => join(mkdtempSync(join(tmpdir(), 'axi-')), 'stream.json')
 
 describe('StreamSettings', () => {
   it('returns defaults when no file exists', () => {
@@ -253,5 +256,50 @@ describe('sanitizeMasks', () => {
   it('caps at MAX_MASKS (8) entries', () => {
     const many = Array.from({ length: 12 }, (_, i) => ({ id: `m${i}`, x: 0.1, y: 0.1, w: 0.1, h: 0.1 }))
     expect(sanitizeMasks(many)).toHaveLength(8)
+  })
+})
+
+describe('webcam settings', () => {
+  it('defaults to a disabled bottom-right webcam', () => {
+    const s = new StreamSettings(tmpFile())
+    expect(s.load().webcam).toEqual({
+      enabled: false, deviceId: null, deviceLabel: null,
+      corner: 'br', sizePct: 0.22, mirrored: false, mode: null,
+    })
+  })
+
+  it('defaults the webcam for a settings file written before webcams existed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'axi-settings-'))
+    const f = join(dir, 'settings.json')
+    writeFileSync(f, JSON.stringify({ titleTemplate: 'x', privacy: 'public' }))
+
+    expect(new StreamSettings(f).load().webcam).toEqual({
+      enabled: false, deviceId: null, deviceLabel: null,
+      corner: 'br', sizePct: 0.22, mirrored: false, mode: null,
+    })
+  })
+
+  it('round-trips a configured webcam', () => {
+    const s = new StreamSettings(tmpFile())
+    s.patch({ webcam: { enabled: true, deviceId: '/dev/video0', deviceLabel: 'C920', corner: 'tl', sizePct: 0.3, mirrored: true, mode: null } })
+    expect(s.load().webcam.deviceId).toBe('/dev/video0')
+    expect(s.load().webcam.corner).toBe('tl')
+    expect(s.load().webcam.mirrored).toBe(true)
+  })
+
+  it('clamps an out-of-range sizePct and rejects a bogus corner', () => {
+    expect(sanitizeWebcam({ sizePct: 0.9, corner: 'middle' })).toMatchObject({ sizePct: 0.35, corner: 'br' })
+    expect(sanitizeWebcam({ sizePct: 0.01 })).toMatchObject({ sizePct: 0.15 })
+  })
+
+  it('drops a partial mode rather than half-applying it', () => {
+    expect(sanitizeWebcam({ mode: { resolution: '1920x1080' } }).mode).toBeNull()
+    expect(sanitizeWebcam({ mode: { pixelformat: '1196444237', resolution: '5', framerate: '3' } }).mode)
+      .toEqual({ pixelformat: '1196444237', resolution: '5', framerate: '3' })
+  })
+
+  it('falls back to defaults for a non-object webcam value', () => {
+    expect(sanitizeWebcam(null)).toEqual(DEFAULT_WEBCAM)
+    expect(sanitizeWebcam('nope')).toEqual(DEFAULT_WEBCAM)
   })
 })

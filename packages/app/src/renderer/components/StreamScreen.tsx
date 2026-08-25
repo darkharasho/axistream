@@ -132,6 +132,12 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
           {capture && phase !== 'AWAITING_APPROVAL'
             ? <RecordButton recording={state.recording} disabled={state.audioTestActive} axi={axi} />
             : null}
+          {state.webcam.deviceId && (
+            <button
+              className={state.webcam.enabled ? 'btn' : 'btn ghost'}
+              onClick={() => void axi.setWebcam({ enabled: !state.webcam.enabled })}
+            >{state.webcam.enabled ? 'Camera on' : 'Camera off'}</button>
+          )}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />
         </div>

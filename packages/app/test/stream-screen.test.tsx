@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
+import { DEFAULT_WEBCAM } from '../src/shared/state.js'
 
 const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, captureTargets: [], stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
-  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null, recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null }
-const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true) }
+  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null, webcam: { enabled: false, deviceId: null, deviceLabel: null, corner: 'br', sizePct: 0.22, mirrored: false, mode: null, available: true }, recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null }
+const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true), setWebcam: vi.fn(async () => {}) }
 const store = { applyState: vi.fn() }
 
 describe('StreamScreen', () => {
@@ -150,5 +152,20 @@ describe('StreamScreen record button', () => {
     const btn = screen.getByRole('button', { name: /^record$/i })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('title', expect.stringMatching(/audio test/i))
+  })
+})
+
+describe('webcam quick toggle', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('is hidden when no camera has been configured', () => {
+    render(<StreamScreen state={{ ...base, webcam: { ...DEFAULT_WEBCAM, available: true } }} preview={null} axi={axi as any} store={store as any} />)
+    expect(screen.queryByRole('button', { name: /camera/i })).toBeNull()
+  })
+
+  it('toggles the camera off when it is on', async () => {
+    render(<StreamScreen state={{ ...base, webcam: { ...DEFAULT_WEBCAM, enabled: true, deviceId: '/dev/video0', available: true } }} preview={null} axi={axi as any} store={store as any} />)
+    await userEvent.click(screen.getByRole('button', { name: /camera/i }))
+    expect(axi.setWebcam).toHaveBeenCalledWith({ enabled: false })
   })
 })

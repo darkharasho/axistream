@@ -1,0 +1,133 @@
+import { useEffect, useState } from 'react'
+import type { AudioDevice, AxiApi, WebcamCorner, WebcamProps, WebcamView } from '../../shared/state.js'
+import { WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT } from '../../shared/state.js'
+
+const CORNERS: { value: WebcamCorner; label: string }[] = [
+  { value: 'tl', label: 'Top left' },
+  { value: 'tr', label: 'Top right' },
+  { value: 'bl', label: 'Bottom left' },
+  { value: 'br', label: 'Bottom right' },
+]
+
+const EMPTY_PROPS: WebcamProps = { pixelformats: [], resolutions: [], framerates: [] }
+
+export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiApi }) {
+  const [devices, setDevices] = useState<AudioDevice[]>([])
+  const [props, setProps] = useState<WebcamProps>(EMPTY_PROPS)
+
+  useEffect(() => { void axi.getWebcamDevices().then(setDevices) }, [axi])
+
+  // The three property lists are dependent — OBS recomputes framerates from
+  // the current resolution — so they are re-fetched after every mode change
+  // rather than cached.
+  useEffect(() => {
+    if (!webcam.deviceId) { setProps(EMPTY_PROPS); return }
+    void axi.getWebcamProps().then(setProps)
+  }, [axi, webcam.deviceId, webcam.mode])
+
+  const manual = webcam.mode !== null
+  const setMode = (patch: Partial<NonNullable<WebcamView['mode']>>) => {
+    const base = webcam.mode ?? {
+      pixelformat: props.pixelformats[0]?.value ?? '',
+      resolution: props.resolutions[0]?.value ?? '',
+      framerate: props.framerates[0]?.value ?? '',
+    }
+    void axi.setWebcam({ mode: { ...base, ...patch } })
+  }
+
+  return (
+    <>
+      <h3>Camera</h3>
+      <label>
+        <input
+          type="checkbox"
+          checked={webcam.enabled}
+          onChange={(e) => void axi.setWebcam({ enabled: e.target.checked })}
+        />
+        Show my camera on stream
+      </label>
+
+      <label>
+        Camera
+        <select
+          value={webcam.deviceId ?? ''}
+          onChange={(e) => {
+            const id = e.target.value || null
+            const name = devices.find((d) => d.id === id)?.name ?? null
+            void axi.setWebcam({ deviceId: id, deviceLabel: name, mode: null })
+          }}
+        >
+          <option value="">Select a camera…</option>
+          {devices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+      </label>
+
+      {webcam.enabled && webcam.deviceId && !webcam.available && (
+        <p className="muted">Camera unavailable — the stream continues without it.</p>
+      )}
+
+      <div className="webcam-corners">
+        {CORNERS.map((c) => (
+          <button
+            key={c.value}
+            className={webcam.corner === c.value ? 'btn' : 'btn ghost'}
+            onClick={() => void axi.setWebcam({ corner: c.value })}
+          >{c.label}</button>
+        ))}
+      </div>
+
+      <label>
+        Size
+        <input
+          type="range"
+          min={Math.round(WEBCAM_MIN_SIZE_PCT * 100)}
+          max={Math.round(WEBCAM_MAX_SIZE_PCT * 100)}
+          value={Math.round(webcam.sizePct * 100)}
+          onChange={(e) => void axi.setWebcam({ sizePct: Number(e.target.value) / 100 })}
+        />
+        <span className="muted">{Math.round(webcam.sizePct * 100)}%</span>
+      </label>
+
+      <label>
+        <input
+          type="checkbox"
+          checked={webcam.mirrored}
+          onChange={(e) => void axi.setWebcam({ mirrored: e.target.checked })}
+        />
+        Mirror my camera
+      </label>
+
+      <label>
+        <input
+          type="checkbox"
+          checked={manual}
+          onChange={(e) => e.target.checked ? setMode({}) : void axi.setWebcam({ mode: null })}
+        />
+        Choose the camera format manually
+      </label>
+
+      {manual && (
+        <div className="webcam-modes">
+          <label>
+            Format
+            <select value={webcam.mode?.pixelformat ?? ''} onChange={(e) => setMode({ pixelformat: e.target.value })}>
+              {props.pixelformats.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          <label>
+            Resolution
+            <select value={webcam.mode?.resolution ?? ''} onChange={(e) => setMode({ resolution: e.target.value })}>
+              {props.resolutions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          <label>
+            Frame rate
+            <select value={webcam.mode?.framerate ?? ''} onChange={(e) => setMode({ framerate: e.target.value })}>
+              {props.framerates.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+    </>
+  )
+}
