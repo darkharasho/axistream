@@ -298,3 +298,19 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .toast-detail { font: 11px/1.4 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
 .toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: #8b949e; background: none; border: 0; cursor: pointer; }
 .toast-x:hover { color: #fff; background: rgba(255,255,255,.1); }
+
+/* Renderer crash fallback. Reuses .hero's centred layout. */
+.crash { gap: 10px; text-align: center; }
+.crash h2 { margin: 0; font-size: 17px; }
+.crash-live { margin: 0; font-size: 13px; color: #56d364; }
+/* Selectable — the whole point is that the user can hand it to us. */
+.crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
+.crash-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+/* Renderer crash fallback. Reuses .hero's centred layout. */
+.crash { gap: 10px; text-align: center; }
+.crash h2 { margin: 0; font-size: 17px; }
+.crash-live { margin: 0; font-size: 13px; color: #56d364; }
+/* Selectable — the whole point is that the user can hand it to us. */
+.crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
+.crash-actions { display: flex; gap: 8px; margin-top: 4px; }
