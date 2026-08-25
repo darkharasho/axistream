@@ -281,3 +281,20 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .keypicker-k { background: #1a222c; border: 1px solid #2a323b; color: #c7d0d9; border-radius: 7px; padding: 4px 9px; font-size: 11px; font-weight: 600; cursor: pointer; min-width: 28px; }
 .keypicker-k:hover { background: #222c38; border-color: #3a4552; }
 .keypicker-k.sel { background: rgba(38,211,238,.15); border-color: #26d3ee; color: #26d3ee; }
+
+/* Toast stack — discrete events only (conditions use .overlay). Sits below
+   .wctl so window controls stay clickable, above .overlay and the preview.
+   Inside the .dragbar band, so it must opt out of window dragging. */
+.toasts { position: absolute; top: 44px; right: 11px; z-index: 8; display: flex; flex-direction: column; gap: 8px; max-width: 340px; -webkit-app-region: no-drag; }
+.toast { display: flex; align-items: flex-start; gap: 9px; padding: 10px 11px; border-radius: 10px; background: rgba(12,15,20,.92); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.45); }
+.toast .toast-icon { flex: none; margin-top: 1px; }
+.toast.info .toast-icon { color: #7ee3f2; }
+.toast.success .toast-icon { color: #56d364; }
+.toast.error { border-color: rgba(240,85,107,.45); }
+.toast.error .toast-icon { color: #f85149; }
+.toast-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.toast-msg { font-size: 13px; line-height: 1.35; color: #e6edf3; }
+/* Technical detail is selectable — users paste it to us. */
+.toast-detail { font: 11px/1.4 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
+.toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: #8b949e; background: none; border: 0; cursor: pointer; }
+.toast-x:hover { color: #fff; background: rgba(255,255,255,.1); }
