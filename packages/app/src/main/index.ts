@@ -1197,6 +1197,11 @@ if (primary) app.whenReady().then(async () => {
       setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true } })
       pushFitted()
       await applyMasksRespectingVisibility()
+      // On a fresh install capture.start() only starts the sidecar — scene
+      // 'Main' may not exist yet until provisioning runs. WebcamController.apply
+      // throws internally in that case, is swallowed (best-effort), and
+      // `available` is left at its seeded `true` — correct, but only by
+      // accident of that swallow, not because the camera was verified.
       await applyWebcam()
       const flatpakState = await installer.detectInstalled()
       let kinds: string[] = []
