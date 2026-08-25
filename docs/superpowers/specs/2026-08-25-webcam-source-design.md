@@ -121,15 +121,22 @@ export interface WebcamConfig {
   mode: WebcamMode | null    // null = auto
 }
 
-// One concrete, device-reported capability combination. Split across three
-// OBS properties, but chosen as a single unit: picking a resolution without
+// All three OBS v4l2 properties, set together. Picking a resolution without
 // its pixel format is what produces the 5fps YUYV case this override exists
-// to escape.
+// to escape, so none of the three is optional.
 export interface WebcamMode {
-  resolution: string   // e.g. '1920x1080'
-  framerate: string    // OBS framerate property value
-  pixelformat: string  // e.g. MJPEG vs YUYV
-  label: string        // '1920x1080 60fps (MJPEG)'
+  pixelformat: string  // OBS property value, e.g. MJPEG vs YUYV
+  resolution: string   // OBS property value
+  framerate: string    // OBS property value
+}
+
+export interface WebcamOption { value: string; label: string }
+
+// The three property lists as OBS currently reports them.
+export interface WebcamProps {
+  pixelformats: WebcamOption[]
+  resolutions: WebcamOption[]
+  framerates: WebcamOption[]
 }
 
 export interface WebcamView extends WebcamConfig {
@@ -146,10 +153,19 @@ sets `res_type: 1` plus all three of `resolution`, `framerate`, and
 `pixelformat` together — they are one choice, not three.
 
 The property lists can only be queried once the input exists with a device
-selected, so `getWebcamModes()` runs against the live input, never while
-building the device picker. OBS exposes the three as separate properties whose
-valid values are interdependent, so the controller queries them after setting
-the device and returns only combinations the device actually reported.
+selected, so `getWebcamProps()` runs against the live input, never while
+building the device picker.
+
+**These three properties are dependent, not independent.** OBS recomputes the
+valid framerate list from the currently-set resolution, and the resolution list
+from the pixel format. obs-websocket reports each list only as it stands right
+now, which means a single call cannot return the set of valid combinations —
+a cross product of the three lists would contain modes the device cannot
+actually produce.
+
+The UI therefore mirrors OBS's own properties dialog: three dependent
+dropdowns, where setting one re-fetches the others. This is the only shape
+obs-websocket supports without one round trip per candidate resolution.
 
 ## IPC
 
@@ -160,9 +176,10 @@ Three channels, not one per field:
   per-field channels in the `setMicDevice` style would mean six new ones.
 - `getWebcamDevices(): Promise<AudioDevice[]>` — reuses the existing
   `{ id, name }` shape.
-- `getWebcamModes(): Promise<WebcamMode[]>` — capability combinations for the
-  currently selected device; empty when no device is selected or when the
-  device reports none.
+- `getWebcamProps(): Promise<WebcamProps>` — the three property lists as OBS
+  reports them for the current device and current settings. All three arrays
+  are empty when no device is selected. Called again after each `setWebcam`
+  that changes `mode`, because the lists shift.
 
 ## Error handling
 
@@ -181,8 +198,9 @@ established in sub-project 1.
 
 A `WebcamSettings` section in `SettingsScreen`, placed between Audio and
 Quality: enable toggle, device picker, four corner buttons, size slider, mirror
-checkbox, and a mode dropdown — labeled by `WebcamMode.label`, defaulting to Auto —
-that populates only after a device is selected. A quick on/off toggle joins the existing ones on the stream screen.
+checkbox, and an Auto/Manual mode control that reveals three dependent
+dropdowns — pixel format, resolution, frame rate — which populate only after a
+device is selected and re-fetch after each change. A quick on/off toggle joins the existing ones on the stream screen.
 
 Framing needs no dedicated preview: the existing preview pump shows OBS program
 output, so the camera appears there as soon as it is composited.
@@ -195,8 +213,8 @@ output, so the camera appears there as soon as it is composited.
 - `placeWebcam` arithmetic for all four corners, size clamping, aspect
   preservation, the mirror origin offset, and zero-dimension input.
 - `kindsFor` platform map.
-- `WebcamSettings` component, including that the mode dropdown offers only
-  Auto until a device is selected.
+- `WebcamSettings` component, including that the mode dropdowns stay empty
+  until a device is selected, and that changing one triggers a props re-fetch.
 - The existing `ipc-contract` test covers channel/preload parity.
 
 Manual smoke (needs real hardware): camera appears in each corner; mirror
