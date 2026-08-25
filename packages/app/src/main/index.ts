@@ -1,7 +1,7 @@
 import './load-env.js' // must run before any process.env read below
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen, clipboard } from 'electron'
 import { join } from 'node:path'
-import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync, promises as fsPromises } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync, promises as fsPromises, constants as fsConstants } from 'node:fs'
 import { homedir, release } from 'node:os'
 import { execFile } from 'node:child_process'
 
@@ -22,6 +22,8 @@ import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PL
 import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
+import { defaultRecordDir, validateRecordDir, RECORD_DIR_ERROR } from './record-dir.js'
+import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
 import { createWindowsKeys } from './windows-keys.js'
@@ -170,6 +172,13 @@ if (primary) app.whenReady().then(async () => {
   const userData = app.getPath('userData')
   const tokenStore = new TokenStore(join(userData, 'yt-tokens.bin'), safeStorage)
   const settings = new StreamSettings(join(userData, 'stream.json'))
+  const resolveRecordDir = () => {
+    const saved = settings.load().recordDir
+    // Stored empty by default so the path follows the user's actual home
+    // rather than being frozen into a settings file at first run.
+    return saved || defaultRecordDir(app.getPath('home'))
+  }
+  setState({ recording: { ...state.recording, dir: resolveRecordDir() } })
   const auth = new YouTubeAuth({
     store: tokenStore,
     config: { clientId: process.env.AXI_YT_CLIENT_ID ?? '', clientSecret: process.env.AXI_YT_CLIENT_SECRET ?? '' },
@@ -271,6 +280,11 @@ if (primary) app.whenReady().then(async () => {
   }
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
+  const summaryAcc = createSummaryAccumulator()
+  // OBS has exactly one record output, so the six-second audio test and a VOD
+  // recording cannot coexist. This flag is the audio test's half of the
+  // mutual exclusion; the VOD's half is state.recording.active.
+  let audioTestInFlight = false
 
   // Thin void exec for pactl calls (flatpakExec below captures output
   // for installer flows — different job).
@@ -367,7 +381,7 @@ if (primary) app.whenReady().then(async () => {
       }
       setState({ phase: p, error: error ?? null })
     },
-    onStats: (s) => push(CH.evtStats, s),
+    onStats: (s) => { summaryAcc.sample(s); push(CH.evtStats, s) },
     encoderLabel: () => currentPreset?.label ?? 'x264',
     onStartFailure: async () => {
       if (encoderKind === 'x264') return false
@@ -452,6 +466,8 @@ if (primary) app.whenReady().then(async () => {
           (tpl && renderTitle(tpl, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat, gw2 }))
         if (!title) { setState({ phase: 'NEEDS_TITLE' }); return }
         setState({ phase: 'GOING_LIVE' })
+        summaryAcc.reset()
+        setState({ summary: null })
         session = await live.startSession({ title, privacy: s.privacy, reuseStreamId: s.streamId, now: new Date() })
         settings.patch({ streamId: session.streamId })
         setState({ watchUrl: watchUrlFor(session.broadcastId) })
@@ -503,8 +519,24 @@ if (primary) app.whenReady().then(async () => {
         if (session) { try { await live.complete(session.broadcastId) } catch { /* best-effort */ } }
       }
     },
-    stopStream: async () => { liveWatchStop = true; setState({ liveUnconfirmed: false }); await stream.stop() },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    stopStream: async () => {
+      const wasUnconfirmed = state.liveUnconfirmed
+      liveWatchStop = true
+      setState({ liveUnconfirmed: false })
+      // Snapshot before stopping: OBS's stats are instantaneous and gone once
+      // the output closes, so nothing here can be recovered afterward.
+      const summary = summaryAcc.snapshot({
+        watchUrl: state.watchUrl,
+        recordingPath: state.recording.lastPath,
+        recordingStillActive: state.recording.active,
+        endedWithError: state.phase === 'ERROR' || wasUnconfirmed,
+      })
+      await stream.stop()
+      // stream.stop() drives onPhase to READY; the summary phase must win, so
+      // it is set after.
+      setState({ phase: 'ENDED', summary })
+    },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -516,7 +548,7 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -712,37 +744,43 @@ if (primary) app.whenReady().then(async () => {
       return r
     },
     recordAudioTest: async () => {
-      if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture) {
+      // OBS has one record output — a VOD recording and this test cannot coexist.
+      if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture || state.recording.active) {
         return { ok: false, error: 'not available right now' }
       }
-      // Must be a HOME-based path: OBS writes this file from inside its
-      // flatpak, whose /tmp is a private tmpfs (even with host access), so an
-      // OS-temp dir here means the record output dies instantly (StopRecord
-      // 501, no file). Home is mapped identically inside the sandbox. The
-      // dedicated subdir keeps the boot sweep away from anything else.
-      const dir = join(app.getPath('userData'), 'audiotest')
-      await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
-      const r = await recorder.recordTestClip(6000, dir)
-      if (!r.ok || !r.outputPath) return { ok: false, error: r.error ?? 'recording failed' }
+      audioTestInFlight = true
       try {
-        // OBS finalizes the file (moov index last) after StopRecord resolves.
-        // Size-stability alone can be fooled by a stall before the moov write,
-        // so verify the index is really in the bytes we read; without it the
-        // clip plays as 0:00.
-        const path = r.outputPath
-        for (let i = 0; i < 3; i++) {
-          await waitForStableFile(() => fsPromises.stat(path).then((s) => s.size, () => null))
-          const clip = await fsPromises.readFile(path)
-          if (hasTopLevelMoov(clip)) {
-            await fsPromises.unlink(path).catch(() => {})
-            return { ok: true, clip, mime: 'video/mp4' }
+        // Must be a HOME-based path: OBS writes this file from inside its
+        // flatpak, whose /tmp is a private tmpfs (even with host access), so an
+        // OS-temp dir here means the record output dies instantly (StopRecord
+        // 501, no file). Home is mapped identically inside the sandbox. The
+        // dedicated subdir keeps the boot sweep away from anything else.
+        const dir = join(app.getPath('userData'), 'audiotest')
+        await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
+        const r = await recorder.recordTestClip(6000, dir)
+        if (!r.ok || !r.outputPath) return { ok: false, error: r.error ?? 'recording failed' }
+        try {
+          // OBS finalizes the file (moov index last) after StopRecord resolves.
+          // Size-stability alone can be fooled by a stall before the moov write,
+          // so verify the index is really in the bytes we read; without it the
+          // clip plays as 0:00.
+          const path = r.outputPath
+          for (let i = 0; i < 3; i++) {
+            await waitForStableFile(() => fsPromises.stat(path).then((s) => s.size, () => null))
+            const clip = await fsPromises.readFile(path)
+            if (hasTopLevelMoov(clip)) {
+              await fsPromises.unlink(path).catch(() => {})
+              return { ok: true, clip, mime: 'video/mp4' }
+            }
           }
+          // Leave the file on disk for inspection when it never finalizes.
+          console.warn('[record] clip never finalized (no moov index):', path)
+          return { ok: false, error: 'clip incomplete — OBS never finished writing it' }
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : String(e) }
         }
-        // Leave the file on disk for inspection when it never finalizes.
-        console.warn('[record] clip never finalized (no moov index):', path)
-        return { ok: false, error: 'clip incomplete — OBS never finished writing it' }
-      } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      } finally {
+        audioTestInFlight = false
       }
     },
     appVersion: async () => app.getVersion(),
@@ -784,12 +822,81 @@ if (primary) app.whenReady().then(async () => {
         : { kind: 'error', message: 'Diagnostics export failed', detail: r.error })
       return r
     },
-    // TODO(Task 6): replace with real recording/summary handler implementations.
-    startRecording: async () => ({ ok: false, error: 'not implemented' }),
-    stopRecording: async () => ({ ok: false, error: 'not implemented' }),
-    chooseRecordDir: async () => ({ ok: false, error: 'not implemented' }),
-    openRecording: async () => ({ ok: false, error: 'not implemented' }),
-    dismissSummary: async () => {},
+    startRecording: async () => {
+      if (audioTestInFlight) return { ok: false, error: 'an audio test is running' }
+      if (state.recording.active) return { ok: false, error: 'already recording' }
+      const dir = resolveRecordDir()
+      const v = validateRecordDir(dir, app.getPath('home'))
+      if (!v.ok) {
+        setState({ recording: { ...state.recording, error: v.error ?? RECORD_DIR_ERROR } })
+        toast(win, { kind: 'error', message: 'Recording folder is not usable', detail: v.error })
+        return { ok: false, error: v.error }
+      }
+      await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
+      const r = await recorder.startRecording(dir, 'fragmented_mp4')
+      if (!r.ok) {
+        setState({ recording: { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
+        toast(win, { kind: 'error', message: 'Recording failed to start', detail: r.error })
+        return r
+      }
+      setState({ recording: { ...state.recording, active: true, startedAt: Date.now(), dir, error: null } })
+      return r
+    },
+
+    stopRecording: async () => {
+      if (!state.recording.active) return { ok: false, error: 'not recording' }
+      const r = await recorder.stopRecording()
+      if (!r.ok) {
+        setState({ recording: { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
+        toast(win, { kind: 'error', message: 'Recording did not stop cleanly', detail: r.error })
+        return r
+      }
+      setState({ recording: { ...state.recording, active: false, startedAt: null, lastPath: r.outputPath ?? null, error: null } })
+      // If the summary is on screen, refresh it in place so "Still recording"
+      // becomes "Open recording" without dismissing the panel.
+      if (state.phase === 'ENDED' && state.summary) {
+        setState({ summary: { ...state.summary, recordingStillActive: false, recordingPath: r.outputPath ?? null } })
+      }
+      return r
+    },
+
+    chooseRecordDir: async () => {
+      const home = app.getPath('home')
+      const res = await dialog.showOpenDialog({
+        title: 'Choose where recordings are saved',
+        defaultPath: resolveRecordDir(),
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (res.canceled || !res.filePaths[0]) return { ok: false }
+      const dir = res.filePaths[0]
+      const v = validateRecordDir(dir, home)
+      if (!v.ok) return { ok: false, error: v.error }
+      try {
+        await fsPromises.mkdir(dir, { recursive: true })
+        await fsPromises.access(dir, fsConstants.W_OK)
+      } catch {
+        return { ok: false, error: 'that folder is not writable' }
+      }
+      settings.patch({ recordDir: dir })
+      setState({ recording: { ...state.recording, dir, error: null }, settings: viewOf(settings.load()) })
+      return { ok: true, dir }
+    },
+
+    openRecording: async (path: string) => {
+      // openPath launches the system video player; on a machine with none
+      // installed it returns a non-empty error string rather than throwing.
+      const err = await shell.openPath(path)
+      if (!err) return { ok: true }
+      console.warn('[record] openPath failed, revealing instead:', err)
+      try {
+        shell.showItemInFolder(path)
+        return { ok: true }
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    },
+
+    dismissSummary: async () => { setState({ phase: goReadyPhase(), summary: null }) },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
@@ -832,6 +939,15 @@ if (primary) app.whenReady().then(async () => {
     try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
     if (ptt.isEnabled()) void ptt.restore()
     void sidecar.stop()
+  })
+
+  app.on('before-quit', () => {
+    // Finalize an in-flight recording, but never let quitting hang on OBS.
+    if (!state.recording.active) return
+    void Promise.race([
+      recorder.stopRecording(),
+      new Promise((r) => setTimeout(r, 2000)),
+    ]).catch(() => {})
   })
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
