@@ -285,6 +285,48 @@ if (primary) app.whenReady().then(async () => {
   // recording cannot coexist. This flag is the audio test's half of the
   // mutual exclusion; the VOD's half is state.recording.active.
   let audioTestInFlight = false
+  // startRecording awaits a 300ms settle plus several websocket round-trips
+  // before state.recording.active flips true. Without this flag, a "Test
+  // audio" click landing in that window would race the VOD start and both
+  // paths would stomp the same shared SimpleOutput profile parameters.
+  let recordingStartInFlight = false
+  // Polls OBS for a recording that died on its own (disk full, encoder
+  // fault) so state.recording.active does not lie forever. Cleared on
+  // explicit stop, on declared death, and on quit.
+  let recordingHealthTimer: ReturnType<typeof setInterval> | null = null
+
+  const stopRecordingHealthPoll = () => {
+    if (recordingHealthTimer) { clearInterval(recordingHealthTimer); recordingHealthTimer = null }
+  }
+  // GetRecordStatus is polled rather than trusted on a single miss:
+  // isRecording() swallows its own errors and returns false on a transient
+  // websocket blip, so one false alone would misreport a healthy recording
+  // as dead. Two consecutive false results is the death signal.
+  const startRecordingHealthPoll = () => {
+    stopRecordingHealthPoll()
+    let consecutiveMisses = 0
+    recordingHealthTimer = setInterval(() => {
+      void (async () => {
+        try {
+          const alive = await recorder.isRecording()
+          if (alive) { consecutiveMisses = 0; return }
+          consecutiveMisses++
+          if (consecutiveMisses < 2) return
+          stopRecordingHealthPoll()
+          setState({ recording: { ...state.recording, active: false, startedAt: null, error: 'recording stopped unexpectedly' } })
+          toast(win, { kind: 'error', message: 'Recording stopped unexpectedly', detail: 'OBS stopped writing the recording — check disk space.' })
+          // If the summary is on screen, refresh it in place the same way
+          // stopRecording does. No recordingPath here — there is no output
+          // path from a death, and lastPath must not be invented.
+          if (state.phase === 'ENDED' && state.summary) {
+            setState({ summary: { ...state.summary, recordingStillActive: false } })
+          }
+        } catch {
+          // best-effort: the poll must never throw out
+        }
+      })()
+    }, 5000)
+  }
 
   // Thin void exec for pactl calls (flatpakExec below captures output
   // for installer flows — different job).
@@ -745,7 +787,9 @@ if (primary) app.whenReady().then(async () => {
     },
     recordAudioTest: async () => {
       // OBS has one record output — a VOD recording and this test cannot coexist.
-      if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture || state.recording.active) {
+      // recordingStartInFlight covers the window between StartRecord being
+      // requested and state.recording.active flipping true.
+      if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture || state.recording.active || recordingStartInFlight) {
         return { ok: false, error: 'not available right now' }
       }
       audioTestInFlight = true
@@ -832,19 +876,26 @@ if (primary) app.whenReady().then(async () => {
         toast(win, { kind: 'error', message: 'Recording folder is not usable', detail: v.error })
         return { ok: false, error: v.error }
       }
-      await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
-      const r = await recorder.startRecording(dir, 'fragmented_mp4')
-      if (!r.ok) {
-        setState({ recording: { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
-        toast(win, { kind: 'error', message: 'Recording failed to start', detail: r.error })
+      recordingStartInFlight = true
+      try {
+        await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
+        const r = await recorder.startRecording(dir, 'fragmented_mp4')
+        if (!r.ok) {
+          setState({ recording: { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
+          toast(win, { kind: 'error', message: 'Recording failed to start', detail: r.error })
+          return r
+        }
+        setState({ recording: { ...state.recording, active: true, startedAt: Date.now(), dir, error: null } })
+        startRecordingHealthPoll()
         return r
+      } finally {
+        recordingStartInFlight = false
       }
-      setState({ recording: { ...state.recording, active: true, startedAt: Date.now(), dir, error: null } })
-      return r
     },
 
     stopRecording: async () => {
       if (!state.recording.active) return { ok: false, error: 'not recording' }
+      stopRecordingHealthPoll()
       const r = await recorder.stopRecording()
       if (!r.ok) {
         setState({ recording: { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
@@ -942,6 +993,7 @@ if (primary) app.whenReady().then(async () => {
   })
 
   app.on('before-quit', () => {
+    stopRecordingHealthPoll()
     // Finalize an in-flight recording, but never let quitting hang on OBS.
     if (!state.recording.active) return
     void Promise.race([
