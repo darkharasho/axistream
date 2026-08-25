@@ -75,9 +75,9 @@ describe('WebcamController.apply', () => {
   })
 
   it('sets no explicit z-order, leaving the item on top by creation order', async () => {
-    // Masks are applied before the webcam on every path, so the webcam item is
-    // created last and OBS draws it topmost — MaskController's rule. An
-    // explicit index call could only move it off the top.
+    // The item is created after the game capture, so OBS draws it above the
+    // capture — MaskController's rule. An explicit index call could only move
+    // it off that spot; see WebcamController for the mask-added-later caveat.
     const r = recorder({ inputs: [WEBCAM_INPUT] })
     await new WebcamController({ client: r.client, platform: 'linux', sleep }).apply(cfg())
     expect(r.calls.some((c) => c.req === 'SetSceneItemIndex')).toBe(false)

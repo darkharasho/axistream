@@ -52,11 +52,18 @@ export class WebcamController {
         overlay: true,
       })
 
-      // No explicit z-order call. Every caller applies masks before the
-      // webcam, so the webcam's item is created last and OBS draws it on top —
-      // the same create-last-is-top rule MaskController relies on. An explicit
-      // SetSceneItemIndex could only move it, and index orientation is not
-      // something we can verify from here.
+      // No explicit z-order call. The webcam's item is created after the game
+      // capture, so OBS draws it above the capture — the same
+      // create-last-is-top rule MaskController relies on. An explicit
+      // SetSceneItemIndex could only move it off that spot, and index
+      // orientation is not something we can verify from here.
+      //
+      // The webcam is NOT unconditionally topmost: setMasks/setMasksVisible/
+      // setMaskStyle re-run MaskController without re-running this, so a box
+      // mask added while the camera is up gets its item created last and lands
+      // above the camera until the next rebuild. Cosmetic only — a mask over a
+      // camera leaks nothing — and re-applying the webcam on every mask drag
+      // would cost an OBS round trip plus up to a second of transform retry.
       const sceneItemId = await this.sceneItemId(c)
       await this.transform(c, sceneItemId, cfg)
       return { available: true }
