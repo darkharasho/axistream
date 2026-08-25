@@ -67,6 +67,8 @@ export interface AudioLevels { desktop: number; mic: number; game: number }
 
 export interface DiscordTestResult { ok: boolean; error?: string }
 
+export interface DiagnosticsResult { ok: boolean; path?: string; error?: string }
+
 /** One-off notification. Discrete events only — conditions belong in AppState. */
 export type ToastKind = 'info' | 'success' | 'error'
 export interface ToastPayload {

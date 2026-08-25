@@ -238,7 +238,7 @@ if (primary) app.whenReady().then(async () => {
           headless: !process.env.AXISTREAM_OBS_VISIBLE,
         })
       : {
-          engineId: 'axistream-obs-unsupported', configIdentity: 'unavailable',
+          engineId: 'axistream-obs-unsupported', configIdentity: 'unavailable', configRoot: '',
           prepare: async () => { throw new Error('Capture is not supported on this platform') },
         }
   const config = new CaptureConfig(join(userData, 'capture.json'), runtime.engineId)
