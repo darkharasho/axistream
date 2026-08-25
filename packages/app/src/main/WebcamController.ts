@@ -1,5 +1,5 @@
 import { placeWebcam } from './webcam-layout.js'
-import type { WebcamConfig } from '../shared/state.js'
+import type { AudioDevice, WebcamConfig, WebcamOption, WebcamProps } from '../shared/state.js'
 
 const SCENE = 'Main'
 export const WEBCAM_INPUT = 'AxiStream Webcam'
@@ -71,6 +71,43 @@ export class WebcamController {
         .filter((it: { itemValue: string }) => it.itemValue)
         .map((it: { itemName: string; itemValue: string }) => ({ id: it.itemValue, name: it.itemName }))
     } catch (e) { console.warn('[webcam] listDevices failed', e); return [] }
+  }
+
+  // The device list lives on the input, so the input must exist first.
+  async devices(): Promise<AudioDevice[]> {
+    const c = this.d.client()
+    const { kind, deviceProp } = kindsFor(this.d.platform ?? process.platform)
+    try {
+      await this.ensureInput(c, kind)
+      return await this.listDevices(c, deviceProp)
+    } catch (e) { console.warn('[webcam] devices failed', e); return [] }
+  }
+
+  // The three lists are dependent: OBS recomputes framerates from the current
+  // resolution. Each is reported as it stands right now, which is why the UI
+  // re-fetches after every change instead of caching a combination list.
+  async props(): Promise<WebcamProps> {
+    const empty: WebcamProps = { pixelformats: [], resolutions: [], framerates: [] }
+    const c = this.d.client()
+    try {
+      const { inputs } = await c.call('GetInputList') as { inputs?: { inputName: string }[] }
+      if (!(inputs ?? []).some((i) => i.inputName === WEBCAM_INPUT)) return empty
+      const [pixelformats, resolutions, framerates] = await Promise.all([
+        this.options(c, 'pixelformat'),
+        this.options(c, 'resolution'),
+        this.options(c, 'framerate'),
+      ])
+      return { pixelformats, resolutions, framerates }
+    } catch (e) { console.warn('[webcam] props failed', e); return empty }
+  }
+
+  private async options(c: Client, propertyName: string): Promise<WebcamOption[]> {
+    try {
+      const r = await c.call('GetInputPropertiesListPropertyItems', { inputName: WEBCAM_INPUT, propertyName })
+      return (r.propertyItems ?? [])
+        .filter((it: { itemValue: unknown }) => it.itemValue !== undefined && it.itemValue !== null && it.itemValue !== '')
+        .map((it: { itemName: string; itemValue: unknown }) => ({ value: String(it.itemValue), label: it.itemName }))
+    } catch { return [] }
   }
 
   private async ensureInput(c: Client, kind: string): Promise<void> {

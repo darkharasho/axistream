@@ -77,7 +77,8 @@ describe('WebcamController.apply', () => {
   it('pins the item to the top so masks cannot cover it', async () => {
     const r = recorder({ inputs: [WEBCAM_INPUT] })
     await new WebcamController({ client: r.client, platform: 'linux', sleep }).apply(cfg())
-    expect(r.calls.some((c) => c.req === 'SetSceneItemIndex')).toBe(true)
+    const pin = r.calls.find((c) => c.req === 'SetSceneItemIndex')
+    expect(pin?.data).toMatchObject({ sceneItemIndex: 0 })
   })
 
   it('applies the computed transform', async () => {
@@ -124,6 +125,7 @@ describe('WebcamController.apply', () => {
     const slept = vi.fn(async () => {})
     await new WebcamController({ client: r.client, platform: 'linux', sleep: slept }).apply(cfg({ corner: 'tl' }))
     expect(slept).toHaveBeenCalled()
+    expect(slept).toHaveBeenCalledTimes(1)
     expect(r.calls.some((c) => c.req === 'SetSceneItemTransform')).toBe(true)
   })
 
@@ -131,6 +133,61 @@ describe('WebcamController.apply', () => {
     const client = () => ({ call: vi.fn(async () => { throw new Error('not connected') }) })
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     await expect(new WebcamController({ client, platform: 'linux', sleep }).apply(cfg())).resolves.toEqual({ available: true })
+    warn.mockRestore()
+  })
+})
+
+describe('WebcamController.devices', () => {
+  it('creates the input if needed, then lists cameras as id/name pairs', async () => {
+    const r = recorder({ devices: [
+      { itemName: 'C920', itemValue: '/dev/video0' },
+      { itemName: 'Kiyo', itemValue: '/dev/video2' },
+    ] })
+    const list = await new WebcamController({ client: r.client, platform: 'linux', sleep }).devices()
+    expect(list).toEqual([
+      { id: '/dev/video0', name: 'C920' },
+      { id: '/dev/video2', name: 'Kiyo' },
+    ])
+    expect(r.calls.some((c) => c.req === 'CreateInput')).toBe(true)
+  })
+
+  it('returns an empty list rather than throwing when OBS is down', async () => {
+    const client = () => ({ call: vi.fn(async () => { throw new Error('down') }) })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(new WebcamController({ client, platform: 'linux', sleep }).devices()).resolves.toEqual([])
+    warn.mockRestore()
+  })
+})
+
+describe('WebcamController.props', () => {
+  it('returns the three dependent property lists', async () => {
+    const byProp: Record<string, { itemName: string; itemValue: string }[]> = {
+      pixelformat: [{ itemName: 'MJPEG', itemValue: '1196444237' }],
+      resolution: [{ itemName: '1920x1080', itemValue: '5' }],
+      framerate: [{ itemName: '60', itemValue: '3' }],
+    }
+    const calls: { req: string; data: any }[] = []
+    const client = () => ({
+      call: vi.fn(async (req: string, data?: any) => {
+        calls.push({ req, data })
+        if (req === 'GetInputList') return { inputs: [{ inputName: WEBCAM_INPUT }] }
+        if (req === 'GetInputPropertiesListPropertyItems') {
+          return { propertyItems: byProp[data.propertyName] ?? [] }
+        }
+        return {}
+      }),
+    })
+    const p = await new WebcamController({ client, platform: 'linux', sleep }).props()
+    expect(p.pixelformats).toEqual([{ value: '1196444237', label: 'MJPEG' }])
+    expect(p.resolutions).toEqual([{ value: '5', label: '1920x1080' }])
+    expect(p.framerates).toEqual([{ value: '3', label: '60' }])
+  })
+
+  it('returns empty lists when OBS is down', async () => {
+    const client = () => ({ call: vi.fn(async () => { throw new Error('down') }) })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(new WebcamController({ client, platform: 'linux', sleep }).props())
+      .resolves.toEqual({ pixelformats: [], resolutions: [], framerates: [] })
     warn.mockRestore()
   })
 })
