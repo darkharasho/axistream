@@ -25,6 +25,7 @@ import { RecordController } from './RecordController.js'
 import { defaultRecordDir, validateRecordDir, RECORD_DIR_ERROR } from './record-dir.js'
 import { recordStartRejection } from './record-gate.js'
 import { createRecordingFinalizer } from './record-finalize.js'
+import { isInAppNavigation } from './navigate-gate.js'
 import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
@@ -130,7 +131,7 @@ function createWindow(): BrowserWindow {
   // external href leaves the app instead of opening a chrome-less child window.
   win.webContents.setWindowOpenHandler(({ url }) => { openWebUrl(url); return { action: 'deny' } })
   win.webContents.on('will-navigate', (e, url) => {
-    try { if (new URL(url).origin === new URL(win.webContents.getURL()).origin) return } catch { return }
+    if (isInAppNavigation(url, win.webContents.getURL())) return
     e.preventDefault()
     openWebUrl(url)
   })
