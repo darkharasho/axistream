@@ -328,5 +328,82 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .rec-elapsed { margin-left: 6px; }
 
 /* Webcam settings: corner picker grid + manual mode selects. */
-.webcam-corners { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
-.webcam-modes { display: grid; gap: 6px; margin-top: 8px; }
+.webcam-corners { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
+.webcam-settings .webcam-corners .btn { padding: 9px 12px; font-size: 12px; font-weight: 700; border-radius: 9px; }
+.webcam-modes { display: grid; gap: 10px; margin-top: 10px; }
+
+/* The camera panel's own controls. Native select/checkbox/range chrome is
+   light-themed on Linux and read as a different app pasted into the panel. */
+.webcam-settings { display: grid; gap: 12px; }
+.webcam-settings label { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
+.webcam-settings select {
+  appearance: none; -webkit-appearance: none;
+  background: rgba(0,0,0,.4) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 10px center / 15px;
+  border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
+  padding: 9px 34px 9px 11px; color: #e6edf3; font-size: 13px; cursor: pointer;
+}
+.webcam-settings select:hover { border-color: rgba(34,211,238,.45); }
+.webcam-settings select:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+
+/* Checkbox rows read as a single line, so they opt out of the grid stacking. */
+.webcam-settings label.check { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+.webcam-settings input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex: none;
+  width: 17px; height: 17px; margin: 0; border-radius: 5px;
+  background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.2); cursor: pointer;
+}
+.webcam-settings input[type="checkbox"]:checked {
+  background: #22d3ee url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306222a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") no-repeat center / 12px;
+  border-color: #22d3ee;
+}
+.webcam-settings input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+
+/* Size slider: the value rides on the same line as the label. */
+.webcam-settings label.slider { grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; }
+.webcam-settings label.slider > span.slider-label { grid-column: 1; }
+.webcam-settings label.slider > .slider-value { grid-column: 2; font: 600 12px/1 ui-monospace, monospace; color: #8b949e; }
+.webcam-settings input[type="range"] {
+  grid-column: 1 / -1; appearance: none; -webkit-appearance: none;
+  width: 100%; height: 4px; margin: 4px 0; border-radius: 3px; cursor: pointer;
+  background: linear-gradient(90deg,#22d3ee,#0bb6d6) no-repeat, rgba(255,255,255,.14);
+  background-size: var(--fill, 50%) 100%;
+}
+.webcam-settings input[type="range"]::-webkit-slider-thumb {
+  appearance: none; -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
+  background: #e6edf3; border: 0; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer;
+}
+.webcam-settings input[type="range"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+
+/* Go Live split button: primary action + a caret that opens the drop-up. */
+/* align-items: stretch keeps the caret exactly as tall as the label half — the
+   two have different content, so content-sized heights drift apart. */
+.action-split { position: relative; display: inline-flex; align-items: stretch; align-self: flex-start; }
+.action-split > .btn.action { align-self: stretch; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.action-split > .btn.action.caret {
+  padding: 0 11px; gap: 5px;
+  /* Restated: the shared .action rule above squares BOTH right corners. */
+  border-radius: 0 10px 10px 0;
+  margin-left: 1px;
+}
+/* The seam: a hairline so the two halves read as one control with two targets. */
+.action-split > .btn.primary.action.caret { box-shadow: inset 1px 0 0 rgba(6,34,42,.3), 0 4px 14px rgba(34,211,238,.22); }
+.action-split > .btn.danger.action.caret { border-left-color: rgba(240,85,107,.45); }
+.rec-dot { width: 7px; height: 7px; border-radius: 50%; background: #e23a52; box-shadow: 0 0 7px rgba(226,58,82,.9); }
+
+.dropup {
+  /* Left-aligned to the split button: the button sits at the left edge of the
+     hero, so a right-aligned menu hangs off the window. */
+  position: absolute; bottom: calc(100% + 7px); left: 0; min-width: 210px;
+  display: flex; flex-direction: column; padding: 5px; z-index: 5;
+  background: rgba(14,19,26,.97); border: 1px solid #2a323b; border-radius: 11px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+.dropup-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 9px 11px; border: 0; border-radius: 8px; background: none;
+  color: #c7d0d9; font: 700 13px/1 inherit; text-align: left; cursor: pointer;
+}
+.dropup-item:hover:not(:disabled) { background: #222c38; color: #e6edf3; }
+.dropup-item:disabled { opacity: .45; cursor: default; }
+.dropup-item.danger { color: #ff8b9c; }
+.dropup-item .rec-elapsed { margin-left: auto; color: #8b949e; }

@@ -147,24 +147,34 @@ describe('WebcamController.apply', () => {
     warn.mockRestore()
   })
 
-  it('retries the transform once when the camera has not yet produced a frame', async () => {
+  it('retries the transform when the camera has not yet produced a frame', async () => {
     // 0x0 on the first read, real dimensions on the second.
     const r = recorder({ inputs: [WEBCAM_INPUT], sourceDims: [{ w: 0, h: 0 }, { w: 1280, h: 720 }] })
     const slept = vi.fn(async () => {})
     await new WebcamController({ client: r.client, platform: 'linux', sleep: slept }).apply(cfg({ corner: 'tl' }))
-    expect(slept).toHaveBeenCalled()
     expect(slept).toHaveBeenCalledTimes(1)
     expect(r.calls.some((c) => c.req === 'SetSceneItemTransform')).toBe(true)
   })
 
-  it('gives up after one retry when the camera never produces a frame, without hanging boot', async () => {
+  it('keeps retrying past the first second, which a cold camera routinely needs', async () => {
+    // 0x0 four times, then a frame. The old one-retry budget gave up here and
+    // left the camera at OBS defaults — native size, top left.
+    const dims = [{ w: 0, h: 0 }, { w: 0, h: 0 }, { w: 0, h: 0 }, { w: 0, h: 0 }, { w: 1280, h: 720 }]
+    const r = recorder({ inputs: [WEBCAM_INPUT], sourceDims: dims })
+    const slept = vi.fn(async () => {})
+    await new WebcamController({ client: r.client, platform: 'linux', sleep: slept }).apply(cfg({ corner: 'tl' }))
+    expect(slept).toHaveBeenCalledTimes(4)
+    expect(r.calls.some((c) => c.req === 'SetSceneItemTransform')).toBe(true)
+  })
+
+  it('gives up eventually when the camera never produces a frame, without hanging boot', async () => {
     // 0x0 on every read: the recorder's dims logic returns the same single
     // entry forever, so this never converges — proving the retry loop is
     // bounded rather than looping until a frame arrives.
     const r = recorder({ inputs: [WEBCAM_INPUT], sourceDims: [{ w: 0, h: 0 }] })
     const slept = vi.fn(async () => {})
     await new WebcamController({ client: r.client, platform: 'linux', sleep: slept }).apply(cfg({ corner: 'tl' }))
-    expect(slept).toHaveBeenCalledTimes(1)
+    expect(slept).toHaveBeenCalledTimes(5)
     expect(r.calls.some((c) => c.req === 'SetSceneItemTransform')).toBe(false)
   })
 

@@ -12,7 +12,17 @@ export function formatElapsed(ms: number): string {
   return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`
 }
 
-export function RecordButton({ recording, disabled, axi }: { recording: RecordingState; disabled: boolean; axi: AxiApi }) {
+export interface RecordMenuItemsProps {
+  recording: RecordingState
+  disabled: boolean
+  axi: AxiApi
+  /** Closes the drop-up that owns these items; a menu that stays open after a
+      choice reads as a click that did nothing. */
+  onAct?: () => void
+}
+
+/** The recording controls, shaped as menu items for the Go Live drop-up. */
+export function RecordMenuItems({ recording, disabled, axi, onAct }: RecordMenuItemsProps) {
   // Elapsed time is derived here rather than pushed from main: a per-second
   // counter over IPC would be a second stats channel carrying one number.
   const [now, setNow] = useState(() => Date.now())
@@ -22,29 +32,30 @@ export function RecordButton({ recording, disabled, axi }: { recording: Recordin
     return () => clearInterval(t)
   }, [recording.active])
 
-  if (recording.active) {
-    const elapsed = formatElapsed(now - (recording.startedAt ?? now))
-    return (
-      <button className="btn danger sm" onClick={() => void axi.stopRecording()} title="Stop the local recording">
-        <Square size={13} /> Stop recording <span className="mono rec-elapsed">{elapsed}</span>
-      </button>
-    )
-  }
-
   // Hoisted: TS does not carry a property narrowing into the click handler
   // below, and a cast there would outlive whatever made it true.
   const lastPath = recording.lastPath
 
   return (
     <>
-      <button className="btn ghost sm" disabled={disabled} onClick={() => void axi.startRecording()}
-        title={disabled ? 'Not while an audio test is running' : 'Save a local copy of what you are capturing'}>
-        <Circle size={13} /> Record
-      </button>
+      {recording.active ? (
+        <button className="dropup-item danger" role="menuitem"
+          onClick={() => { onAct?.(); void axi.stopRecording() }}
+          title="Stop the local recording">
+          <Square size={13} /> Stop recording
+          <span className="mono rec-elapsed">{formatElapsed(now - (recording.startedAt ?? now))}</span>
+        </button>
+      ) : (
+        <button className="dropup-item" role="menuitem" disabled={disabled}
+          onClick={() => { onAct?.(); void axi.startRecording() }}
+          title={disabled ? 'Not while an audio test is running' : 'Save a local copy of what you are capturing'}>
+          <Circle size={13} /> Record
+        </button>
+      )}
       {lastPath ? (
-        <button className="btn ghost xs" onClick={() => void axi.openRecording(lastPath)}
-          title={lastPath}>
-          <FolderOpen size={12} /> Open recording
+        <button className="dropup-item" role="menuitem"
+          onClick={() => { onAct?.(); void axi.openRecording(lastPath) }} title={lastPath}>
+          <FolderOpen size={13} /> Open recording
         </button>
       ) : null}
     </>

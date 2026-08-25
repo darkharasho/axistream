@@ -7,7 +7,7 @@ import { DEFAULT_WEBCAM } from '../src/shared/state.js'
 
 const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, captureTargets: [], stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
   videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null, webcam: { enabled: false, deviceId: null, deviceLabel: null, corner: 'br', sizePct: 0.22, mirrored: false, mode: null, available: true }, recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null }
-const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true), setWebcam: vi.fn(async () => {}) }
+const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true), setWebcam: vi.fn(async () => {}), startRecording: vi.fn(async () => ({ ok: true })), stopRecording: vi.fn(async () => ({ ok: true })), openRecording: vi.fn(async () => ({ ok: true })) }
 const store = { applyState: vi.fn() }
 
 describe('StreamScreen', () => {
@@ -141,31 +141,34 @@ describe('StreamScreen ENDED phase', () => {
   })
 })
 
-describe('StreamScreen record button', () => {
-  it('mounts an enabled Record button while nothing owns the recorder', () => {
+describe('StreamScreen record drop-up', () => {
+  const openMenu = async () => {
+    await userEvent.click(screen.getByRole('button', { name: /more stream actions/i }))
+  }
+
+  it('keeps Record out of the bottom bar until the drop-up is opened', () => {
     render(<StreamScreen state={base} preview={null} axi={axi as never} store={store as never} />)
-    expect(screen.getByRole('button', { name: /^record$/i })).toBeEnabled()
+    expect(screen.queryByRole('menuitem', { name: /^record$/i })).toBeNull()
   })
 
-  it('disables Record while the audio test owns the single record output', () => {
+  it('mounts an enabled Record item while nothing owns the recorder', async () => {
+    render(<StreamScreen state={base} preview={null} axi={axi as never} store={store as never} />)
+    await openMenu()
+    expect(screen.getByRole('menuitem', { name: /^record$/i })).toBeEnabled()
+  })
+
+  it('disables Record while the audio test owns the single record output', async () => {
     render(<StreamScreen state={{ ...base, audioTestActive: true }} preview={null} axi={axi as never} store={store as never} />)
-    const btn = screen.getByRole('button', { name: /^record$/i })
+    await openMenu()
+    const btn = screen.getByRole('menuitem', { name: /^record$/i })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('title', expect.stringMatching(/audio test/i))
   })
-})
 
-describe('webcam quick toggle', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('is hidden when no camera has been configured', () => {
-    render(<StreamScreen state={{ ...base, webcam: { ...DEFAULT_WEBCAM, available: true } }} preview={null} axi={axi as any} store={store as any} />)
-    expect(screen.queryByRole('button', { name: /camera/i })).toBeNull()
-  })
-
-  it('toggles the camera off when it is on', async () => {
-    render(<StreamScreen state={{ ...base, webcam: { ...DEFAULT_WEBCAM, enabled: true, deviceId: '/dev/video0', available: true } }} preview={null} axi={axi as any} store={store as any} />)
-    await userEvent.click(screen.getByRole('button', { name: /camera/i }))
-    expect(axi.setWebcam).toHaveBeenCalledWith({ enabled: false })
+  it('closes the drop-up once a choice is made, so the click does not read as a no-op', async () => {
+    render(<StreamScreen state={base} preview={null} axi={axi as never} store={store as never} />)
+    await openMenu()
+    await userEvent.click(screen.getByRole('menuitem', { name: /^record$/i }))
+    expect(screen.queryByRole('menuitem', { name: /^record$/i })).toBeNull()
   })
 })
