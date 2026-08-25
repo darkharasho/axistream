@@ -13,7 +13,7 @@ const mkState = (over: Partial<AppState> = {}): AppState => ({
   ...over,
 })
 
-const mkAxi = () => ({ setMicEnabled: vi.fn(), setMasksVisible: vi.fn(), setPttEnabled: vi.fn() })
+const mkAxi = () => ({ setMicEnabled: vi.fn(), setMasksVisible: vi.fn(), setPttEnabled: vi.fn(), setWebcam: vi.fn(async () => {}) })
 
 describe('Sidebar quick toggles', () => {
   it('mic toggle flips the mic', () => {
@@ -49,5 +49,26 @@ describe('Sidebar quick toggles', () => {
     rerender(<Sidebar active="stream" state={mkState()} onNav={() => {}} axi={axi as never} />)
     fireEvent.click(screen.getByLabelText('Quick toggle push to talk'))
     expect(axi.setPttEnabled).toHaveBeenCalledWith(true)
+  })
+})
+
+describe('Sidebar camera quick toggle', () => {
+  const cam = (over = {}) => ({ ...INITIAL_STATE.webcam, available: true, ...over })
+
+  it('is hidden until a camera has been configured', () => {
+    render(<Sidebar active="stream" state={mkState({ webcam: cam() })} onNav={() => {}} axi={mkAxi() as never} />)
+    expect(screen.queryByLabelText('Quick toggle camera')).toBeNull()
+  })
+
+  it('is hidden when the configured camera is unavailable', () => {
+    render(<Sidebar active="stream" state={mkState({ webcam: cam({ deviceId: '/dev/video0', available: false }) })} onNav={() => {}} axi={mkAxi() as never} />)
+    expect(screen.queryByLabelText('Quick toggle camera')).toBeNull()
+  })
+
+  it('flips the camera off when it is on', () => {
+    const axi = mkAxi()
+    render(<Sidebar active="stream" state={mkState({ webcam: cam({ deviceId: '/dev/video0', enabled: true }) })} onNav={() => {}} axi={axi as never} />)
+    fireEvent.click(screen.getByLabelText('Quick toggle camera'))
+    expect(axi.setWebcam).toHaveBeenCalledWith({ enabled: false })
   })
 })

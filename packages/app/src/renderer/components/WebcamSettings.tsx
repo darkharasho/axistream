@@ -35,10 +35,14 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
     void axi.setWebcam({ mode: { ...base, ...patch } })
   }
 
+  const sizePct = Math.round(webcam.sizePct * 100)
+  const minPct = Math.round(WEBCAM_MIN_SIZE_PCT * 100)
+  const maxPct = Math.round(WEBCAM_MAX_SIZE_PCT * 100)
+
   return (
-    <>
+    <div className="webcam-settings">
       <h3>Camera</h3>
-      <label>
+      <label className="check">
         <input
           type="checkbox"
           checked={webcam.enabled}
@@ -48,7 +52,7 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
       </label>
 
       <label>
-        Camera
+        <span>Camera</span>
         <select
           value={webcam.deviceId ?? ''}
           onChange={(e) => {
@@ -76,19 +80,22 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
         ))}
       </div>
 
-      <label>
-        Size
+      <label className="slider">
+        <span className="slider-label">Size</span>
+        <span className="slider-value">{sizePct}%</span>
         <input
           type="range"
-          min={Math.round(WEBCAM_MIN_SIZE_PCT * 100)}
-          max={Math.round(WEBCAM_MAX_SIZE_PCT * 100)}
-          value={Math.round(webcam.sizePct * 100)}
+          min={minPct}
+          max={maxPct}
+          value={sizePct}
+          /* The filled part of the track is painted by a background gradient
+             sized from this variable — a native range cannot style it. */
+          style={{ ['--fill' as string]: `${((sizePct - minPct) / (maxPct - minPct)) * 100}%` }}
           onChange={(e) => void axi.setWebcam({ sizePct: Number(e.target.value) / 100 })}
         />
-        <span className="muted">{Math.round(webcam.sizePct * 100)}%</span>
       </label>
 
-      <label>
+      <label className="check">
         <input
           type="checkbox"
           checked={webcam.mirrored}
@@ -97,7 +104,7 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
         Mirror my camera
       </label>
 
-      <label>
+      <label className="check">
         <input
           type="checkbox"
           checked={manual}
@@ -109,25 +116,25 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
       {manual && (
         <div className="webcam-modes">
           <label>
-            Format
+            <span>Format</span>
             <select value={webcam.mode?.pixelformat ?? ''} onChange={(e) => setMode({ pixelformat: e.target.value })}>
               {props.pixelformats.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>
           <label>
-            Resolution
+            <span>Resolution</span>
             <select value={webcam.mode?.resolution ?? ''} onChange={(e) => setMode({ resolution: e.target.value })}>
               {props.resolutions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>
           <label>
-            Frame rate
+            <span>Frame rate</span>
             <select value={webcam.mode?.framerate ?? ''} onChange={(e) => setMode({ framerate: e.target.value })}>
               {props.framerates.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>
         </div>
       )}
-    </>
+    </div>
   )
 }

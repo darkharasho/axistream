@@ -1,4 +1,4 @@
-import { Radio, Settings, Mic, MicOff, Eye, EyeOff, Keyboard, Download } from 'lucide-react'
+import { Radio, Settings, Mic, MicOff, Eye, EyeOff, Keyboard, Video, VideoOff, Download } from 'lucide-react'
 import { AxiMark } from './AxiMark.js'
 import type { AppState, AxiApi, UpdateStatus } from '../../shared/state.js'
 
@@ -6,7 +6,7 @@ const ICON = 16
 
 export function Sidebar({ active, state, onNav, axi, update = null }: { active: 'stream' | 'settings'; state: AppState; onNav: (s: 'stream' | 'settings') => void; axi: AxiApi; update?: UpdateStatus | null }) {
   const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING'
-  const { audio, masks, masksVisible, ptt } = state
+  const { audio, masks, masksVisible, ptt, webcam } = state
   return (
     <div className="sidebar">
       <div className="brand"><AxiMark size={20} /><span className="wordmark"><span>Axi</span><span className="accent">Stream</span></span></div>
@@ -27,6 +27,15 @@ export function Sidebar({ active, state, onNav, axi, update = null }: { active: 
             onClick={() => axi.setMasksVisible(!masksVisible)}>
             {masksVisible && masks.length ? <Eye size={14} /> : <EyeOff size={14} />}
           </button>
+          {/* Only once a camera is set up and reachable — a toggle for a camera
+              the user never picked is noise. */}
+          {webcam.deviceId && webcam.available && (
+            <button className={`qt ${webcam.enabled ? 'on' : ''}`} aria-label="Quick toggle camera"
+              title={webcam.enabled ? 'Camera is on stream — click to hide it' : 'Camera is off'}
+              onClick={() => void axi.setWebcam({ enabled: !webcam.enabled })}>
+              {webcam.enabled ? <Video size={14} /> : <VideoOff size={14} />}
+            </button>
+          )}
           {ptt.available && (
             <button className={`qt ${ptt.enabled ? 'on' : ''} ${ptt.active ? 'tx' : ''}`} aria-label="Quick toggle push to talk" disabled={!audio.micEnabled}
               title={!audio.micEnabled ? 'Enable the microphone first' : ptt.active ? 'Transmitting' : ptt.enabled ? `Push to talk armed — hold ${ptt.keyName} to speak` : 'Push to talk is off'}

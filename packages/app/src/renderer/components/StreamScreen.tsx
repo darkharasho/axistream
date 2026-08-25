@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { MonitorPlay, Radio, Square, RefreshCw, Loader2, Shield, Scan, Link, Check } from 'lucide-react'
+import { MonitorPlay, RefreshCw, Loader2, Shield, Scan, Link, Check } from 'lucide-react'
 import type { AppState, CaptureTargetOption } from '../../shared/state.js'
 import type { AxiApi } from '../../shared/state.js'
 import type { Store } from '../../renderer/store.js'
@@ -8,7 +8,7 @@ import { PreviewVideo } from './PreviewVideo.js'
 import { TitlePromptModal } from './TitlePromptModal.js'
 import { MaskEditor } from './MaskEditor.js'
 import { LiveBadge } from './LiveBadge.js'
-import { RecordButton } from './RecordButton.js'
+import { ActionButton } from './ActionButton.js'
 import { StreamSummaryPanel } from './StreamSummaryPanel.js'
 
 export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
@@ -129,34 +129,11 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
                 <Scan size={12} /> {state.windowFitted ? 'Unfit' : 'Fit'}
               </button>
             : null}
-          {capture && phase !== 'AWAITING_APPROVAL'
-            ? <RecordButton recording={state.recording} disabled={state.audioTestActive} axi={axi} />
-            : null}
-          {state.webcam.deviceId && (
-            <button
-              className={state.webcam.enabled ? 'btn' : 'btn ghost'}
-              onClick={() => void axi.setWebcam({ enabled: !state.webcam.enabled })}
-            >{state.webcam.enabled ? 'Camera on' : 'Camera off'}</button>
-          )}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />
         </div>
 
-        {phase === 'NEEDS_YOUTUBE' ? (
-          <button className="btn primary action" onClick={() => axi.connectYouTube()}>
-            <Radio size={15} /> Connect YouTube to go live
-          </button>
-        ) : live ? (
-          <button className="btn danger action" onClick={() => axi.stopStream()}><Square size={16} /> End Stream</button>
-        ) : (
-          <button className="btn primary action"
-            disabled={phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE'}
-            onClick={() => axi.goLive()}>
-            {phase === 'GOING_LIVE' ? 'Starting…'
-              : phase === 'STARTING_ON_YOUTUBE' ? 'Starting on YouTube…'
-              : <><Radio size={15} /> Go Live</>}
-          </button>
-        )}
+        <ActionButton state={state} axi={axi} />
         {state.watchUrl ? (
           <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
             {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}

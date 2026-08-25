@@ -21,6 +21,16 @@ export interface WebcamDeps {
 
 const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
+// A freshly opened v4l2 device reports 0x0 until its first frame lands, and
+// on the very first selection that includes the driver's cold-start time —
+// routinely past a second. One 1s retry was not enough: the placement was
+// skipped, leaving the camera at OBS's default (native size, top left) until
+// some later edit re-ran apply() against a warm camera. Six half-second
+// tries spend up to 3s in the worst case, and that worst case is a camera
+// that produced no frame at all, where there is nothing to be late for.
+const TRANSFORM_ATTEMPTS = 6
+const TRANSFORM_RETRY_MS = 500
+
 // Reconciles OBS scene 'Main' so the webcam item matches `cfg`.
 // Idempotent; called on boot, after any capture rebuild, and on every edit.
 // Best-effort throughout — a camera must never block go-live.
@@ -145,7 +155,7 @@ export class WebcamController {
 
   private async transform(c: Client, sceneItemId: number, cfg: WebcamConfig): Promise<void> {
     const sleep = this.d.sleep ?? realSleep
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < TRANSFORM_ATTEMPTS; attempt++) {
       const v = await c.call('GetVideoSettings') as { baseWidth?: number; baseHeight?: number }
       const t = await c.call('GetSceneItemTransform', { sceneName: SCENE, sceneItemId }) as
         { sceneItemTransform?: { sourceWidth?: number; sourceHeight?: number } }
@@ -158,8 +168,8 @@ export class WebcamController {
         await c.call('SetSceneItemTransform', { sceneName: SCENE, sceneItemId, sceneItemTransform: p })
         return
       }
-      // A camera reports 0x0 until its first frame arrives. Give it one beat.
-      if (attempt === 0) await sleep(1000)
+      // A camera reports 0x0 until its first frame arrives.
+      if (attempt < TRANSFORM_ATTEMPTS - 1) await sleep(TRANSFORM_RETRY_MS)
     }
     console.warn('[webcam] source dimensions never arrived; left at OBS defaults')
   }

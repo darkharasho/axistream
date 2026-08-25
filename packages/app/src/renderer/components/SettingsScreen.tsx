@@ -26,10 +26,6 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
           </section>
 
           <section className="setting">
-            <UpdatesSettings />
-          </section>
-
-          <section className="setting">
             <h3>Quality</h3>
             <p className="muted">
               {state.encoder}
@@ -50,6 +46,12 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
 
           <section className="setting">
             <DiagnosticsSettings axi={axi} />
+          </section>
+
+          {/* Updates & What's New sit last: they are the least-used controls
+              and the What's New body is the tallest block in the panel. */}
+          <section className="setting">
+            <UpdatesSettings />
           </section>
         </div>
       </div>
