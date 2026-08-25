@@ -190,6 +190,7 @@ export const CH = {
   getWhatsNew: 'app:getWhatsNew',
   setLastSeenVersion: 'app:setLastSeenVersion',
   copyToClipboard: 'app:copyToClipboard',
+  openExternalUrl: 'app:openExternalUrl',
   exportDiagnostics: 'axi:exportDiagnostics',
   startRecording: 'axi:startRecording',
   stopRecording: 'axi:stopRecording',
@@ -243,6 +244,7 @@ export interface AxiApi {
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
+  openExternalUrl(url: string): Promise<boolean>
   exportDiagnostics(): Promise<DiagnosticsResult>
   startRecording(): Promise<RecordStartResult>
   stopRecording(): Promise<RecordStopResult>

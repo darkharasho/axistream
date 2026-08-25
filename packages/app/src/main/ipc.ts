@@ -44,6 +44,7 @@ export interface IpcHandlers {
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
+  openExternalUrl(url: string): Promise<boolean>
   exportDiagnostics(): Promise<DiagnosticsResult>
   startRecording(): Promise<RecordStartResult>
   stopRecording(): Promise<RecordStopResult>
@@ -102,6 +103,7 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.getWhatsNew, () => handlers.getWhatsNew())
   ipcMain.handle(CH.setLastSeenVersion, (_e: unknown, v: string) => handlers.setLastSeenVersion(v))
   ipcMain.handle(CH.copyToClipboard, (_e: unknown, text: string) => handlers.copyToClipboard(text))
+  ipcMain.handle(CH.openExternalUrl, (_e: unknown, url: string) => handlers.openExternalUrl(url))
   ipcMain.handle(CH.exportDiagnostics, () => handlers.exportDiagnostics())
   ipcMain.handle(CH.startRecording, () => handlers.startRecording())
   ipcMain.handle(CH.stopRecording, () => handlers.stopRecording())

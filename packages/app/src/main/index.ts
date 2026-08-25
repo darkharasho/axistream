@@ -94,6 +94,23 @@ const resolveGw2 = async (): Promise<{ character: string; class: string; map: st
   return { character: id.character, class: spec || professionName(id.profession), map, race: raceName(id.race), team }
 }
 
+/**
+ * Hand a URL to the user's real browser — never to an in-app window.
+ *
+ * Electron's default for a target=_blank link is a chrome-less child window
+ * loading the site with this app's webPreferences and no address bar. Only
+ * http(s) is forwarded: an unvetted scheme out of renderer content is an OS
+ * command surface.
+ */
+function openWebUrl(url: string): boolean {
+  try {
+    const protocol = new URL(url).protocol
+    if (protocol !== 'https:' && protocol !== 'http:') return false
+  } catch { return false }
+  void shell.openExternal(url).catch((e) => console.warn('[shell] openExternal failed', e))
+  return true
+}
+
 function createWindow(): BrowserWindow {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
   const { width, height } = computeWindowSize(display.workArea, WINDOW_FRACTION, WINDOW_MIN)
@@ -108,6 +125,14 @@ function createWindow(): BrowserWindow {
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   })
   win.once('ready-to-show', () => win.show())
+  // Belt and braces behind axi.openExternalUrl: any window.open or stray
+  // external href leaves the app instead of opening a chrome-less child window.
+  win.webContents.setWindowOpenHandler(({ url }) => { openWebUrl(url); return { action: 'deny' } })
+  win.webContents.on('will-navigate', (e, url) => {
+    try { if (new URL(url).origin === new URL(win.webContents.getURL()).origin) return } catch { return }
+    e.preventDefault()
+    openWebUrl(url)
+  })
   if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
   else win.loadFile(join(import.meta.dirname, '../renderer/index.html'))
   return win
@@ -854,6 +879,7 @@ if (primary) app.whenReady().then(async () => {
       try { clipboard.writeText(text); return true }
       catch (e) { console.warn('[clipboard] writeText failed', e); return false }
     },
+    openExternalUrl: async (url: string) => openWebUrl(url),
     // Argument-free by design, so it also works from a partly-collapsed renderer.
     exportDiagnostics: async () => {
       const r = await collectDiagnostics({

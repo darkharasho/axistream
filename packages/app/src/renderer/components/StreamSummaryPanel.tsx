@@ -21,6 +21,9 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
     setTimeout(() => setCopied(false), 1500)
   }
 
+  // Hoisted so the narrowing survives into the click handlers below.
+  const watchUrl = summary.watchUrl
+
   return (
     <div className="hero summary-panel" role="region" aria-label="Stream summary">
       <h2>Stream ended</h2>
@@ -42,14 +45,17 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
         </div>
       </div>
 
-      {summary.watchUrl ? (
+      {watchUrl ? (
         <div className="summary-actions">
           <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
             {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
           </button>
-          <a className="btn ghost sm" href={summary.watchUrl} target="_blank" rel="noreferrer">
+          {/* Through main: a renderer href to an external site opens a chrome-less
+              in-app window, not the user's browser. */}
+          <button className="btn ghost sm" onClick={() => void axi.openExternalUrl(watchUrl)}
+            title="Open the broadcast in your browser">
             <ExternalLink size={14} /> Open on YouTube
-          </a>
+          </button>
         </div>
       ) : null}
 

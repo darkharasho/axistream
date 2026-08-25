@@ -28,6 +28,7 @@ describe('ipc contract', () => {
       CH.setGameAudioApps, CH.getGameAudioApps,
       CH.fitWindowToCapture,
       CH.startRecording, CH.stopRecording, CH.chooseRecordDir, CH.openRecording, CH.dismissSummary,
+      CH.openExternalUrl,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)
   })

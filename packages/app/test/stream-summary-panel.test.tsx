@@ -11,6 +11,7 @@ const base: StreamSummary = {
 
 const api = (over: Record<string, any> = {}) => ({
   copyToClipboard: vi.fn(async () => true),
+  openExternalUrl: vi.fn(async () => true),
   openRecording: vi.fn(async () => ({ ok: true })),
   stopRecording: vi.fn(async () => ({ ok: true, outputPath: '/home/u/v.mp4' })),
   dismissSummary: vi.fn(async () => {}),
@@ -49,6 +50,18 @@ describe('StreamSummaryPanel', () => {
 
     expect(axi.copyToClipboard).toHaveBeenCalledWith('https://youtu.be/abc')
     await screen.findByText(/copied/i)
+  })
+
+  it('opens the broadcast through main, never as a renderer href', () => {
+    const axi = api()
+    const { container } = render(<StreamSummaryPanel summary={{ ...base, watchUrl: 'https://youtu.be/abc' }} axi={axi} />)
+
+    // An href here would open a chrome-less in-app window with the app's
+    // webPreferences instead of the user's browser.
+    expect(container.querySelector('a[href]')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /open on youtube/i }))
+
+    expect(axi.openExternalUrl).toHaveBeenCalledWith('https://youtu.be/abc')
   })
 
   it('omits the recording block when no recording happened', () => {
