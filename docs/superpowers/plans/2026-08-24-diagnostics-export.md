@@ -418,7 +418,10 @@ const logSink = createLogSink({ dir: app.getPath('logs'), scrub: scrubLine })
 installLogSink(logSink)
 ```
 
-Place this immediately after the existing `const userData = app.getPath('userData')` line (`index.ts:163`) if that is inside the boot function; if the surrounding code makes an earlier placement possible without touching `app` before it is ready, prefer earlier.
+Place it as the **first statement** in the `app.whenReady()` block — above the
+`session.defaultSession.setPermissionRequestHandler` call at `index.ts:121`, and well above
+`createWindow()` at `:124`. Everything after that point can fail, and all of it should land
+in the log.
 
 - [ ] **Step 3: Verify by hand**
 
@@ -575,14 +578,25 @@ git commit -m "feat(capture): expose configRoot and route OBS output through con
 
 **Files:**
 - Create: `packages/app/src/main/diagnostics.ts`
+- Modify: `packages/app/src/shared/state.ts` (add `DiagnosticsResult`)
 - Modify: `packages/app/package.json` (add `archiver` + `@types/archiver`)
 - Test: `packages/app/test/diagnostics.test.ts`
 
 **Interfaces:**
 - Consumes: `pickState` (Task 1), `LogSink.path`/`backupPath` (Task 2), `OwnedObsRuntime.configRoot` (Task 4)
-- Produces: `collectDiagnostics(d: DiagnosticsDeps): Promise<DiagnosticsResult>`
+- Produces: `DiagnosticsResult` (in `shared/state.ts`, so main, preload, and renderer share one definition) and `collectDiagnostics(d: DiagnosticsDeps): Promise<DiagnosticsResult>`
 
-- [ ] **Step 1: Add the dependency**
+- [ ] **Step 1: Add the shared result type**
+
+The result crosses IPC, so it belongs in `shared/state.ts` rather than in
+`diagnostics.ts` — one definition, imported by main, preload, and renderer alike. Add it
+beside `DiscordTestResult`:
+
+```ts
+export interface DiagnosticsResult { ok: boolean; path?: string; error?: string }
+```
+
+- [ ] **Step 2: Add the dependency**
 
 ```bash
 npm -w @axistream/app install archiver
@@ -591,7 +605,7 @@ npm -w @axistream/app install -D @types/archiver
 
 `archiver` is already resolved in the lockfile as an electron-builder transitive, so this promotes it to an explicit dependency rather than introducing new supply-chain surface. electron-builder only packages declared `dependencies`, which is why the promotion is required.
 
-- [ ] **Step 2: Write the failing test**
+- [ ] **Step 3: Write the failing test**
 
 ```ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -658,7 +672,7 @@ describe('collectDiagnostics', () => {
 })
 ```
 
-- [ ] **Step 3: Run it and watch it fail**
+- [ ] **Step 4: Run it and watch it fail**
 
 ```bash
 cd packages/app && npx vitest run test/diagnostics.test.ts
@@ -666,14 +680,14 @@ cd packages/app && npx vitest run test/diagnostics.test.ts
 
 Expected: FAIL — cannot resolve `../src/main/diagnostics.js`.
 
-- [ ] **Step 4: Implement**
+- [ ] **Step 5: Implement**
 
 ```ts
 import archiver from 'archiver'
 import { createWriteStream, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { pickState, scrubLine } from './redact.js'
-import type { AppState } from '../shared/state.js'
+import type { AppState, DiagnosticsResult } from '../shared/state.js'
 
 interface ObsClientLike { call(request: string, data?: unknown): Promise<unknown> }
 
@@ -685,8 +699,6 @@ export interface DiagnosticsDeps {
   state: () => AppState
   versions: { app: string; electron: string; node: string; os: string }
 }
-
-export interface DiagnosticsResult { ok: boolean; path?: string; error?: string }
 
 /** Keep the newest N bundles so a debugging session cannot grow without bound. */
 const KEEP = 5
@@ -790,7 +802,7 @@ function prune(dir: string): void {
 }
 ```
 
-- [ ] **Step 5: Run it and watch it pass**
+- [ ] **Step 6: Run it and watch it pass**
 
 ```bash
 cd packages/app && npx vitest run test/diagnostics.test.ts
@@ -798,7 +810,7 @@ cd packages/app && npx vitest run test/diagnostics.test.ts
 
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add packages/app/src/main/diagnostics.ts packages/app/test/diagnostics.test.ts packages/app/package.json package-lock.json
@@ -847,13 +859,8 @@ Expected: FAIL — `CH.exportDiagnostics` is undefined.
 
 - [ ] **Step 3: Add the shared contract**
 
-In `packages/app/src/shared/state.ts`, add beside `DiscordTestResult`:
-
-```ts
-export interface DiagnosticsResult { ok: boolean; path?: string; error?: string }
-```
-
-Add to `CH`, after `copyToClipboard`:
+`DiagnosticsResult` already exists from Task 5. In `packages/app/src/shared/state.ts`, add
+to `CH`, after `copyToClipboard`:
 
 ```ts
   exportDiagnostics: 'axi:exportDiagnostics',
@@ -904,7 +911,7 @@ and add the handler alongside the others. It takes no arguments, so it works fro
         logDir: app.getPath('logs'),
         obsConfigRoot: runtime.configRoot,
         client: () => sidecar.client(),
-        state: () => getState(),
+        state: () => state,
         versions: {
           app: app.getVersion(),
           electron: process.versions.electron,
@@ -919,7 +926,9 @@ and add the handler alongside the others. It takes no arguments, so it works fro
     },
 ```
 
-Add `import { release } from 'node:os'` if not already present. Use whatever the surrounding code calls the current-state getter — if there is no `getState()`, use the same expression the `getInitialState` handler returns.
+Add `import { release } from 'node:os'` if not already present. `state` is the closure
+variable that `setState` (`index.ts:144`) mutates, so `() => state` always reads current
+state — do not snapshot it at handler-registration time.
 
 - [ ] **Step 7: Run the suite**
 
@@ -1064,17 +1073,31 @@ git commit -m "feat(diagnostics): add Settings export panel"
 
 Add a case to `packages/app/test/error-boundary.test.tsx`, following the file's existing throwing-child helper:
 
+The file stubs the API by assigning `(globalThis as any).axi` in its `beforeEach`. Add a
+third mock there:
+
+```ts
+let exportDiagnostics: ReturnType<typeof vi.fn>
+```
+
+and inside `beforeEach`:
+
+```ts
+  exportDiagnostics = vi.fn().mockResolvedValue({ ok: true, path: '/tmp/x.zip' })
+  ;(globalThis as any).axi = { copyToClipboard, appVersion, exportDiagnostics }
+```
+
+Then the new case, using `act` as the file's other async cases do:
+
 ```tsx
   it('exports diagnostics from the crash screen', async () => {
-    const exportDiagnostics = vi.fn().mockResolvedValue({ ok: true, path: '/tmp/x.zip' })
-    stubAxi({ exportDiagnostics })
-    render(<ErrorBoundary label="Settings"><Boom /></ErrorBoundary>)
-    await userEvent.click(screen.getByRole('button', { name: /export diagnostics/i }))
-    await waitFor(() => expect(exportDiagnostics).toHaveBeenCalled())
+    render(<ErrorBoundary label="Settings"><Boom fail /></ErrorBoundary>)
+    await act(async () => { screen.getByRole('button', { name: /export diagnostics/i }).click() })
+    expect(exportDiagnostics).toHaveBeenCalled()
   })
 ```
 
-Use whatever the file already does to stub `window.axi` rather than inventing `stubAxi` — match the existing `copyToClipboard` case.
+Note `<Boom fail />` — the helper in this file takes a required `fail` prop.
 
 - [ ] **Step 2: Run it and watch it fail**
 
