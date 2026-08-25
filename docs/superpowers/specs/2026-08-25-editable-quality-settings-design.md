@@ -178,9 +178,11 @@ preferSoftware, preferSoftwareAuto }` — mirroring the settings fields. The
 resolved values the summary needs already exist in state:
 `capture.outputHeight`, `capture.fps`, `videoBitrateKbps`, `encoder`.
 
-`QualitySettings.tsx`, mounted in `SettingsScreen` after Recording and before
-Push-to-talk. Collapsed by default; the header button carries the resolved
-truth:
+`QualitySettings.tsx` **replaces the existing read-only Quality section** in
+`SettingsScreen`, keeping its current position between Camera and Recording.
+That section already prints the encoder, bitrate, and "chosen automatically"
+line, so this feature makes an existing panel editable rather than adding a
+new one. Collapsed by default; the header button carries the resolved truth:
 
 > **Quality** — Auto · 1080p60 · 6000 kbps · NVENC
 
@@ -205,6 +207,10 @@ Expanded, four controls following the patterns `WebcamSettings` established:
 
 While LIVE or RECONNECTING the controls stay enabled and a line under the
 header reads "Applies to your next stream."
+
+The Auto labels resolve from the capture's *base* height, not its current
+output height — otherwise, with a custom 720p active, the Auto option would
+mislabel itself as "Auto (720p)".
 
 ## Error handling
 
