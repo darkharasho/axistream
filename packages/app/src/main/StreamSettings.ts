@@ -27,6 +27,7 @@ export interface StreamSettingsData {
   pttKeyName: string
   pttModifier: '' | 'ctrl' | 'alt' | 'shift' | 'super'
   lastSeenVersion: string
+  recordDir: string
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -51,6 +52,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   pttKeyName: 'F18',
   pttModifier: '',
   lastSeenVersion: '',
+  recordDir: '',
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -124,6 +126,7 @@ export class StreamSettings {
         pttKeyName: typeof raw.pttKeyName === 'string' && raw.pttKeyName ? raw.pttKeyName : DEFAULT_SETTINGS.pttKeyName,
         pttModifier: raw.pttModifier === 'ctrl' || raw.pttModifier === 'alt' || raw.pttModifier === 'shift' || raw.pttModifier === 'super' ? raw.pttModifier : DEFAULT_SETTINGS.pttModifier,
         lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
+        recordDir: typeof raw.recordDir === 'string' ? raw.recordDir : DEFAULT_SETTINGS.recordDir,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

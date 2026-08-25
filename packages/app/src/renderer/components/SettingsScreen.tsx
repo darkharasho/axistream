@@ -3,6 +3,7 @@ import { YouTubeSettings } from './YouTubeSettings.js'
 import { AudioSettings } from './AudioSettings.js'
 import { UpdatesSettings } from './UpdatesSettings.js'
 import { DiagnosticsSettings } from './DiagnosticsSettings.js'
+import { RecordingSettings } from './RecordingSettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -30,6 +31,10 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
               {state.videoBitrateKbps ? ` · ${state.videoBitrateKbps / 1000} Mbps` : ''}
               {state.capture ? ` — chosen automatically for ${state.capture.outputHeight}p${state.capture.fps}` : ' — chosen automatically'}
             </p>
+          </section>
+
+          <section className="setting">
+            <RecordingSettings recording={state.recording} axi={axi} />
           </section>
 
           <section className="setting">

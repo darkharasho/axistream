@@ -85,3 +85,89 @@ describe('RecordController.recordTestClip', () => {
     expect(r.ok).toBe(false)
   })
 })
+
+describe('RecordController.startRecording', () => {
+  it('sets all three profile parameters with the requested format', async () => {
+    const h = harness()
+
+    const r = await h.ctl.startRecording('/home/u/Videos/AxiStream', 'fragmented_mp4')
+
+    expect(r).toEqual({ ok: true })
+    const params = h.calls.filter((c) => c.req === 'SetProfileParameter').map((c) => c.data)
+    expect(params).toEqual([
+      { parameterCategory: 'SimpleOutput', parameterName: 'FilePath', parameterValue: '/home/u/Videos/AxiStream' },
+      { parameterCategory: 'SimpleOutput', parameterName: 'RecFormat2', parameterValue: 'fragmented_mp4' },
+      { parameterCategory: 'SimpleOutput', parameterName: 'RecQuality', parameterValue: 'Stream' },
+    ])
+  })
+
+  it('verifies the output actually went active before reporting success', async () => {
+    // StartRecord resolving only means the request was accepted — an
+    // unreachable FilePath kills the output immediately afterward.
+    const h = harness({ GetRecordStatus: { outputActive: false } })
+
+    const r = await h.ctl.startRecording('/nope', 'fragmented_mp4')
+
+    expect(r.ok).toBe(false)
+    expect(r.error).toMatch(/record folder/i)
+  })
+
+  it('reports failure when StartRecord itself throws', async () => {
+    const h = harness({ StartRecord: new Error('boom') })
+
+    const r = await h.ctl.startRecording('/home/u/v', 'fragmented_mp4')
+
+    expect(r).toEqual({ ok: false, error: 'boom' })
+  })
+
+  it('does not sleep for a record duration — it returns as soon as the output is verified', async () => {
+    const h = harness()
+
+    await h.ctl.startRecording('/home/u/v', 'fragmented_mp4')
+
+    expect(h.sleeps).toEqual([300])
+  })
+})
+
+describe('RecordController.stopRecording', () => {
+  it('returns the output path OBS reports', async () => {
+    const h = harness()
+
+    expect(await h.ctl.stopRecording()).toEqual({ ok: true, outputPath: '/tmp/clip.mp4' })
+  })
+
+  it('retries StopRecord once before giving up', async () => {
+    const h = harness({ StopRecord: new Error('not stopped') })
+
+    const r = await h.ctl.stopRecording()
+
+    expect(r).toEqual({ ok: false, error: 'not stopped' })
+    expect(h.calls.filter((c) => c.req === 'StopRecord')).toHaveLength(2)
+  })
+})
+
+describe('RecordController.isRecording', () => {
+  it('reflects outputActive', async () => {
+    expect(await harness().ctl.isRecording()).toBe(true)
+    expect(await harness({ GetRecordStatus: { outputActive: false } }).ctl.isRecording()).toBe(false)
+  })
+
+  it('reports false when the status call fails', async () => {
+    expect(await harness({ GetRecordStatus: new Error('down') }).ctl.isRecording()).toBe(false)
+  })
+})
+
+describe('recordTestClip is unaffected by VOD recording', () => {
+  it('still writes plain mp4 after a fragmented_mp4 recording set the profile', async () => {
+    const h = harness()
+    await h.ctl.startRecording('/home/u/v', 'fragmented_mp4')
+    h.calls.length = 0
+
+    await h.ctl.recordTestClip(6000, '/tmp/audiotest')
+
+    const formats = h.calls
+      .filter((c) => c.req === 'SetProfileParameter' && c.data.parameterName === 'RecFormat2')
+      .map((c) => c.data.parameterValue)
+    expect(formats).toEqual(['mp4'])
+  })
+})

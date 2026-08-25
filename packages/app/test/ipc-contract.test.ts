@@ -27,6 +27,8 @@ describe('ipc contract', () => {
       CH.setMaskStyle, CH.installBlurPlugin, CH.relaunchApp,
       CH.setGameAudioApps, CH.getGameAudioApps,
       CH.fitWindowToCapture,
+      CH.startRecording, CH.stopRecording, CH.chooseRecordDir, CH.openRecording, CH.dismissSummary,
+      CH.openExternalUrl,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)
   })
@@ -69,6 +71,20 @@ describe('ipc contract', () => {
       bindPush: () => {},
     })
     expect(handled).toContain(CH.exportDiagnostics)
+  })
+
+  it('forwards the recording path through openRecording IPC', async () => {
+    const registered = new Map<string, (...args: any[]) => any>()
+    const openRecording = vi.fn()
+    registerIpc({
+      ipcMain: { handle: (channel: string, handler: (...args: any[]) => any) => registered.set(channel, handler) } as any,
+      handlers: { openRecording } as any,
+      bindPush: () => {},
+    })
+
+    await registered.get(CH.openRecording)?.({}, '/home/u/Videos/AxiStream/a.mp4')
+
+    expect(openRecording).toHaveBeenCalledWith('/home/u/Videos/AxiStream/a.mp4')
   })
 
   it('defines a dedicated event channel for toasts', () => {

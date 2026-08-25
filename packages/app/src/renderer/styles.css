@@ -316,3 +316,13 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* Selectable — the whole point is that the user can hand it to us. */
 .crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
 .crash-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+/* End-of-stream summary panel. Reuses .hero's centred layout. */
+.summary-panel { gap: 18px; }
+.summary-stats { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
+.summary-stat { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; }
+.summary-value { font-size: 15px; }
+.summary-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.summary-path { font-size: 11px; color: #94a3b8; user-select: text; }
+.rec-elapsed { margin-left: 6px; }

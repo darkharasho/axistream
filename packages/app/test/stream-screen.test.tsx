@@ -4,7 +4,7 @@ import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
 const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, captureTargets: [], stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
-  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null }
+  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null, recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null }
 const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true) }
 const store = { applyState: vi.fn() }
 
@@ -111,5 +111,44 @@ describe('StreamScreen fit label', () => {
     expect(screen.getByRole('button', { name: /fit/i })).toHaveTextContent('Fit')
     rerender(<StreamScreen state={{ ...base, windowFitted: true }} preview={null} axi={axi as never} store={store as never} />)
     expect(screen.getByRole('button', { name: /unfit/i })).toBeInTheDocument()
+  })
+})
+
+const summary = {
+  durationMs: 5_400_000, avgBitrateKbps: 6000, peakDroppedPct: 0.02, droppedFrames: 12,
+  droppedPct: 0.02, encoder: 'NVENC H.264', watchUrl: 'https://youtu.be/abc',
+  recordingPath: null, recordingStillActive: false, endedWithError: false,
+}
+
+describe('StreamScreen ENDED phase', () => {
+  it('mounts the summary panel instead of the stream hero', () => {
+    render(<StreamScreen state={{ ...base, phase: 'ENDED', summary }} preview={null} axi={axi as never} store={store as never} />)
+
+    expect(screen.getByRole('region', { name: /stream summary/i })).toBeInTheDocument()
+    expect(screen.getByText(/stream ended/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
+    // The hero's live controls are gone while the summary is up.
+    expect(screen.queryByRole('button', { name: /go live/i })).toBeNull()
+  })
+
+  it('falls back to the stream hero when ENDED arrives without a summary', () => {
+    render(<StreamScreen state={{ ...base, phase: 'ENDED', summary: null }} preview={null} axi={axi as never} store={store as never} />)
+
+    expect(screen.queryByRole('region', { name: /stream summary/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /go live/i })).toBeInTheDocument()
+  })
+})
+
+describe('StreamScreen record button', () => {
+  it('mounts an enabled Record button while nothing owns the recorder', () => {
+    render(<StreamScreen state={base} preview={null} axi={axi as never} store={store as never} />)
+    expect(screen.getByRole('button', { name: /^record$/i })).toBeEnabled()
+  })
+
+  it('disables Record while the audio test owns the single record output', () => {
+    render(<StreamScreen state={{ ...base, audioTestActive: true }} preview={null} axi={axi as never} store={store as never} />)
+    const btn = screen.getByRole('button', { name: /^record$/i })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('title', expect.stringMatching(/audio test/i))
   })
 })

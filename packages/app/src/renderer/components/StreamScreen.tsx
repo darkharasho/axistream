@@ -8,6 +8,8 @@ import { PreviewVideo } from './PreviewVideo.js'
 import { TitlePromptModal } from './TitlePromptModal.js'
 import { MaskEditor } from './MaskEditor.js'
 import { LiveBadge } from './LiveBadge.js'
+import { RecordButton } from './RecordButton.js'
+import { StreamSummaryPanel } from './StreamSummaryPanel.js'
 
 export function StreamScreen({ state, preview, axi, store }: { state: AppState; preview: string | null; axi: AxiApi; store: Store }) {
   const { phase, capture, stats } = state
@@ -83,6 +85,10 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
     )
   }
 
+  if (phase === 'ENDED' && state.summary) {
+    return <StreamSummaryPanel summary={state.summary} axi={axi} />
+  }
+
   return (
     <div className="hero">
       <PreviewVideo />
@@ -122,6 +128,9 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
                 title={state.windowFitted ? 'Back to the default window size' : "Resize the window to the game's aspect (removes letterbox bars)"}>
                 <Scan size={12} /> {state.windowFitted ? 'Unfit' : 'Fit'}
               </button>
+            : null}
+          {capture && phase !== 'AWAITING_APPROVAL'
+            ? <RecordButton recording={state.recording} disabled={state.audioTestActive} axi={axi} />
             : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />

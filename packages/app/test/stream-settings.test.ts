@@ -217,6 +217,24 @@ describe('StreamSettings', () => {
     s.patch({ lastSeenVersion: '0.1.4' })
     expect(new StreamSettings(file).load().lastSeenVersion).toBe('0.1.4')
   })
+
+  it('defaults recordDir to empty for a settings file written before recording existed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'axi-settings-'))
+    const f = join(dir, 'settings.json')
+    writeFileSync(f, JSON.stringify({ titleTemplate: 'x', privacy: 'public' }))
+    const s = new StreamSettings(f)
+
+    expect(s.load().recordDir).toBe('')
+  })
+
+  it('persists a recordDir through patch', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'axi-settings-'))
+    const s = new StreamSettings(join(dir, 'settings.json'))
+
+    s.patch({ recordDir: '/home/u/Videos/AxiStream' })
+
+    expect(s.load().recordDir).toBe('/home/u/Videos/AxiStream')
+  })
 })
 
 describe('sanitizeMasks', () => {
