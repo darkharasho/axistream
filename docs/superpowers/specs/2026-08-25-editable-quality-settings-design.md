@@ -147,7 +147,9 @@ const qualityOf = (s: StreamSettingsData) => ({
 back `GetVideoSettings`, so `state.capture` remains the authority on what OBS
 actually holds rather than what was asked for.
 
-A new `setQuality` IPC persists the patch, then:
+A new `setQuality` IPC takes a partial patch in the renderer's vocabulary —
+`{ height?, fps?, bitrateKbps?, preferSoftware? }`, each mapping to its
+`quality*` settings field — persists it, then:
 
 - **Not live** — re-runs `applyResolution()` + `applyEncoderPreset()`
   immediately and pushes the resulting `capture` into state, so the preview,
