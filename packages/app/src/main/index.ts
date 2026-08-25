@@ -10,7 +10,9 @@ import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
-import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, type StreamSettingsData } from './StreamSettings.js'
+import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, sanitizeWebcam, type StreamSettingsData } from './StreamSettings.js'
+import { WebcamController } from './WebcamController.js'
+import { webcamToast } from './webcam-availability.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
 import { YouTubeLive, watchUrlFor } from './YouTubeLive.js'
 import { renderTitle } from './TitleTemplate.js'
@@ -42,7 +44,7 @@ import { createLogSink, installLogSink } from './log.js'
 import { collectDiagnostics } from './diagnostics.js'
 import { scrubLine } from './redact.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
-import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView } from '../shared/state.js'
+import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView, type WebcamConfig } from '../shared/state.js'
 import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
@@ -306,6 +308,16 @@ if (primary) app.whenReady().then(async () => {
     const a = settings.load()
     await maskCtl.applyMasks(a.masksVisible ? a.masks : [], a.maskStyle)
   }
+  const webcamCtl = new WebcamController({ client: () => sidecar.client() })
+  const applyWebcam = async () => {
+    const cfg = settings.load().webcam
+    const prev = state.webcam.available
+    const { available } = await webcamCtl.apply(cfg)
+    setState({ webcam: { ...cfg, available } })
+    if (webcamToast(prev, available, cfg.enabled)) {
+      toast(win, { kind: 'error', message: 'Camera unavailable', detail: cfg.deviceLabel ?? cfg.deviceId ?? undefined })
+    }
+  }
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
   const recorder = new RecordController({ client: () => sidecar.client() })
   const summaryAcc = createSummaryAccumulator()
@@ -532,7 +544,7 @@ if (primary) app.whenReady().then(async () => {
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
     }),
-    provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
+    provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
     getCaptureTargets: async () => capture.captureTargets(),
     cancelCaptureSelection: async () => capture.cancelSelection(),
     goLive: async (titleOverride?: string) => {
@@ -621,7 +633,7 @@ if (primary) app.whenReady().then(async () => {
       // it is set after.
       setState({ phase: 'ENDED', summary })
     },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -633,7 +645,7 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -1027,6 +1039,14 @@ if (primary) app.whenReady().then(async () => {
     },
 
     dismissSummary: async () => { setState({ phase: goReadyPhase(), summary: null }) },
+
+    setWebcam: async (p: Partial<WebcamConfig>) => {
+      const next = sanitizeWebcam({ ...settings.load().webcam, ...p })
+      settings.patch({ webcam: next })
+      await applyWebcam()
+    },
+    getWebcamDevices: () => webcamCtl.devices(),
+    getWebcamProps: () => webcamCtl.props(),
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
@@ -1174,9 +1194,10 @@ if (primary) app.whenReady().then(async () => {
         const r = await ptt.enable()
         const lbEn = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lbEn), keyCode: lbEn.key.code, modifier: lbEn.modifier } })
       }
-      setState({ masks: a.masks, masksVisible: a.masksVisible })
+      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true } })
       pushFitted()
       await applyMasksRespectingVisibility()
+      await applyWebcam()
       const flatpakState = await installer.detectInstalled()
       let kinds: string[] = []
       try { kinds = ((await sidecar.client().call('GetInputKindList')) as { inputKinds?: string[] }).inputKinds ?? [] } catch { /* best-effort */ }
