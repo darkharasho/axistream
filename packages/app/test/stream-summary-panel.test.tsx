@@ -41,13 +41,14 @@ describe('StreamSummaryPanel', () => {
     expect(screen.queryByRole('button', { name: /copy link/i })).toBeNull()
   })
 
-  it('copies the watch link through the main-process clipboard', () => {
+  it('copies the watch link through the main-process clipboard', async () => {
     const axi = api()
     render(<StreamSummaryPanel summary={{ ...base, watchUrl: 'https://youtu.be/abc' }} axi={axi} />)
 
     fireEvent.click(screen.getByRole('button', { name: /copy link/i }))
 
     expect(axi.copyToClipboard).toHaveBeenCalledWith('https://youtu.be/abc')
+    await screen.findByText(/copied/i)
   })
 
   it('omits the recording block when no recording happened', () => {
