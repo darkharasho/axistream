@@ -129,6 +129,17 @@ describe('WebcamController.apply', () => {
     expect(r.calls.some((c) => c.req === 'SetSceneItemTransform')).toBe(true)
   })
 
+  it('gives up after one retry when the camera never produces a frame, without hanging boot', async () => {
+    // 0x0 on every read: the recorder's dims logic returns the same single
+    // entry forever, so this never converges — proving the retry loop is
+    // bounded rather than looping until a frame arrives.
+    const r = recorder({ inputs: [WEBCAM_INPUT], sourceDims: [{ w: 0, h: 0 }] })
+    const slept = vi.fn(async () => {})
+    await new WebcamController({ client: r.client, platform: 'linux', sleep: slept }).apply(cfg({ corner: 'tl' }))
+    expect(slept).toHaveBeenCalledTimes(1)
+    expect(r.calls.some((c) => c.req === 'SetSceneItemTransform')).toBe(false)
+  })
+
   it('never throws when OBS is unreachable', async () => {
     const client = () => ({ call: vi.fn(async () => { throw new Error('not connected') }) })
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
