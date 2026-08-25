@@ -326,8 +326,14 @@ if (primary) app.whenReady().then(async () => {
   // fault) so state.recording.active does not lie forever. Cleared on
   // explicit stop, on declared death, and on quit.
   let recordingHealthTimer: ReturnType<typeof setInterval> | null = null
+  // clearInterval cannot cancel a tick already suspended in its await, so each
+  // run of the poll carries a generation the tick re-checks after the await.
+  // Without it, a tick that had already seen one miss resumes after a clean
+  // Stop and declares the recording dead.
+  let recordingHealthGeneration = 0
 
   const stopRecordingHealthPoll = () => {
+    recordingHealthGeneration++
     if (recordingHealthTimer) { clearInterval(recordingHealthTimer); recordingHealthTimer = null }
   }
   // GetRecordStatus is polled rather than trusted on a single miss:
@@ -336,11 +342,13 @@ if (primary) app.whenReady().then(async () => {
   // as dead. Two consecutive false results is the death signal.
   const startRecordingHealthPoll = () => {
     stopRecordingHealthPoll()
+    const generation = recordingHealthGeneration
     let consecutiveMisses = 0
     recordingHealthTimer = setInterval(() => {
       void (async () => {
         try {
           const alive = await recorder.isRecording()
+          if (generation !== recordingHealthGeneration) return // stopped mid-tick
           if (alive) { consecutiveMisses = 0; return }
           consecutiveMisses++
           if (consecutiveMisses < 2) return
