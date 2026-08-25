@@ -31,15 +31,19 @@ export function RecordButton({ recording, disabled, axi }: { recording: Recordin
     )
   }
 
+  // Hoisted: TS does not carry a property narrowing into the click handler
+  // below, and a cast there would outlive whatever made it true.
+  const lastPath = recording.lastPath
+
   return (
     <>
       <button className="btn ghost sm" disabled={disabled} onClick={() => void axi.startRecording()}
         title={disabled ? 'Not while an audio test is running' : 'Save a local copy of what you are capturing'}>
         <Circle size={13} /> Record
       </button>
-      {recording.lastPath ? (
-        <button className="btn ghost xs" onClick={() => void axi.openRecording(recording.lastPath as string)}
-          title={recording.lastPath}>
+      {lastPath ? (
+        <button className="btn ghost xs" onClick={() => void axi.openRecording(lastPath)}
+          title={lastPath}>
           <FolderOpen size={12} /> Open recording
         </button>
       ) : null}

@@ -21,8 +21,11 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
     setTimeout(() => setCopied(false), 1500)
   }
 
-  // Hoisted so the narrowing survives into the click handlers below.
+  // Hoisted so the narrowing survives into the click handlers below — TS does
+  // not carry a property narrowing into a callback, and a cast there would
+  // outlive whatever made it true.
   const watchUrl = summary.watchUrl
+  const recordingPath = summary.recordingPath
 
   return (
     <div className="hero summary-panel" role="region" aria-label="Stream summary">
@@ -81,13 +84,13 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
             <Square size={13} /> Stop recording
           </button>
         </div>
-      ) : summary.recordingPath ? (
+      ) : recordingPath ? (
         <div className="summary-actions">
-          <button className="btn ghost sm" onClick={() => void axi.openRecording(summary.recordingPath as string)}>
+          <button className="btn ghost sm" onClick={() => void axi.openRecording(recordingPath)}>
             <FolderOpen size={14} /> Open recording
           </button>
           {/* Selectable so a failed open still leaves something to copy. */}
-          <span className="mono summary-path">{summary.recordingPath}</span>
+          <span className="mono summary-path">{recordingPath}</span>
         </div>
       ) : null}
 
