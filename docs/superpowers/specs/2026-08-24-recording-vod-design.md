@@ -121,13 +121,19 @@ export interface StreamSummary {
   droppedFrames: number
   encoder: string
   watchUrl: string | null
-  recordingPath: string | null
+  recordingPath: string | null      // a recording that finished during this stream
+  recordingStillActive: boolean     // a recording was running when the stream ended
   endedWithError: boolean
 }
 
 export function createSummaryAccumulator(): {
   sample(s: LiveStats): void
-  snapshot(extra: { watchUrl: string | null; recordingPath: string | null; endedWithError: boolean }): StreamSummary
+  snapshot(extra: {
+    watchUrl: string | null
+    recordingPath: string | null
+    recordingStillActive: boolean
+    endedWithError: boolean
+  }): StreamSummary
   reset(): void
 }
 ```
@@ -142,6 +148,10 @@ export function createSummaryAccumulator(): {
   start — no wall-clock arithmetic, no drift.
 - Zero samples (a stream that died before the first tick) yields an all-zero summary rather
   than `NaN`. This is the failure path the spec explicitly promises to show.
+- `endedWithError` is set by the caller, not inferred: true when the stream ended from the
+  `ERROR` phase or while `liveUnconfirmed` was still set — that is, when the session never
+  reached a confirmed live state. It drives the suppression of the watch-link block and
+  nothing else.
 
 The accumulator is fed from the existing stats tick in `index.ts` and reset on go-live.
 
@@ -233,8 +243,12 @@ explanatory title when an audio test is running.
   stream-key mode and on an unconfirmed go-live): **Copy link** via the main-process
   clipboard — never `navigator.clipboard`, the shortcut PR #12 had to walk back — and
   **Open on YouTube**.
-- Recording block, rendered only when a recording overlapped the stream: **Open recording**
-  plus the path as selectable text, so a failed open still leaves something to copy.
+- Recording block, in one of three states. A recording that **finished** during the stream:
+  **Open recording** plus the path as selectable text, so a failed open still leaves
+  something to copy. A recording **still running** (the normal case, since End Stream does
+  not stop recordings): "Still recording — 42:15" with a **Stop recording** button, which
+  on success swaps the block to the finished state without leaving the summary. No
+  recording at all: the block is absent entirely.
 - **Dismiss**, returning to `READY`.
 
 **`RecordingSettings.tsx`** — a new Settings section showing the current folder, a Change
@@ -257,9 +271,10 @@ End Stream  →  liveWatchStop, stream.stop()
             →  user: Open recording / Copy link / Open on YouTube / Dismiss → READY
 ```
 
-Note the ordering guarantee that matters: the snapshot is taken **before** anything clears
-`stats`, and `recordingPath` is read from `recording.lastPath` — so a recording stopped
-mid-stream still shows up in the summary.
+Two ordering guarantees matter here. The snapshot is taken **before** anything clears
+`stats`. And `recordingPath` is read from `recording.lastPath` while `recordingStillActive`
+is read from `recording.active` — so both a recording stopped mid-stream and one still
+running at End Stream are represented, rather than the summary silently showing neither.
 
 ## Error handling
 
@@ -290,7 +305,10 @@ sub-project may throw out into the go-live path.
   a `/mnt` path, and a `..` traversal escaping `$HOME` are all rejected with the specific
   message.
 - **`stream-summary.test.tsx`** (new) — the watch block is absent when `watchUrl` is null
-  and present otherwise; the recording block is absent when `recordingPath` is null; the
+  and present otherwise; the recording block is absent when there is no recording, shows
+  Open recording when `recordingPath` is set, and shows Stop recording when
+  `recordingStillActive` is true; stopping from the summary swaps the block in place
+  without dismissing the summary; the
   dropped-frames verdict switches at the threshold; Copy link calls `axi.copyToClipboard`;
   Dismiss returns to `READY`.
 - **`record-button.test.tsx`** (new) — idle/active labels; elapsed time derives from
