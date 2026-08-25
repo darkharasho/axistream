@@ -136,6 +136,7 @@ export const CH = {
   updatesCheck: 'updates:check',
   updatesInstall: 'updates:install',
   evtUpdateStatus: 'updates:status',
+  evtToast: 'axi:evt:toast',
   appVersion: 'app:version',
   getWhatsNew: 'app:getWhatsNew',
   setLastSeenVersion: 'app:setLastSeenVersion',
@@ -188,6 +189,7 @@ export interface AxiApi {
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
+  onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void
   onStats(cb: (s: LiveStats) => void): () => void
   onPreview(cb: (dataUrl: string) => void): () => void

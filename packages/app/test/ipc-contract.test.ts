@@ -59,4 +59,16 @@ describe('ipc contract', () => {
     })
     expect(typeof push).toBe('function')
   })
+
+  it('defines a dedicated event channel for toasts', () => {
+    expect(CH.evtToast).toBe('axi:evt:toast')
+    // Event channel, not a command — registerIpc must not claim a handler for it.
+    const handled = new Set<string>()
+    registerIpc({
+      ipcMain: { handle: (ch: string) => handled.add(ch) } as any,
+      handlers: {} as any,
+      bindPush: () => {},
+    })
+    expect(handled.has(CH.evtToast)).toBe(false)
+  })
 })
