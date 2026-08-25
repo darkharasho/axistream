@@ -32,6 +32,10 @@ describe('isInAppNavigation', () => {
     expect(isInAppNavigation('file:///home/user/.ssh/id_ed25519', PACKAGED)).toBe(false)
   })
 
+  it('refuses a remote host wearing the packaged path', () => {
+    expect(isInAppNavigation('file://evil.example/opt/AxiStream/resources/app/out/renderer/index.html', PACKAGED)).toBe(false)
+  })
+
   it('refuses a target that will not parse', () => {
     expect(isInAppNavigation('not a url', PACKAGED)).toBe(false)
   })

@@ -20,7 +20,9 @@ export function isInAppNavigation(target: string, current: string): boolean {
     from = new URL(current)
   } catch { return false }
   if (to.protocol !== from.protocol) return false
-  if (to.protocol === 'file:') return to.pathname === from.pathname
+  // The host is load-bearing: a packaged window sits at file:///... with an
+  // empty host, and file://evil.example/<same path> shares its pathname.
+  if (to.protocol === 'file:') return to.host === from.host && to.pathname === from.pathname
   if (to.protocol === 'http:' || to.protocol === 'https:') return to.origin === from.origin
   return false
 }
