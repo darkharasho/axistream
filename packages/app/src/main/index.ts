@@ -1036,12 +1036,53 @@ if (primary) app.whenReady().then(async () => {
     }, 2000)
   }
 
+  // Quit-time recording finalization. Memoized because both the window's close
+  // handler and before-quit can reach it and OBS must only get one StopRecord;
+  // this only ever runs on the way out, so it is never reused across recordings.
+  let recordingFinalization: Promise<unknown> | null = null
+  const finalizeRecording = () => {
+    if (!recordingFinalization) {
+      stopRecordingHealthPoll()
+      recordingFinalization = Promise.race([
+        recorder.stopRecording().catch((err) => { console.warn('[record] stop on quit failed', err) }),
+        new Promise((r) => setTimeout(r, 2000)),
+      ])
+    }
+    return recordingFinalization
+  }
+
   // Wire quit-while-live guard and engine teardown before booting OBS,
   // so that close events fired during the async start are handled correctly.
+  // Answered once: finalizing a recording defers the close and fires this
+  // handler a second time, which must not re-ask.
+  let closeConfirmed = false
   win.on('close', (e) => {
-    if (stream.isLive()) {
-      const choice = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['Stay live', 'End stream & quit'], defaultId: 0, cancelId: 0, message: "You're still live — end stream and quit?" })
+    const live = stream.isLive()
+    if (!closeConfirmed && (live || state.recording.active)) {
+      const [message, quitLabel] = live && state.recording.active
+        ? ["You're still live and still recording — end both and quit?", 'End stream, stop recording & quit']
+        : live
+        ? ["You're still live — end stream and quit?", 'End stream & quit']
+        : ["You're still recording — stop the recording and quit?", 'Stop recording & quit']
+      const choice = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['Stay in AxiStream', quitLabel], defaultId: 0, cancelId: 0, message })
       if (choice === 0) { e.preventDefault(); return }
+    }
+    closeConfirmed = true
+    // Finalize the recording BEFORE the sidecar teardown below. On the ordinary
+    // quit path the order is close -> window-all-closed -> app.quit ->
+    // before-quit, so a StopRecord issued from before-quit lands on an OBS that
+    // is already being killed and the file is left without its index. Defer the
+    // close instead, then re-close once OBS has finished the file — boxed at 2s
+    // so quitting can never hang on OBS.
+    if (state.recording.active) {
+      e.preventDefault()
+      void finalizeRecording().finally(() => {
+        // Cleared unconditionally: the second close must not defer again, even
+        // if StopRecord timed out.
+        setState({ recording: { ...state.recording, active: false, startedAt: null } })
+        win.close()
+      })
+      return
     }
     preview.stop()
     void meter.stop()
@@ -1052,12 +1093,10 @@ if (primary) app.whenReady().then(async () => {
 
   app.on('before-quit', () => {
     stopRecordingHealthPoll()
-    // Finalize an in-flight recording, but never let quitting hang on OBS.
-    if (!state.recording.active) return
-    void Promise.race([
-      recorder.stopRecording(),
-      new Promise((r) => setTimeout(r, 2000)),
-    ]).catch(() => {})
+    // Backstop for quit paths that reach here first (tray Quit). Shares the
+    // memoized finalization with the close handler so OBS only ever gets one
+    // StopRecord.
+    if (state.recording.active) void finalizeRecording()
   })
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
