@@ -1096,7 +1096,11 @@ if (primary) app.whenReady().then(async () => {
         // if StopRecord timed out, and the UI must not keep timing a recording
         // that OBS has already stopped.
         setState({ recording: { ...state.recording, active: false, startedAt: null } })
-        win.close()
+        // Two closes arriving during the deferral both wait on the one
+        // finalization and then run back to back; the first destroys the
+        // window, so the second must not call close() on it — that throws
+        // "Object has been destroyed" into the quit path.
+        if (!win.isDestroyed()) win.close()
       })
       return
     }
