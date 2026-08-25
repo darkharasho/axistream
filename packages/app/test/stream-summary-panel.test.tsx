@@ -74,6 +74,20 @@ describe('StreamSummaryPanel', () => {
     expect(axi.openExternalUrl).toHaveBeenCalledWith('https://youtu.be/abc')
   })
 
+  it('suppresses the watch link when the stream ended with an error', () => {
+    render(<StreamSummaryPanel summary={{ ...base, watchUrl: 'https://youtu.be/abc', endedWithError: true }} axi={api()} />)
+
+    expect(screen.queryByRole('button', { name: /copy link/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /open on youtube/i })).toBeNull()
+  })
+
+  it('reports dropped frames as a plain count and names the encoder', () => {
+    render(<StreamSummaryPanel summary={{ ...base, droppedFrames: 412 }} axi={api()} />)
+
+    expect(screen.getByText(/412 ·/)).toBeTruthy()
+    expect(screen.getByText('NVENC H.264')).toBeTruthy()
+  })
+
   it('omits the recording block when no recording happened', () => {
     render(<StreamSummaryPanel summary={base} axi={api()} />)
 

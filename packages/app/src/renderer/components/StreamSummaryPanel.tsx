@@ -42,7 +42,7 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
         <div className="summary-stat">
           <span className="summary-label">Dropped frames</span>
           <span className="summary-value mono">
-            {summary.droppedPct.toFixed(2)}% — {droppedVerdict(summary.droppedPct)}
+            {summary.droppedFrames} · {summary.droppedPct.toFixed(2)}% — {droppedVerdict(summary.droppedPct)}
           </span>
         </div>
         <div className="summary-stat">
@@ -51,9 +51,16 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
             {summary.peakDroppedPct.toFixed(2)}% — {droppedVerdict(summary.peakDroppedPct)}
           </span>
         </div>
+        <div className="summary-stat">
+          <span className="summary-label">Encoder</span>
+          <span className="summary-value mono">{summary.encoder || 'unknown'}</span>
+        </div>
       </div>
 
-      {watchUrl ? (
+      {/* endedWithError suppresses the watch link and nothing else: a stream that
+          reached YouTube and then failed has a URL, but pointing the user at a
+          broken broadcast is worse than offering nothing. */}
+      {watchUrl && !summary.endedWithError ? (
         <div className="summary-actions">
           <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
             {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
