@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar.js'
 import { StreamScreen } from './components/StreamScreen.js'
 import { SettingsScreen } from './components/SettingsScreen.js'
 import { ToastHost } from './components/ToastHost.js'
+import { ErrorBoundary } from './components/ErrorBoundary.js'
 import { toastStore } from './toasts.js'
 import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
@@ -36,18 +37,20 @@ export function App() {
   }, [])
 
   return (
-    <div className="app">
-      <div className="dragbar" />
-      <ToastHost />
-      <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
-      {nav === 'stream'
-        ? <StreamScreen state={state} preview={preview} axi={axi} store={store} />
-        : <SettingsScreen state={state} axi={axi} />}
-      <div className="wctl">
-        <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}><Minus size={15} /></button>
-        <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}><Square size={13} /></button>
-        <button className="wbtn close" aria-label="Close" onClick={() => axi.windowClose()}><X size={15} /></button>
+    <ErrorBoundary label="AxiStream" root>
+      <div className="app">
+        <div className="dragbar" />
+        <ToastHost />
+        <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
+        {nav === 'stream'
+          ? <ErrorBoundary label="Stream"><StreamScreen state={state} preview={preview} axi={axi} store={store} /></ErrorBoundary>
+          : <ErrorBoundary label="Settings"><SettingsScreen state={state} axi={axi} /></ErrorBoundary>}
+        <div className="wctl">
+          <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}><Minus size={15} /></button>
+          <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}><Square size={13} /></button>
+          <button className="wbtn close" aria-label="Close" onClick={() => axi.windowClose()}><X size={15} /></button>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   )
 }
