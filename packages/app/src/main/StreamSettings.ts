@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { MAX_MASKS, type MaskRect } from '../shared/state.js'
+import { MAX_MASKS, type MaskRect, type WebcamCorner, type WebcamMode, type WebcamConfig, WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT, DEFAULT_WEBCAM } from '../shared/state.js'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
 export type MaskStyle = 'box' | 'blur'
@@ -28,6 +28,7 @@ export interface StreamSettingsData {
   pttModifier: '' | 'ctrl' | 'alt' | 'shift' | 'super'
   lastSeenVersion: string
   recordDir: string
+  webcam: WebcamConfig
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -53,12 +54,41 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   pttModifier: '',
   lastSeenVersion: '',
   recordDir: '',
+  webcam: { ...DEFAULT_WEBCAM },
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
 const MASK_STYLES: MaskStyle[] = ['box', 'blur']
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
+
+const CORNERS: WebcamCorner[] = ['tl', 'tr', 'bl', 'br']
+
+export function sanitizeWebcam(raw: unknown): WebcamConfig {
+  if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_WEBCAM }
+  const r = raw as Record<string, unknown>
+  // A mode is all three properties or none — a resolution without its pixel
+  // format is exactly the broken combination the override exists to avoid.
+  let mode: WebcamMode | null = null
+  const m = r.mode
+  if (typeof m === 'object' && m !== null) {
+    const { pixelformat, resolution, framerate } = m as Record<string, unknown>
+    if (typeof pixelformat === 'string' && pixelformat && typeof resolution === 'string' && resolution && typeof framerate === 'string' && framerate) {
+      mode = { pixelformat, resolution, framerate }
+    }
+  }
+  return {
+    enabled: typeof r.enabled === 'boolean' ? r.enabled : DEFAULT_WEBCAM.enabled,
+    deviceId: typeof r.deviceId === 'string' && r.deviceId ? r.deviceId : null,
+    deviceLabel: typeof r.deviceLabel === 'string' && r.deviceLabel ? r.deviceLabel : null,
+    corner: CORNERS.includes(r.corner as WebcamCorner) ? (r.corner as WebcamCorner) : DEFAULT_WEBCAM.corner,
+    sizePct: typeof r.sizePct === 'number' && Number.isFinite(r.sizePct)
+      ? clamp(r.sizePct, WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT)
+      : DEFAULT_WEBCAM.sizePct,
+    mirrored: typeof r.mirrored === 'boolean' ? r.mirrored : DEFAULT_WEBCAM.mirrored,
+    mode,
+  }
+}
 
 export function sanitizeMasks(raw: unknown): MaskRect[] {
   if (!Array.isArray(raw)) return []
@@ -127,6 +157,7 @@ export class StreamSettings {
         pttModifier: raw.pttModifier === 'ctrl' || raw.pttModifier === 'alt' || raw.pttModifier === 'shift' || raw.pttModifier === 'super' ? raw.pttModifier : DEFAULT_SETTINGS.pttModifier,
         lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
         recordDir: typeof raw.recordDir === 'string' ? raw.recordDir : DEFAULT_SETTINGS.recordDir,
+        webcam: sanitizeWebcam(raw.webcam),
       }
     } catch {
       return { ...DEFAULT_SETTINGS }
