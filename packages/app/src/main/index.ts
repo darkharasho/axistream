@@ -23,6 +23,7 @@ import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
 import { RecordController } from './RecordController.js'
 import { defaultRecordDir, validateRecordDir, RECORD_DIR_ERROR } from './record-dir.js'
+import { recordStartRejection } from './record-gate.js'
 import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
@@ -867,8 +868,12 @@ if (primary) app.whenReady().then(async () => {
       return r
     },
     startRecording: async () => {
-      if (audioTestInFlight) return { ok: false, error: 'an audio test is running' }
-      if (state.recording.active) return { ok: false, error: 'already recording' }
+      const rejection = recordStartRejection({
+        startInFlight: recordingStartInFlight,
+        recordingActive: state.recording.active,
+        audioTestActive: audioTestInFlight,
+      })
+      if (rejection) return { ok: false, error: rejection }
       const dir = resolveRecordDir()
       const v = validateRecordDir(dir, app.getPath('home'))
       if (!v.ok) {
@@ -881,7 +886,12 @@ if (primary) app.whenReady().then(async () => {
         await fsPromises.mkdir(dir, { recursive: true }).catch(() => {})
         const r = await recorder.startRecording(dir, 'fragmented_mp4')
         if (!r.ok) {
-          setState({ recording: { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
+          // Only clear the fields this call owns. If a recording is somehow
+          // already running, reporting our own failure must not flip it to
+          // inactive — that would leave OBS writing a file with no Stop button.
+          setState({ recording: state.recording.active
+            ? { ...state.recording, error: r.error ?? 'failed' }
+            : { ...state.recording, active: false, startedAt: null, error: r.error ?? 'failed' } })
           toast(win, { kind: 'error', message: 'Recording failed to start', detail: r.error })
           return r
         }
