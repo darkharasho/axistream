@@ -37,10 +37,18 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
           <span className="summary-label">Average bitrate</span>
           <span className="summary-value mono">{summary.avgBitrateKbps} kbps</span>
         </div>
+        {/* Each figure is judged by its own verdict: pairing the session total
+            with the peak's verdict read "0.03% — viewers likely saw stuttering". */}
         <div className="summary-stat">
           <span className="summary-label">Dropped frames</span>
           <span className="summary-value mono">
-            {summary.droppedPct.toFixed(2)}% — {droppedVerdict(summary.peakDroppedPct)}
+            {summary.droppedPct.toFixed(2)}% — {droppedVerdict(summary.droppedPct)}
+          </span>
+        </div>
+        <div className="summary-stat">
+          <span className="summary-label">Worst moment</span>
+          <span className="summary-value mono">
+            {summary.peakDroppedPct.toFixed(2)}% — {droppedVerdict(summary.peakDroppedPct)}
           </span>
         </div>
       </div>

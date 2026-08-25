@@ -36,6 +36,16 @@ describe('StreamSummaryPanel', () => {
     expect(screen.getByText(/6000 kbps/i)).toBeTruthy()
   })
 
+  it('judges each dropped-frame figure by its own number', () => {
+    // A recovered 4% spike in an otherwise clean stream used to render
+    // "0.03% — viewers likely saw stuttering": the session total beside the
+    // peak's verdict.
+    render(<StreamSummaryPanel summary={{ ...base, droppedPct: 0.03, peakDroppedPct: 4 }} axi={api()} />)
+
+    expect(screen.getByText(/0\.03% — clean/)).toBeTruthy()
+    expect(screen.getByText(/4\.00% — viewers likely saw stuttering/)).toBeTruthy()
+  })
+
   it('omits the watch link entirely when there is no watch url', () => {
     render(<StreamSummaryPanel summary={base} axi={api()} />)
 
