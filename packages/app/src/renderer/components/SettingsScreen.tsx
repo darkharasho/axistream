@@ -2,6 +2,7 @@ import type { AppState, AxiApi } from '../../shared/state.js'
 import { YouTubeSettings } from './YouTubeSettings.js'
 import { AudioSettings } from './AudioSettings.js'
 import { UpdatesSettings } from './UpdatesSettings.js'
+import { DiagnosticsSettings } from './DiagnosticsSettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -35,6 +36,10 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
             <h3>Capture</h3>
             <p className="muted">Re-run setup if you changed monitors or the capture stopped working.</p>
             <button className="btn ghost" onClick={() => axi.repairCapture()}>Re-set up capture</button>
+          </section>
+
+          <section className="setting">
+            <DiagnosticsSettings axi={axi} />
           </section>
         </div>
       </div>
