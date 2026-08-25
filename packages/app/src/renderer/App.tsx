@@ -4,6 +4,8 @@ import { createStore } from './store.js'
 import { Sidebar } from './components/Sidebar.js'
 import { StreamScreen } from './components/StreamScreen.js'
 import { SettingsScreen } from './components/SettingsScreen.js'
+import { ToastHost } from './components/ToastHost.js'
+import { toastStore } from './toasts.js'
 import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
 const store = createStore()
@@ -22,7 +24,13 @@ export function App() {
       axi.onState((p) => store.applyState(p)),
       axi.onStats((s) => store.applyStats(s)),
       axi.onPreview((d) => store.applyPreview(d)),
-      axi.onUpdateStatus(setUpdate),
+      axi.onUpdateStatus((s) => {
+        setUpdate(s)
+        // Update failures otherwise render only inside UpdatesSettings — invisible
+        // unless the user happens to be sitting on the Settings screen.
+        if (s.state === 'error') toastStore.push({ kind: 'error', message: 'Update failed', detail: s.message })
+      }),
+      axi.onToast((t) => { toastStore.push(t) }),
     ]
     axi.getInitialState().then((s) => store.applyState(s))
     return () => offs.forEach((off) => off())
@@ -31,6 +39,7 @@ export function App() {
   return (
     <div className="app">
       <div className="dragbar" />
+      <ToastHost />
       <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
       {nav === 'stream'
         ? <StreamScreen state={state} preview={preview} axi={axi} store={store} />

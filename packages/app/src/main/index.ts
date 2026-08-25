@@ -40,6 +40,7 @@ import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-siz
 import { enforceSingleInstance } from './single-instance.js'
 import { AudioLevelMeter } from './AudioLevelMeter.js'
 import { createSmokeWatcher, type SmokeResult } from './smoke.js'
+import { toast } from './toast.js'
 
 const runtimeOnlySmokeMode = process.argv.includes('--smoke-runtime')
 const smokeMode = process.argv.includes('--smoke') || runtimeOnlySmokeMode
@@ -477,7 +478,13 @@ if (primary) app.whenReady().then(async () => {
                 title,
                 watchUrl: watchUrlFor(session!.broadcastId),
                 message: cfg.discordMessage,
-              }, realFetch).catch(() => {})
+              }, realFetch)
+                .then((r) => {
+                  if (!r.ok) toast(win, { kind: 'error', message: 'Discord announcement failed', detail: r.error })
+                })
+                .catch((e) => {
+                  toast(win, { kind: 'error', message: 'Discord announcement failed', detail: String(e) })
+                })
             }
           },
           onStop: () => live.complete(session!.broadcastId),
@@ -594,12 +601,19 @@ if (primary) app.whenReady().then(async () => {
       setState({ gameAudioPlugin: { status: 'installing', error: null } })
       const r = await installer.install()
       setState({ gameAudioPlugin: r.ok ? { status: 'installed', error: null } : { status: 'error', error: r.error ?? 'Install failed' } })
+      // Installs finish in the background, often on another screen.
+      toast(win, r.ok
+        ? { kind: 'success', message: 'Game audio plugin installed' }
+        : { kind: 'error', message: 'Game audio plugin install failed', detail: r.error })
     },
     installBlurPlugin: async () => {
       if (state.blurPlugin.status === 'installing') return
       setState({ blurPlugin: { status: 'installing', error: null } })
       const r = await blurInstaller.install()
       setState({ blurPlugin: r.ok ? { status: 'installed', error: null } : { status: 'error', error: r.error ?? 'Install failed' } })
+      toast(win, r.ok
+        ? { kind: 'success', message: 'Blur plugin installed' }
+        : { kind: 'error', message: 'Blur plugin install failed', detail: r.error })
     },
     setMaskStyle: async (style: 'box' | 'blur') => {
       settings.patch({ maskStyle: style })
