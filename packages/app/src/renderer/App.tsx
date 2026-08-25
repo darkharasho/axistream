@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Minus, Square, X } from 'lucide-react'
-import { createStore } from './store.js'
+import { store } from './store.js'
 import { Sidebar } from './components/Sidebar.js'
 import { StreamScreen } from './components/StreamScreen.js'
 import { SettingsScreen } from './components/SettingsScreen.js'
@@ -8,7 +8,6 @@ import { ToastHost } from './components/ToastHost.js'
 import { toastStore } from './toasts.js'
 import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
-const store = createStore()
 const axi = (globalThis as unknown as { axi: AxiApi }).axi
 
 export function App() {

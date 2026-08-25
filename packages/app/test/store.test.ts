@@ -25,4 +25,11 @@ describe('store', () => {
     expect(s.getPreview()).toBe('data:image/png;base64,AAAA')
     expect(s.getState().phase).toBe('SETTING_UP')
   })
+
+  it('exports a module-level singleton', async () => {
+    const a = await import('../src/renderer/store.js')
+    const b = await import('../src/renderer/store.js')
+    expect(a.store).toBe(b.store)
+    expect(a.store.getState().phase).toBe('SETTING_UP')
+  })
 })
