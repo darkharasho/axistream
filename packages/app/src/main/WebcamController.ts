@@ -40,8 +40,10 @@ export class WebcamController {
       // GetInputPropertiesListPropertyItems needs an inputName. Create first.
       await this.ensureInput(c, kind)
 
+      // null means the enumeration itself failed (a dead websocket proves
+      // nothing about the hardware); [] means OBS really sees no cameras.
       const devices = await this.listDevices(c, deviceProp)
-      const available = devices.length === 0 || devices.some((d) => d.id === cfg.deviceId)
+      const available = devices === null || devices.some((d) => d.id === cfg.deviceId)
       if (!available) return { available: false }
 
       await c.call('SetInputSettings', {
@@ -50,8 +52,12 @@ export class WebcamController {
         overlay: true,
       })
 
+      // No explicit z-order call. Every caller applies masks before the
+      // webcam, so the webcam's item is created last and OBS draws it on top —
+      // the same create-last-is-top rule MaskController relies on. An explicit
+      // SetSceneItemIndex could only move it, and index orientation is not
+      // something we can verify from here.
       const sceneItemId = await this.sceneItemId(c)
-      await c.call('SetSceneItemIndex', { sceneName: SCENE, sceneItemId, sceneItemIndex: 0 }).catch(() => {})
       await this.transform(c, sceneItemId, cfg)
       return { available: true }
     } catch (e) {
@@ -62,7 +68,8 @@ export class WebcamController {
     }
   }
 
-  async listDevices(c: Client, deviceProp: string): Promise<{ id: string; name: string }[]> {
+  // Returns null when OBS could not be asked, [] when it answered with none.
+  async listDevices(c: Client, deviceProp: string): Promise<{ id: string; name: string }[] | null> {
     try {
       const r = await c.call('GetInputPropertiesListPropertyItems', {
         inputName: WEBCAM_INPUT, propertyName: deviceProp,
@@ -70,7 +77,7 @@ export class WebcamController {
       return (r.propertyItems ?? [])
         .filter((it: { itemValue: string }) => it.itemValue)
         .map((it: { itemName: string; itemValue: string }) => ({ id: it.itemValue, name: it.itemName }))
-    } catch (e) { console.warn('[webcam] listDevices failed', e); return [] }
+    } catch (e) { console.warn('[webcam] listDevices failed', e); return null }
   }
 
   // The device list lives on the input, so the input must exist first.
@@ -79,7 +86,7 @@ export class WebcamController {
     const { kind, deviceProp } = kindsFor(this.d.platform ?? process.platform)
     try {
       await this.ensureInput(c, kind)
-      return await this.listDevices(c, deviceProp)
+      return (await this.listDevices(c, deviceProp)) ?? []
     } catch (e) { console.warn('[webcam] devices failed', e); return [] }
   }
 

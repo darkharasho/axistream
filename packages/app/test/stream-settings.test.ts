@@ -268,6 +268,17 @@ describe('webcam settings', () => {
     })
   })
 
+  it('defaults the webcam for a settings file written before webcams existed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'axi-settings-'))
+    const f = join(dir, 'settings.json')
+    writeFileSync(f, JSON.stringify({ titleTemplate: 'x', privacy: 'public' }))
+
+    expect(new StreamSettings(f).load().webcam).toEqual({
+      enabled: false, deviceId: null, deviceLabel: null,
+      corner: 'br', sizePct: 0.22, mirrored: false, mode: null,
+    })
+  })
+
   it('round-trips a configured webcam', () => {
     const s = new StreamSettings(tmpFile())
     s.patch({ webcam: { enabled: true, deviceId: '/dev/video0', deviceLabel: 'C920', corner: 'tl', sizePct: 0.3, mirrored: true, mode: null } })

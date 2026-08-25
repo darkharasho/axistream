@@ -74,11 +74,13 @@ describe('WebcamController.apply', () => {
     expect(r.calls.some((c) => c.req === 'CreateSceneItem' && c.data.sourceName === WEBCAM_INPUT)).toBe(true)
   })
 
-  it('pins the item to the top so masks cannot cover it', async () => {
+  it('sets no explicit z-order, leaving the item on top by creation order', async () => {
+    // Masks are applied before the webcam on every path, so the webcam item is
+    // created last and OBS draws it topmost — MaskController's rule. An
+    // explicit index call could only move it off the top.
     const r = recorder({ inputs: [WEBCAM_INPUT] })
     await new WebcamController({ client: r.client, platform: 'linux', sleep }).apply(cfg())
-    const pin = r.calls.find((c) => c.req === 'SetSceneItemIndex')
-    expect(pin?.data).toMatchObject({ sceneItemIndex: 0 })
+    expect(r.calls.some((c) => c.req === 'SetSceneItemIndex')).toBe(false)
   })
 
   it('applies the computed transform', async () => {
@@ -117,6 +119,32 @@ describe('WebcamController.apply', () => {
     expect(res.available).toBe(false)
     const set = r.calls.find((c) => c.req === 'SetInputSettings')
     expect(set?.data?.inputSettings?.device_id).toBeUndefined()
+  })
+
+  it('reports unavailable when the camera list is empty — the unplugged case', async () => {
+    // The common failure: the only camera is gone, so v4l2 enumerates nothing.
+    const r = recorder({ inputs: [WEBCAM_INPUT], devices: [] })
+    const res = await new WebcamController({ client: r.client, platform: 'linux', sleep }).apply(cfg())
+    expect(res.available).toBe(false)
+    expect(r.calls.find((c) => c.req === 'SetInputSettings')).toBeUndefined()
+  })
+
+  it('stays available when the enumeration itself fails, not the camera', async () => {
+    // A broken enumeration call is indistinguishable from "no cameras" unless
+    // listDevices reports null; blaming the hardware would be a false alarm.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const r = recorder({ inputs: [WEBCAM_INPUT] })
+    const client = () => {
+      const inner = r.client()
+      return { call: async (req: string, data?: any) => {
+        if (req === 'GetInputPropertiesListPropertyItems') throw new Error('no such property')
+        return inner.call(req, data)
+      } }
+    }
+    const res = await new WebcamController({ client, platform: 'linux', sleep }).apply(cfg())
+    expect(res.available).toBe(true)
+    expect(r.calls.some((c) => c.req === 'SetInputSettings')).toBe(true)
+    warn.mockRestore()
   })
 
   it('retries the transform once when the camera has not yet produced a frame', async () => {
