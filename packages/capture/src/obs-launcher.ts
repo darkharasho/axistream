@@ -42,8 +42,8 @@ export class FlatpakObsLauncher implements ObsLauncher {
 
   launch(args: string[]): ObsLaunchHandle {
     const proc = this.spawnProcess('flatpak', ['run', this.appId, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
-    proc.stdout?.on('data', (d) => process.stdout.write(`[obs] ${d}`))
-    proc.stderr?.on('data', (d) => process.stderr.write(`[obs] ${d}`))
+    proc.stdout?.on('data', (d) => console.log(`[obs] ${String(d).trimEnd()}`))
+    proc.stderr?.on('data', (d) => console.warn(`[obs] ${String(d).trimEnd()}`))
     return {
       kill: () => { try { proc.kill() } catch { /* ignore */ } },
       onExit: (cb) => proc.on('exit', cb),

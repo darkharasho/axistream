@@ -154,8 +154,11 @@ export class WindowsObsLauncher implements ObsLauncher {
       '--minimize-to-tray', '--websocket_ipv4_only', ...args,
     ]
     const child = this.spawn(this.options.executablePath, launchArgs, {
-      cwd: win32.dirname(this.options.executablePath), stdio: 'ignore', detached: false,
+      cwd: win32.dirname(this.options.executablePath), stdio: ['ignore', 'pipe', 'pipe'], detached: false,
     })
+    // Attached at spawn, not later: an undrained pipe blocks a chatty OBS.
+    child.stdout?.on('data', (d) => console.log(`[obs] ${String(d).trimEnd()}`))
+    child.stderr?.on('data', (d) => console.warn(`[obs] ${String(d).trimEnd()}`))
     try {
       if (!child.pid) throw new Error('AxiStream OBS process did not provide a PID')
       container.assign(child.pid)

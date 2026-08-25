@@ -9,5 +9,7 @@ export interface OwnedObsLaunchSpec {
 export interface OwnedObsRuntime {
   readonly engineId: string
   readonly configIdentity: string
+  /** OBS's config directory; `<configRoot>/obs-studio/logs` holds OBS's own logs. */
+  readonly configRoot: string
   prepare(): Promise<OwnedObsLaunchSpec>
 }
