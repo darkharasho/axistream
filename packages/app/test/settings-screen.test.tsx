@@ -25,6 +25,9 @@ const axi = {
   getWhatsNew: vi.fn(async () => ({ version: '0.1.4', notes: null as string | null })),
   setLastSeenVersion: vi.fn(async () => {}),
   onUpdateStatus: vi.fn(() => () => {}),
+  setWebcam: vi.fn(async () => {}),
+  getWebcamDevices: vi.fn(async () => []),
+  getWebcamProps: vi.fn(async () => ({ pixelformats: [], resolutions: [], framerates: [] })),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 

@@ -4,6 +4,7 @@ import { AudioSettings } from './AudioSettings.js'
 import { UpdatesSettings } from './UpdatesSettings.js'
 import { DiagnosticsSettings } from './DiagnosticsSettings.js'
 import { RecordingSettings } from './RecordingSettings.js'
+import { WebcamSettings } from './WebcamSettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -18,6 +19,10 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
 
           <section className="setting">
             <AudioSettings audio={state.audio} gameAudioPlugin={state.gameAudioPlugin} phase={state.phase} ptt={state.ptt} />
+          </section>
+
+          <section className="setting">
+            <WebcamSettings webcam={state.webcam} axi={axi} />
           </section>
 
           <section className="setting">
