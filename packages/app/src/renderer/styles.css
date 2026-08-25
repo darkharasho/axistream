@@ -7,10 +7,12 @@ body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter',
    Re-enabled only where selecting has value: form fields and error text. */
 body { -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: text; user-select: text; }
-.overlay-pill, .ptt-err, .audio-test-err, .yt-test-err, .yt-preview { -webkit-user-select: text; user-select: text; }
+.overlay-pill, .field-err, .yt-preview { -webkit-user-select: text; user-select: text; }
 /* Corner rounding (KWin/compositor rounds the window; #root matches the radius
    so content doesn't poke into the rounded corner). Window is opaque
    (transparent:false + dark backgroundColor) — same technique as axibridge. */
+/* Keyboard focus baseline. :focus-visible only — pointer users don't see it. */
+:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; border-radius: 6px; }
 #root { height: 100%; overflow: hidden; border-radius: 10px; }
 
 /* App is a row: sidebar | active screen. Window controls float top-right. */
@@ -181,7 +183,9 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: #8b98a5; }
 .yt-discord-test { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .yt-test-ok { font-size: 12px; font-weight: 600; color: #3fb950; }
-.yt-test-err { font-size: 12px; font-weight: 600; color: #f85149; }
+/* Inline failure attached to a specific control. Discrete background events
+   use toasts instead; phase-level conditions use .overlay. */
+.field-err { font-size: 12px; font-weight: 600; color: #f85149; }
 .updates-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .whatsnew { border-top: 1px solid rgba(255,255,255,.08); margin-top: 12px; padding-top: 10px; }
 .whatsnew-body { white-space: pre-wrap; font-size: 12px; color: #c4cedb; background: #0b1017; border: 1px solid #1c242e; border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; }
@@ -250,12 +254,10 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .ptt { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
 .ptt-live { margin-left: auto; font-size: 11px; font-weight: 800; color: #f85149; letter-spacing: .04em; }
 .ptt-muted { margin-left: auto; font-size: 11px; color: #8b98a5; }
-.ptt-err { font-size: 12px; font-weight: 600; color: #f85149; }
 
 /* Stream audio check */
 .audio-test { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .audio-test audio { width: 100%; height: 32px; }
-.audio-test-err { font-size: 12px; font-weight: 600; color: #f85149; }
 
 /* PTT key picker (combo builder) */
 .keypicker { display: flex; flex-direction: column; gap: 8px; margin: 6px 0; }

@@ -32,7 +32,7 @@ export function UpdatesSettings() {
       <div className="updates-row">
         <button className="btn ghost sm" disabled={busy} onClick={() => axi().checkForUpdates()}>Check for updates</button>
         {status?.state === 'ready' && <button className="btn primary sm" onClick={() => axi().installUpdate()}>Restart &amp; update</button>}
-        {status && <span className={status.state === 'error' ? 'yt-test-err' : 'muted'}>{line()}</span>}
+        {status && <span className={status.state === 'error' ? 'field-err' : 'muted'}>{line()}</span>}
       </div>
       {notes && (
         <div className="whatsnew">

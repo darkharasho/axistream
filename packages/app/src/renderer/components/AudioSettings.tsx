@@ -200,7 +200,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               : <span className="ptt-muted">muted — hold {ptt.keyName} to talk</span>)}
           </label>
           {!ptt.available && <p className="muted">Needs the GlobalShortcuts portal — available on KDE Plasma</p>}
-          {ptt.error && <p className="ptt-err">{ptt.error}</p>}
+          {ptt.error && <p className="field-err">{ptt.error}</p>}
           {ptt.enabled && ptt.mode === 'passthrough' && (
             <>
               <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
@@ -217,7 +217,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               <p className="muted">AxiStream owns the key — Discord won't see {ptt.keyName}.</p>
               <button className="btn ghost xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
               <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
-              {unlockErr && <p className="ptt-err">{unlockErr}</p>}
+              {unlockErr && <p className="field-err">{unlockErr}</p>}
               <label className="muted">Push-to-talk key
                 <select value={ptt.keyName}
                   onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttBinding({ key: k, modifier: null }) }}>
@@ -239,7 +239,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           <audio data-testid="audio-test-player" controls src={test.url}
             onError={() => setTest({ st: 'error', error: "Couldn't play the clip — the recording may be corrupt or blocked" })} />
         )}
-        {test.st === 'error' && <span className="audio-test-err">{test.error}</span>}
+        {test.st === 'error' && <span className="field-err">{test.error}</span>}
         <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.{pttEnabled ? ` Hold ${ptt.keyName} while recording to test your mic.` : null}</p>
       </div>
     </section>
