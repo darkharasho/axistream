@@ -283,9 +283,10 @@ if (primary) app.whenReady().then(async () => {
   const recorder = new RecordController({ client: () => sidecar.client() })
   const summaryAcc = createSummaryAccumulator()
   // OBS has exactly one record output, so the six-second audio test and a VOD
-  // recording cannot coexist. This flag is the audio test's half of the
-  // mutual exclusion; the VOD's half is state.recording.active.
-  let audioTestInFlight = false
+  // recording cannot coexist. state.audioTestActive is the audio test's half of
+  // the mutual exclusion; the VOD's half is state.recording.active. It lives in
+  // AppState rather than in a local so the Record button can disable itself and
+  // explain why, instead of silently swallowing the rejection.
   // startRecording awaits a 300ms settle plus several websocket round-trips
   // before state.recording.active flips true. Without this flag, a "Test
   // audio" click landing in that window would race the VOD start and both
@@ -793,7 +794,7 @@ if (primary) app.whenReady().then(async () => {
       if (stream.isLive() || state.phase === 'GOING_LIVE' || !state.capture || state.recording.active || recordingStartInFlight) {
         return { ok: false, error: 'not available right now' }
       }
-      audioTestInFlight = true
+      setState({ audioTestActive: true })
       try {
         // Must be a HOME-based path: OBS writes this file from inside its
         // flatpak, whose /tmp is a private tmpfs (even with host access), so an
@@ -825,7 +826,7 @@ if (primary) app.whenReady().then(async () => {
           return { ok: false, error: e instanceof Error ? e.message : String(e) }
         }
       } finally {
-        audioTestInFlight = false
+        setState({ audioTestActive: false })
       }
     },
     appVersion: async () => app.getVersion(),
@@ -871,9 +872,23 @@ if (primary) app.whenReady().then(async () => {
       const rejection = recordStartRejection({
         startInFlight: recordingStartInFlight,
         recordingActive: state.recording.active,
-        audioTestActive: audioTestInFlight,
+        audioTestActive: state.audioTestActive,
       })
-      if (rejection) return { ok: false, error: rejection }
+      if (rejection) {
+        // A rejection the user cannot see is a button that does nothing. The
+        // in-flight case is deliberately silent: it is the second half of one
+        // double-click, and the first half is already starting.
+        if (rejection !== 'already starting') {
+          toast(win, {
+            kind: 'error',
+            message: 'Cannot start recording',
+            detail: rejection === 'an audio test is running'
+              ? 'An audio test is using the recorder — it finishes in a few seconds.'
+              : 'A recording is already running.',
+          })
+        }
+        return { ok: false, error: rejection }
+      }
       const dir = resolveRecordDir()
       const v = validateRecordDir(dir, app.getPath('home'))
       if (!v.ok) {

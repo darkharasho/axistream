@@ -44,7 +44,7 @@ const base: AppState = {
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
   ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, liveUnconfirmed: false, watchUrl: null,
-  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, summary: null,
+  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null,
 }
 
 describe('SettingsScreen', () => {

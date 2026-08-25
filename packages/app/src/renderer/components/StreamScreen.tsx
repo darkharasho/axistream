@@ -130,7 +130,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
               </button>
             : null}
           {capture && phase !== 'AWAITING_APPROVAL'
-            ? <RecordButton recording={state.recording} disabled={false} axi={axi} />
+            ? <RecordButton recording={state.recording} disabled={state.audioTestActive} axi={axi} />
             : null}
           <span className="spacer" />
           <StatChips stats={stats} capture={capture} encoder={state.encoder} />

@@ -4,7 +4,7 @@ import { StreamScreen } from '../src/renderer/components/StreamScreen.js'
 import type { AppState } from '../src/shared/state.js'
 
 const base: AppState = { phase: 'READY', capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }, captureTargets: [], stats: null, liveUnconfirmed: false, error: null, encoder: 'x264',
-  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null, recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, summary: null }
+  videoBitrateKbps: null, youtube: { connected: false, channel: null }, settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' }, audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }, masks: [], gameAudioPlugin: { status: 'missing', error: null }, blurPlugin: { status: 'missing', error: null }, maskStyle: 'box', ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, watchUrl: null, recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null }
 const axi = { provision: vi.fn(), getCaptureTargets: vi.fn(), cancelCaptureSelection: vi.fn(), goLive: vi.fn(), stopStream: vi.fn(), repairCapture: vi.fn(), switchSource: vi.fn(), getInitialState: vi.fn(async () => base), setMasks: vi.fn(), setMaskStyle: vi.fn(), installBlurPlugin: vi.fn(), relaunchApp: vi.fn(), fitWindowToCapture: vi.fn(), setMasksVisible: vi.fn(), connectYouTube: vi.fn(), copyToClipboard: vi.fn(async () => true) }
 const store = { applyState: vi.fn() }
 
@@ -111,5 +111,19 @@ describe('StreamScreen fit label', () => {
     expect(screen.getByRole('button', { name: /fit/i })).toHaveTextContent('Fit')
     rerender(<StreamScreen state={{ ...base, windowFitted: true }} preview={null} axi={axi as never} store={store as never} />)
     expect(screen.getByRole('button', { name: /unfit/i })).toBeInTheDocument()
+  })
+})
+
+describe('StreamScreen record button', () => {
+  it('mounts an enabled Record button while nothing owns the recorder', () => {
+    render(<StreamScreen state={base} preview={null} axi={axi as never} store={store as never} />)
+    expect(screen.getByRole('button', { name: /^record$/i })).toBeEnabled()
+  })
+
+  it('disables Record while the audio test owns the single record output', () => {
+    render(<StreamScreen state={{ ...base, audioTestActive: true }} preview={null} axi={axi as never} store={store as never} />)
+    const btn = screen.getByRole('button', { name: /^record$/i })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('title', expect.stringMatching(/audio test/i))
   })
 })

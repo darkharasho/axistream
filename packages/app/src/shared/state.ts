@@ -80,6 +80,10 @@ export interface AppState {
   masksVisible: boolean
   watchUrl: string | null
   recording: RecordingState
+  /** The six-second audio test owns OBS's single record output while it runs,
+   *  so Record must refuse. A condition, so it lives here rather than as a
+   *  main-process local the renderer cannot see. */
+  audioTestActive: boolean
   summary: StreamSummary | null
 }
 export const INITIAL_STATE: AppState = {
@@ -97,6 +101,7 @@ export const INITIAL_STATE: AppState = {
   masksVisible: true,
   watchUrl: null,
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null },
+  audioTestActive: false,
   summary: null,
 }
 
