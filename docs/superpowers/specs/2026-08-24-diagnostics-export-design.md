@@ -104,7 +104,7 @@ regex metacharacters cannot defeat it.
 `pickState(state: AppState): Record<string, unknown>` — an explicit allowlist for the
 structured dump. Includes `phase`, `encoder`, `videoBitrateKbps`, `capture`, `stats`,
 `audio` (device *names* and enablement), `masks` (count and geometry only),
-`gameAudioPlugin`, `blurPlugin`, `maskStyle`, `ptt` (minus nothing — it holds no secrets),
+`gameAudioPlugin`, `blurPlugin`, `maskStyle`, `ptt` in full (it holds no secrets),
 `windowFitted`, `masksVisible`, `youtube.connected`, `settings.titleTemplate`,
 `settings.dateFormat`, `settings.privacy`. Excludes `settings.discordWebhookUrl`,
 `settings.discordMessage`, `youtube.channel`, and `watchUrl`.
