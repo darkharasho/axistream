@@ -57,7 +57,7 @@ const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
 const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
-const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage })
+const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage, recordDir: s.recordDir })
 let state: AppState = { ...INITIAL_STATE }
 
 // MumbleLink reader deps — /proc/<pid>/mem reads the live address space, so

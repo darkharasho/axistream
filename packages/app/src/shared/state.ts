@@ -3,7 +3,7 @@ import type { PttBinding, PttCaptureResult } from './keys.js'
 export type StreamPhase =
   | 'SETTING_UP' | 'PREPARING_CAPTURE' | 'CHOOSING_CAPTURE' | 'AWAITING_APPROVAL'
   | 'NEEDS_YOUTUBE' | 'NEEDS_TITLE' | 'READY'
-  | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ERROR'
+  | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ENDED' | 'ERROR'
 
 export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
 
@@ -17,6 +17,7 @@ export interface StreamSettingsView {
   privacy: 'public' | 'unlisted' | 'private'
   discordWebhookUrl: string
   discordMessage: string
+  recordDir: string
 }
 
 export interface AudioDevice { id: string; name: string }
@@ -26,6 +27,38 @@ export interface LiveStats {
   bitrateKbps: number; droppedFrames: number; droppedPct: number; durationMs: number;
   encoder: string; cpuPct: number; reconnecting: boolean
 }
+
+/** Local recording. A condition, so it lives here rather than on the toast channel. */
+export interface RecordingState {
+  active: boolean
+  /** Epoch ms. The renderer derives elapsed time from this rather than main
+   *  pushing a per-second counter down a second stats channel. */
+  startedAt: number | null
+  dir: string
+  /** Most recent finished recording, for the summary's "Open recording". */
+  lastPath: string | null
+  error: string | null
+}
+
+/** Snapshot taken at End Stream. OBS's stats are instantaneous and vanish once
+ *  the stream stops, so every figure here is accumulated live — nothing in this
+ *  shape can be recomputed after the fact. */
+export interface StreamSummary {
+  durationMs: number
+  avgBitrateKbps: number
+  peakDroppedPct: number
+  droppedFrames: number
+  droppedPct: number
+  encoder: string
+  watchUrl: string | null
+  /** A recording that finished during this stream. */
+  recordingPath: string | null
+  /** A recording still running when the stream ended — the normal case, since
+   *  Record is fully manual and End Stream does not stop it. */
+  recordingStillActive: boolean
+  endedWithError: boolean
+}
+
 export interface AppState {
   phase: StreamPhase
   capture: CaptureMeta | null
@@ -46,12 +79,14 @@ export interface AppState {
   windowFitted: boolean
   masksVisible: boolean
   watchUrl: string | null
+  recording: RecordingState
+  summary: StreamSummary | null
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, captureTargets: [], stats: null, liveUnconfirmed: false, error: null,
   encoder: 'x264', videoBitrateKbps: null,
   youtube: { connected: false, channel: null },
-  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '' },
+  settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },
   masks: [],
   gameAudioPlugin: { status: 'missing', error: null },
@@ -61,6 +96,8 @@ export const INITIAL_STATE: AppState = {
   windowFitted: false,
   masksVisible: true,
   watchUrl: null,
+  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null },
+  summary: null,
 }
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
@@ -68,6 +105,11 @@ export interface AudioLevels { desktop: number; mic: number; game: number }
 export interface DiscordTestResult { ok: boolean; error?: string }
 
 export interface DiagnosticsResult { ok: boolean; path?: string; error?: string }
+
+export interface RecordStartResult { ok: boolean; error?: string }
+export interface RecordStopResult { ok: boolean; outputPath?: string; error?: string }
+export interface ChooseDirResult { ok: boolean; dir?: string; error?: string }
+export interface OpenResult { ok: boolean; error?: string }
 
 /** One-off notification. Discrete events only — conditions belong in AppState. */
 export type ToastKind = 'info' | 'success' | 'error'
@@ -144,6 +186,11 @@ export const CH = {
   setLastSeenVersion: 'app:setLastSeenVersion',
   copyToClipboard: 'app:copyToClipboard',
   exportDiagnostics: 'axi:exportDiagnostics',
+  startRecording: 'axi:startRecording',
+  stopRecording: 'axi:stopRecording',
+  chooseRecordDir: 'axi:chooseRecordDir',
+  openRecording: 'axi:openRecording',
+  dismissSummary: 'axi:dismissSummary',
 } as const
 
 export interface AxiApi {
@@ -192,6 +239,11 @@ export interface AxiApi {
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
   exportDiagnostics(): Promise<DiagnosticsResult>
+  startRecording(): Promise<RecordStartResult>
+  stopRecording(): Promise<RecordStopResult>
+  chooseRecordDir(): Promise<ChooseDirResult>
+  openRecording(path: string): Promise<OpenResult>
+  dismissSummary(): Promise<void>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void
