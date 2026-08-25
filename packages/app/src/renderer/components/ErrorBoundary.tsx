@@ -40,6 +40,11 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ error: null, stack: '' })
   }
 
+  private exportDiagnostics = async (): Promise<void> => {
+    // Argument-free by design: this tree has already partly collapsed.
+    await axi().exportDiagnostics().catch(() => ({ ok: false }))
+  }
+
   private copy = async (): Promise<void> => {
     const version = await axi().appVersion().catch(() => 'unknown')
     const body = [
@@ -64,6 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="crash-actions">
           <button className="btn primary" onClick={this.reset}>Reload</button>
           <button className="btn ghost" onClick={() => void this.copy()}>Copy error details</button>
+          <button className="btn ghost" onClick={() => void this.exportDiagnostics()}>Export diagnostics</button>
         </div>
       </div>
     )

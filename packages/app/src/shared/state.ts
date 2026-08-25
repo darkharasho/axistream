@@ -67,6 +67,8 @@ export interface AudioLevels { desktop: number; mic: number; game: number }
 
 export interface DiscordTestResult { ok: boolean; error?: string }
 
+export interface DiagnosticsResult { ok: boolean; path?: string; error?: string }
+
 /** One-off notification. Discrete events only — conditions belong in AppState. */
 export type ToastKind = 'info' | 'success' | 'error'
 export interface ToastPayload {
@@ -141,6 +143,7 @@ export const CH = {
   getWhatsNew: 'app:getWhatsNew',
   setLastSeenVersion: 'app:setLastSeenVersion',
   copyToClipboard: 'app:copyToClipboard',
+  exportDiagnostics: 'axi:exportDiagnostics',
 } as const
 
 export interface AxiApi {
@@ -188,6 +191,7 @@ export interface AxiApi {
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
+  exportDiagnostics(): Promise<DiagnosticsResult>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void

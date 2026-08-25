@@ -2,7 +2,7 @@ import './load-env.js' // must run before any process.env read below
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen, clipboard } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync, promises as fsPromises } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, release } from 'node:os'
 import { execFile } from 'node:child_process'
 
 import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
@@ -33,6 +33,9 @@ import { createEvdevShortcuts, captureNextKey } from './evdev-keys.js'
 import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
+import { createLogSink, installLogSink } from './log.js'
+import { collectDiagnostics } from './diagnostics.js'
+import { scrubLine } from './redact.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView } from '../shared/state.js'
 import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
@@ -117,6 +120,10 @@ const primary = enforceSingleInstance({
 }, () => focusMain())
 
 if (primary) app.whenReady().then(async () => {
+  // Everything below can fail; all of it should land in the log.
+  const logSink = createLogSink({ dir: app.getPath('logs'), scrub: scrubLine })
+  installLogSink(logSink)
+
   // Allow the renderer to consume the OBS Virtual Camera for the live preview.
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'))
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
@@ -232,7 +239,7 @@ if (primary) app.whenReady().then(async () => {
           headless: !process.env.AXISTREAM_OBS_VISIBLE,
         })
       : {
-          engineId: 'axistream-obs-unsupported', configIdentity: 'unavailable',
+          engineId: 'axistream-obs-unsupported', configIdentity: 'unavailable', configRoot: '',
           prepare: async () => { throw new Error('Capture is not supported on this platform') },
         }
   const config = new CaptureConfig(join(userData, 'capture.json'), runtime.engineId)
@@ -756,6 +763,26 @@ if (primary) app.whenReady().then(async () => {
     copyToClipboard: async (text) => {
       try { clipboard.writeText(text); return true }
       catch (e) { console.warn('[clipboard] writeText failed', e); return false }
+    },
+    // Argument-free by design, so it also works from a partly-collapsed renderer.
+    exportDiagnostics: async () => {
+      const r = await collectDiagnostics({
+        outDir: join(userData, 'diagnostics'),
+        logDir: app.getPath('logs'),
+        obsConfigRoot: runtime.configRoot,
+        client: () => sidecar.client(),
+        state: () => state,
+        versions: {
+          app: app.getVersion(),
+          electron: process.versions.electron,
+          node: process.versions.node,
+          os: `${process.platform} ${release()}`,
+        },
+      })
+      toast(win, r.ok
+        ? { kind: 'success', message: 'Diagnostics exported', detail: r.path }
+        : { kind: 'error', message: 'Diagnostics export failed', detail: r.error })
+      return r
     },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })

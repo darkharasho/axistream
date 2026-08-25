@@ -24,8 +24,8 @@ export interface HeadlessCageOptions {
 
 function defaultSpawn(cmd: string, args: string[], env: NodeJS.ProcessEnv): ObsLaunchHandle {
   const proc = spawn(cmd, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
-  proc.stdout.on('data', (d) => process.stdout.write(`[obs] ${d}`))
-  proc.stderr.on('data', (d) => process.stderr.write(`[obs] ${d}`))
+  proc.stdout.on('data', (d) => console.log(`[obs] ${String(d).trimEnd()}`))
+  proc.stderr.on('data', (d) => console.warn(`[obs] ${String(d).trimEnd()}`))
   return {
     kill: () => { try { proc.kill() } catch { /* ignore */ } },
     onExit: (cb) => proc.on('exit', cb),

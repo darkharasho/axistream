@@ -1,4 +1,4 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 export interface IpcHandlers {
@@ -44,6 +44,7 @@ export interface IpcHandlers {
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
+  exportDiagnostics(): Promise<DiagnosticsResult>
 }
 
 export interface IpcDeps {
@@ -96,5 +97,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.getWhatsNew, () => handlers.getWhatsNew())
   ipcMain.handle(CH.setLastSeenVersion, (_e: unknown, v: string) => handlers.setLastSeenVersion(v))
   ipcMain.handle(CH.copyToClipboard, (_e: unknown, text: string) => handlers.copyToClipboard(text))
+  ipcMain.handle(CH.exportDiagnostics, () => handlers.exportDiagnostics())
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

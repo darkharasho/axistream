@@ -56,6 +56,7 @@ async function hashFile(path: string): Promise<string> {
 export class LinuxOwnedObsRuntime implements OwnedObsRuntime {
   readonly engineId: string
   readonly configIdentity: string
+  readonly configRoot: string
   private readonly exec: FlatpakExec
   private readonly makeLauncher: (appId: string) => ObsLauncher
   private readonly configureWebsocket: (configRoot: string) => void
@@ -66,6 +67,7 @@ export class LinuxOwnedObsRuntime implements OwnedObsRuntime {
     }
     this.engineId = options.manifest.engineId
     this.configIdentity = `flatpak:${options.manifest.appId}`
+    this.configRoot = join(homedir(), '.var', 'app', options.manifest.appId, 'config')
     this.exec = options.exec ?? defaultExec
     this.makeLauncher = options.makeLauncher ?? ((appId) => {
       const visible = new FlatpakObsLauncher(appId)
@@ -103,7 +105,7 @@ export class LinuxOwnedObsRuntime implements OwnedObsRuntime {
     // instance and leak the first. Clear only the dedicated app id — never personal
     // OBS — before handing back a launcher. Best-effort: a no-op when none is running.
     await this.exec('flatpak', ['kill', manifest.appId]).catch(() => { /* nothing to clean */ })
-    this.configureWebsocket(join(homedir(), '.var', 'app', manifest.appId, 'config'))
+    this.configureWebsocket(this.configRoot)
     return {
       launcher: this.makeLauncher(manifest.appId),
       expectedObsVersion: manifest.obsVersion,

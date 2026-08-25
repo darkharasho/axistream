@@ -109,12 +109,14 @@ function assertPathInside(root: string, child: string): void {
 export class WindowsOwnedObsRuntime implements OwnedObsRuntime {
   readonly engineId: string
   readonly configIdentity: string
+  readonly configRoot: string
   private readonly extractArchive: ArchiveExtractor
   private readonly makeLauncher: NonNullable<WindowsOwnedObsRuntimeOptions['makeLauncher']>
 
   constructor(private readonly options: WindowsOwnedObsRuntimeOptions) {
     this.engineId = options.manifest.engineId
     this.configIdentity = `portable:${options.manifest.engineId}`
+    this.configRoot = join(options.installRoot, options.manifest.obsVersion, 'config')
     this.extractArchive = options.extractArchive ?? defaultExtract
     this.makeLauncher = options.makeLauncher ?? ((launcherOptions) => new WindowsObsLauncher(launcherOptions))
   }
@@ -183,7 +185,7 @@ export class WindowsOwnedObsRuntime implements OwnedObsRuntime {
     const { manifest } = this.options
     const launcher = this.makeLauncher({
       executablePath: join(target, manifest.executableRelativePath),
-      configRoot: join(target, 'config'),
+      configRoot: this.configRoot,
     })
     return { launcher, expectedObsVersion: manifest.obsVersion, engineId: manifest.engineId }
   }

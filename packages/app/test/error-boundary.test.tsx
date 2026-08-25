@@ -10,11 +10,13 @@ const Boom = ({ fail }: { fail: boolean }) => {
 
 let copyToClipboard: ReturnType<typeof vi.fn>
 let appVersion: ReturnType<typeof vi.fn>
+let exportDiagnostics: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   copyToClipboard = vi.fn().mockResolvedValue(true)
   appVersion = vi.fn().mockResolvedValue('1.0.0')
-  ;(globalThis as any).axi = { copyToClipboard, appVersion }
+  exportDiagnostics = vi.fn().mockResolvedValue({ ok: true, path: '/tmp/x.zip' })
+  ;(globalThis as any).axi = { copyToClipboard, appVersion, exportDiagnostics }
   // React logs caught errors; keep the test output readable.
   vi.spyOn(console, 'error').mockImplementation(() => {})
   store.applyState({ phase: 'READY' })
@@ -76,5 +78,11 @@ describe('ErrorBoundary', () => {
     expect(payload).toContain('kaboom')
     expect(payload).toContain('1.0.0')
     expect(payload).toContain('Stream')
+  })
+
+  it('exports diagnostics from the crash screen', async () => {
+    render(<ErrorBoundary label="Settings"><Boom fail={true} /></ErrorBoundary>)
+    await act(async () => { screen.getByRole('button', { name: /export diagnostics/i }).click() })
+    expect(exportDiagnostics).toHaveBeenCalled()
   })
 })
