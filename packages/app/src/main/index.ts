@@ -2,7 +2,7 @@ import './load-env.js' // must run before any process.env read below
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, session, Tray, Menu, nativeImage, screen, clipboard } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSync, closeSync, promises as fsPromises } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, release } from 'node:os'
 import { execFile } from 'node:child_process'
 
 import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
@@ -34,6 +34,7 @@ import { runInputUnlock } from './input-unlock.js'
 import { waitForStableFile, hasTopLevelMoov } from './wait-stable-file.js'
 import { registerIpc, type IpcHandlers } from './ipc.js'
 import { createLogSink, installLogSink } from './log.js'
+import { collectDiagnostics } from './diagnostics.js'
 import { scrubLine } from './redact.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
 import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView } from '../shared/state.js'
@@ -762,6 +763,26 @@ if (primary) app.whenReady().then(async () => {
     copyToClipboard: async (text) => {
       try { clipboard.writeText(text); return true }
       catch (e) { console.warn('[clipboard] writeText failed', e); return false }
+    },
+    // Argument-free by design, so it also works from a partly-collapsed renderer.
+    exportDiagnostics: async () => {
+      const r = await collectDiagnostics({
+        outDir: join(userData, 'diagnostics'),
+        logDir: app.getPath('logs'),
+        obsConfigRoot: runtime.configRoot,
+        client: () => sidecar.client(),
+        state: () => state,
+        versions: {
+          app: app.getVersion(),
+          electron: process.versions.electron,
+          node: process.versions.node,
+          os: `${process.platform} ${release()}`,
+        },
+      })
+      toast(win, r.ok
+        ? { kind: 'success', message: 'Diagnostics exported', detail: r.path }
+        : { kind: 'error', message: 'Diagnostics export failed', detail: r.error })
+      return r
     },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })

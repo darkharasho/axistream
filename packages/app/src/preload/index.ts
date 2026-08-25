@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult, type DiagnosticsResult } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
@@ -53,6 +53,7 @@ const api: AxiApi = {
   getWhatsNew: () => ipcRenderer.invoke(CH.getWhatsNew) as Promise<{ version: string; notes: string | null }>,
   setLastSeenVersion: (v: string) => ipcRenderer.invoke(CH.setLastSeenVersion, v) as Promise<void>,
   copyToClipboard: (text: string) => ipcRenderer.invoke(CH.copyToClipboard, text) as Promise<boolean>,
+  exportDiagnostics: () => ipcRenderer.invoke(CH.exportDiagnostics) as Promise<DiagnosticsResult>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),
   onStats: (cb) => sub<LiveStats>(CH.evtStats, cb),
   onPreview: (cb) => sub<string>(CH.evtPreview, cb),
