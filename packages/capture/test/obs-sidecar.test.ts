@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 import { ObsSidecar, ObsVersionMismatchError } from '../src/obs-sidecar.js'
 import type { ObsLauncher, ObsLaunchHandle } from '../src/obs-launcher.js'
 
-function fakeLauncher(): { launcher: ObsLauncher; exit: (code: number | null) => void } {
+function fakeLauncher(): { launcher: ObsLauncher; handle: ObsLaunchHandle; exit: (code: number | null) => void } {
   let exitCb: (code: number | null) => void = () => {}
   const handle: ObsLaunchHandle = { kill: vi.fn(), onExit: (cb) => { exitCb = cb } }
   const launcher: ObsLauncher = { launch: vi.fn(() => handle), stopOwned: vi.fn() }
-  return { launcher, exit: (c) => exitCb(c) }
+  return { launcher, handle, exit: (c) => exitCb(c) }
 }
 
 describe('ObsSidecar', () => {
@@ -56,6 +56,56 @@ describe('ObsSidecar', () => {
     await sidecar.start()
     await sidecar.stop()
     expect(launcher.stopOwned).toHaveBeenCalledOnce()
+  })
+
+  it('stop() kills the launch handle after stopOwned() resolves', async () => {
+    // On Linux the handle is the `cage` compositor wrapping OBS; stopOwned()
+    // only ends the Flatpak app inside it. Dropping the handle without killing
+    // it orphans cage, which is what survives an AxiStream quit. Kill order
+    // matters: cage first would yank the compositor out from under a still-live
+    // OBS mid-shutdown.
+    const { launcher, handle } = fakeLauncher()
+    const order: string[] = []
+    ;(launcher.stopOwned as any).mockImplementation(async () => {
+      await Promise.resolve()
+      order.push('stopOwned')
+    })
+    ;(handle.kill as any).mockImplementation(() => { order.push('kill') })
+    const fakeClient = { connect: vi.fn().mockResolvedValue({}), disconnect: vi.fn().mockResolvedValue(undefined) }
+    const sidecar = new ObsSidecar({
+      launcher, collection: 'AxiStream',
+      _waitForPort: vi.fn().mockResolvedValue(undefined),
+      _makeClient: () => fakeClient as any,
+    } as any)
+    await sidecar.start()
+    await sidecar.stop()
+    expect(handle.kill).toHaveBeenCalledOnce()
+    expect(order).toEqual(['stopOwned', 'kill'])
+  })
+
+  it('stop() is idempotent — a second call does not re-kill a dead handle', async () => {
+    const { launcher, handle } = fakeLauncher()
+    const fakeClient = { connect: vi.fn().mockResolvedValue({}), disconnect: vi.fn().mockResolvedValue(undefined) }
+    const sidecar = new ObsSidecar({
+      launcher, collection: 'AxiStream',
+      _waitForPort: vi.fn().mockResolvedValue(undefined),
+      _makeClient: () => fakeClient as any,
+    } as any)
+    await sidecar.start()
+    await sidecar.stop()
+    await sidecar.stop()
+    expect(handle.kill).toHaveBeenCalledOnce()
+  })
+
+  it('a failed start() kills the launch handle too', async () => {
+    const { launcher, handle } = fakeLauncher()
+    const sidecar = new ObsSidecar({
+      launcher, collection: 'AxiStream',
+      _waitForPort: vi.fn().mockRejectedValue(new Error('port never opened')),
+      _makeClient: () => ({}) as any,
+    } as any)
+    await expect(sidecar.start()).rejects.toThrow('port never opened')
+    expect(handle.kill).toHaveBeenCalledOnce()
   })
 
   it('stop() suppresses the "crashed" event when OBS exits after intentional teardown', async () => {
