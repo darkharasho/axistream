@@ -4,7 +4,7 @@ import type { AxiApi, AudioDevice, AppState, AudioLevels } from '../../shared/st
 import { staleOption } from '../device-options.js'
 import { GameAudioSettings } from './GameAudioSettings.js'
 import { AudioPulse } from './AudioPulse.js'
-import { PTT_KEY_CHOICES } from '../../shared/keys.js'
+import { PTT_KEY_CHOICES, keyName } from '../../shared/keys.js'
 import { KeyPicker } from './KeyPicker.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
@@ -205,7 +205,13 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           {ptt.enabled && ptt.mode === 'passthrough' && (
             <>
               <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
-              <KeyPicker binding={{ key: { code: ptt.keyCode, name: ptt.keyName }, modifier: ptt.modifier }}
+              {/* state.ptt.keyName is a DISPLAY label (bindingLabel — "Ctrl + F18"
+                  once a modifier is set), not a key name. KeyPicker renders the
+                  modifier chip itself and passes binding.key straight back into
+                  onBind, so feeding the label in would render "Ctrl + Ctrl + F18"
+                  and persist the label as the stored key name. Derive the real
+                  name from the code. */}
+              <KeyPicker binding={{ key: { code: ptt.keyCode, name: keyName(ptt.keyCode) }, modifier: ptt.modifier }}
                 onBind={(b) => axi().setPttBinding(b)} />
               {capturing
                 ? <span className="muted">Press any key… {captureLeft}s (Esc cancels)</span>
