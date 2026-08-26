@@ -49,11 +49,43 @@ export const PTT_ID = 'ptt'
 export class HotkeyService {
   private set: BoundSet | null = null
   private endArmedAt = 0
+  /** The rebuild currently running, or null. */
+  private current: Promise<{ ok: boolean; error?: string }> | null = null
+  /** The single trailing rebuild queued behind `current`, or null. */
+  private next: Promise<{ ok: boolean; error?: string }> | null = null
 
   constructor(private readonly d: HotkeyServiceDeps) {}
 
-  async rebuild(): Promise<{ ok: boolean; error?: string }> {
-    await this.close()
+  /** Rebuild the one backend session. Serialized and COALESCED: overlapping
+   *  callers can never interleave into two live sessions (close() nulls
+   *  `this.set` synchronously, so a second entrant's close would be a no-op
+   *  and the loser's watcher would leak for the process lifetime — the exact
+   *  thread-pool starvation this class exists to prevent). Requests arriving
+   *  mid-flight collapse into ONE trailing rebuild rather than queueing: five
+   *  rapid clicks cost two rebuilds, not five. Both the boot rebuild and a
+   *  settings double-click reach this concurrently, and the portal's
+   *  BindShortcuts can sit on an interactive approval dialog for a minute. */
+  rebuild(): Promise<{ ok: boolean; error?: string }> {
+    if (!this.current) return this.run()
+    if (this.next) return this.next
+    const after = this.current
+    this.next = (async () => {
+      // run() never rejects (doRebuild catches), but be defensive.
+      await after.catch(() => {})
+      this.next = null
+      return this.run()
+    })()
+    return this.next
+  }
+
+  private run(): Promise<{ ok: boolean; error?: string }> {
+    const p = this.doRebuild().finally(() => { this.current = null })
+    this.current = p
+    return p
+  }
+
+  private async doRebuild(): Promise<{ ok: boolean; error?: string }> {
+    await this.closeSession()
     const bindings = this.d.bindings()
     const ptt = this.d.pttBinding()
     const specs: BindSpec[] = []
@@ -70,10 +102,10 @@ export class HotkeyService {
       const { backend, mode } = await this.d.selectBackend()
       const set = await backend.bindAll(specs)
       set.onActivated((id) => {
-        if (id === PTT_ID) { this.d.onPttEdge(true); return }
+        if (id === PTT_ID) { this.pttEdge(true); return }
         void this.fire(id as HotkeyId)
       })
-      set.onDeactivated((id) => { if (id === PTT_ID) this.d.onPttEdge(false) })
+      set.onDeactivated((id) => { if (id === PTT_ID) this.pttEdge(false) })
       this.set = set
       this.d.onMode(mode)
       return { ok: true }
@@ -85,11 +117,30 @@ export class HotkeyService {
     }
   }
 
+  /** Tear the session down and leave it down. Waits for any in-flight
+   *  rebuild first: the key-capture flow closes the session so the pressed
+   *  key can't fire an action, and closing ahead of a rebuild that is about
+   *  to install a fresh session would leave one live underneath it. */
   async close(): Promise<void> {
+    if (this.current) await this.current.catch(() => {})
+    await this.closeSession()
+  }
+
+  private async closeSession(): Promise<void> {
     if (!this.set) return
     const set = this.set
     this.set = null
     try { await set.close() } catch { /* best-effort */ }
+  }
+
+  /** The PTT edge counterpart to `fire`'s error boundary. These callbacks run
+   *  from an evdev stream `data` handler, a Windows timer tick or a D-Bus
+   *  signal — there is no request context left to catch a throw, so it would
+   *  take down main with no renderer to report it. */
+  private pttEdge(down: boolean): void {
+    try { this.d.onPttEdge(down) } catch (e) {
+      console.warn('[hotkeys] ptt edge failed', e instanceof Error ? e.message : String(e))
+    }
   }
 
   /** Dispatch one action. Always resolves — a throwing handler becomes a
