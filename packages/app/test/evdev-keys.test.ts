@@ -71,7 +71,7 @@ describe('createEvdevShortcuts', () => {
 
   it('fires activated/deactivated for F18 press/release; ignores repeats and other codes', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -85,7 +85,7 @@ describe('createEvdevShortcuts', () => {
 
   it('reassembles frames split across reads', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     const f = frame(1, KEY_F18, 1)
@@ -97,15 +97,15 @@ describe('createEvdevShortcuts', () => {
 
   it('a device stream error drops that device without throwing; close destroys all streams', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])
     h.devs['/dev/input/event3'].emitError(new Error('unplugged'))
     await sc.close()
     expect(h.devs['/dev/input/event7'].stream.destroy).toHaveBeenCalled()
   })
 
-  it('bind rejects when nothing is readable', async () => {
+  it('bindAll rejects when nothing is readable', async () => {
     const h = harness(false)
-    await expect(h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })).rejects.toThrow(/no readable input devices/i)
+    await expect(h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])).rejects.toThrow(/no readable input devices/i)
   })
 })
 
@@ -117,7 +117,7 @@ describe('createEvdevShortcuts key parameter', () => {
       canRead: () => true,
       openStream: (p) => devs[p as keyof typeof devs].stream as never,
     })
-    const sc = await backend.bind('ptt', 'Push to talk', { key: { code: 185, name: 'F15' }, modifier: null })
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 185, name: 'F15' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     const dev = devs['/dev/input/event3']
@@ -222,7 +222,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('activates only when the modifier is already held', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: 'ctrl' })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: 'ctrl' } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -238,7 +238,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('modifier release while active deactivates (no sticky transmit)', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: 'ctrl' })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: 'ctrl' } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -252,7 +252,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('modifier on one device gates a key on another', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: 'ctrl' })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: 'ctrl' } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     h.devs['/dev/input/event3'].emitData(frame(1, CTRL_L, 1))   // keyboard
@@ -262,7 +262,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('without a modifier the binding behaves as before', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -272,5 +272,110 @@ describe('createEvdevShortcuts modifier gating', () => {
     dev.emitData(frame(1, 188, 2))       // repeat — ignored
     dev.emitData(frame(1, 188, 0))
     expect(seq).toEqual(['down', 'up'])
+  })
+})
+
+// fakeDeps: a single-device deps fake for bindAll, with an emit() helper that
+// encodes a JS input_event into the 24-byte wire frame and hands it to the
+// registered 'data' callback for that path.
+function fakeDeps(paths: string[]) {
+  const dataHandlers = new Map<string, Handler[]>()
+  const errorHandlers = new Map<string, Handler[]>()
+  const destroyed = new Set<string>()
+  const openStream = vi.fn((path: string) => {
+    dataHandlers.set(path, [])
+    errorHandlers.set(path, [])
+    return {
+      on: (ev: 'data' | 'error', cb: (arg: never) => void) => {
+        (ev === 'data' ? dataHandlers : errorHandlers).get(path)!.push(cb as Handler)
+      },
+      destroy: () => { destroyed.add(path) },
+    }
+  })
+  return {
+    listDevices: () => paths,
+    canRead: () => true,
+    openStream,
+    emit(path: string, event: { type: number; code: number; value: number }) {
+      const buf = frame(event.type, event.code, event.value)
+      dataHandlers.get(path)?.forEach((cb) => cb(buf))
+    },
+    destroyed,
+  }
+}
+
+describe('evdev bindAll', () => {
+  it('dispatches two different keys to their own ids from ONE pass over the devices', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } },
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 188, value: 1 })
+
+    expect(fired).toEqual(['masks', 'ptt'])
+    // One watcher, not one per spec: the whole point of the batch call.
+    expect(deps.openStream).toHaveBeenCalledTimes(1)
+    await set.close()
+  })
+
+  it('reports release edges with the id that pressed', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } },
+    ])
+    const down: string[] = []
+    const up: string[] = []
+    set.onActivated((id) => down.push(id))
+    set.onDeactivated((id) => up.push(id))
+
+    deps.emit('/dev/input/event0', { type: 1, code: 188, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 188, value: 0 })
+
+    expect(down).toEqual(['ptt'])
+    expect(up).toEqual(['ptt'])
+    await set.close()
+  })
+
+  it('gates a modified spec on its modifier while leaving an unmodified one alone', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: 'ctrl' } },
+      { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    // F13 with no Ctrl held: only the unmodified spec fires.
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 0 })
+    expect(fired).toEqual(['record'])
+
+    // Ctrl down, then F13: both specs match now.
+    fired.length = 0
+    deps.emit('/dev/input/event0', { type: 1, code: 29, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    expect(fired).toEqual(['masks', 'record'])
+    await set.close()
+  })
+
+  it('ignores auto-repeat (value 2)', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 2 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 2 })
+
+    expect(fired).toEqual(['masks'])
+    await set.close()
   })
 })

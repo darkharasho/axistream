@@ -43,17 +43,14 @@ describe('createWindowsKeys — available()', () => {
   })
 })
 
-describe('createWindowsKeys — bind() validation', () => {
-  it('throws a clear error for an unmappable evdev code', async () => {
-    const { backend } = makeHarness()
-    const badBinding = { key: { code: 999, name: 'KEY_999' }, modifier: null }
-    await expect(backend.bind('ptt', 'Push to talk', badBinding))
-      .rejects.toThrow(/key not supported on Windows/i)
-  })
+describe('createWindowsKeys — bindAll() validation', () => {
+  // The unmappable-code throw was specific to the deleted transitional bind()
+  // wrapper. bindAll's real behavior (drop + warn, never fail the whole set)
+  // is covered below by "skips a spec whose key has no Windows equivalent...".
 
   it('accepts a valid evdev code without throwing', async () => {
     const { backend } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     await sc.close()
   })
 })
@@ -64,7 +61,7 @@ describe('createWindowsKeys — press/release edges (no modifier)', () => {
 
   it('fires onActivated on key down-edge and onDeactivated on key up-edge', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -88,7 +85,7 @@ describe('createWindowsKeys — press/release edges (no modifier)', () => {
 
   it('repeat polls while held fire nothing extra', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -102,7 +99,7 @@ describe('createWindowsKeys — press/release edges (no modifier)', () => {
 
   it('a second press after release fires again', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -120,7 +117,7 @@ describe('createWindowsKeys — press/release edges (no modifier)', () => {
     const { backend, held } = makeHarness()
     // Key is already down BEFORE bind
     held.add(VK_F18)
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -144,7 +141,7 @@ describe('createWindowsKeys — modifier gating (ctrl)', () => {
 
   it('does not activate when modifier is not held', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_CF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_CF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -157,7 +154,7 @@ describe('createWindowsKeys — modifier gating (ctrl)', () => {
 
   it('activates when modifier is already held at key down-edge', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_CF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_CF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -177,7 +174,7 @@ describe('createWindowsKeys — modifier gating (ctrl)', () => {
 
   it('late modifier (key already down, then modifier pressed) does NOT activate', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_CF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_CF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -192,7 +189,7 @@ describe('createWindowsKeys — modifier gating (ctrl)', () => {
 
   it('modifier release while active deactivates (no sticky transmit)', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_CF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_CF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -220,7 +217,7 @@ describe('createWindowsKeys — super modifier (two VKs)', () => {
 
   it('activates with VK_LWIN held', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_SF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_SF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -233,7 +230,7 @@ describe('createWindowsKeys — super modifier (two VKs)', () => {
 
   it('activates with VK_RWIN held', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_SF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_SF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -246,7 +243,7 @@ describe('createWindowsKeys — super modifier (two VKs)', () => {
 
   it('modifier release of either super VK deactivates', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_SF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_SF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -269,7 +266,7 @@ describe('createWindowsKeys — without modifier', () => {
 
   it('fires even when stray modifier keys are held', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -289,7 +286,7 @@ describe('createWindowsKeys — close stops polling', () => {
 
   it('close clears the interval; no more events after close', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_F18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_F18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -311,7 +308,7 @@ describe('createWindowsKeys — letter binding (V)', () => {
 
   it('binds a letter key and fires edges correctly', async () => {
     const { backend, held } = makeHarness()
-    const sc = await backend.bind('ptt', 'Push to talk', { key: { code: EVDEV_V, name: 'V' }, modifier: null })
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: EVDEV_V, name: 'V' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -342,7 +339,7 @@ describe('createWindowsKeys — key AND modifier held at arm time', () => {
     // Both key and modifier are already held before bind
     held.add(VK_CTRL)
     held.add(VK_F18)
-    const sc = await backend.bind('ptt', 'Push to talk', BINDING_CF18)
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: BINDING_CF18 }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
 
@@ -356,5 +353,87 @@ describe('createWindowsKeys — key AND modifier held at arm time', () => {
     expect(seq).toEqual(['down'])
 
     await sc.close()
+  })
+})
+
+describe('windows bindAll', () => {
+  it('watches every bound VK from ONE timer and dispatches by id', async () => {
+    vi.useFakeTimers()
+    const down = new Set<number>()
+    const deps = { platform: 'win32' as const, keyDown: (vk: number) => down.has(vk) }
+    const set = await createWindowsKeys(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } },
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    down.add(0x7C) // F13
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['masks'])
+
+    down.add(0x81) // F18
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['masks', 'ptt'])
+
+    await set.close()
+    vi.useRealTimers()
+  })
+
+  it('skips an ACTION spec whose key has no Windows equivalent instead of failing the whole set', async () => {
+    vi.useFakeTimers()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const down = new Set<number>()
+    const deps = { platform: 'win32' as const, keyDown: (vk: number) => down.has(vk) }
+    const set = await createWindowsKeys(deps).bindAll([
+      { id: 'masks', description: 'Masks', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
+      { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    // The unsupported spec is dropped with a warning...
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0].join(' '))).toMatch(/masks/)
+
+    // ...and the surviving binding really is armed: drive a live edge on it.
+    down.add(0x7C) // VK_F13
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['record'])
+    down.delete(0x7C)
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['record'])
+
+    // The dropped id never fires.
+    expect(fired).not.toContain('masks')
+
+    await set.close()
+    warn.mockRestore()
+    vi.useRealTimers()
+  })
+
+  // Push-to-talk is the one spec whose loss must fail the whole set. A silent
+  // drop returns a healthy BoundSet, the caller arms PTT (baseline-muting the
+  // mic) and no watcher ever delivers the unmute edge: the user streams with
+  // no voice while the UI says everything is fine. Base threw here; the
+  // flatMap drop turned that failure into a silent success.
+  it('THROWS when the ptt spec is the unmappable one — never half-succeeds', async () => {
+    const deps = { platform: 'win32' as const, keyDown: () => false }
+    await expect(createWindowsKeys(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
+      { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])).rejects.toThrow(/not supported on Windows/)
+  })
+
+  it('leaves no timer running when the ptt spec fails the set', async () => {
+    vi.useFakeTimers()
+    const deps = { platform: 'win32' as const, keyDown: vi.fn(() => false) }
+    await expect(createWindowsKeys(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
+    ])).rejects.toThrow()
+    deps.keyDown.mockClear()
+    vi.advanceTimersByTime(500)
+    expect(deps.keyDown).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

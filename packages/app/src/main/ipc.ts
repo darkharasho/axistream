@@ -1,5 +1,6 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps, type QualityPatch } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps, type QualityPatch, type SetHotkeyResult } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
+import type { Binding, HotkeyId } from '../shared/hotkeys.js'
 
 export interface IpcHandlers {
   getInitialState(): Promise<AppState>
@@ -55,6 +56,7 @@ export interface IpcHandlers {
   getWebcamDevices(): Promise<AudioDevice[]>
   getWebcamProps(): Promise<WebcamProps>
   setQuality(p: QualityPatch): Promise<void>
+  setHotkey(id: HotkeyId, binding: Binding | null): Promise<SetHotkeyResult>
 }
 
 export interface IpcDeps {
@@ -118,5 +120,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.getWebcamDevices, () => handlers.getWebcamDevices())
   ipcMain.handle(CH.getWebcamProps, () => handlers.getWebcamProps())
   ipcMain.handle(CH.setQuality, (_e: unknown, p: QualityPatch) => handlers.setQuality(p))
+  ipcMain.handle(CH.setHotkey, (_e: unknown, id: HotkeyId, binding: Binding | null) => handlers.setHotkey(id, binding))
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }

@@ -10,13 +10,12 @@
 // low-level match rule + raw message listener BEFORE the call, which closes
 // the reply-before-subscribe race without needing the object to exist.
 import dbus, { Variant, type MessageBus, type ClientInterface } from 'dbus-next'
-import { MODIFIER_LABELS, type PttBinding } from '../shared/keys.js'
+import { MODIFIER_LABELS } from '../shared/keys.js'
+import type { BindSpec, BoundSet } from '../shared/hotkeys.js'
 
 const PORTAL_DEST = 'org.freedesktop.portal.Desktop'
 const PORTAL_PATH = '/org/freedesktop/portal/desktop'
 const GS_IFACE = 'org.freedesktop.portal.GlobalShortcuts'
-
-export interface BoundShortcut { onActivated(cb: () => void): void; onDeactivated(cb: () => void): void; close(): Promise<void> }
 
 let tokenCounter = 0
 const nextToken = () => `axistream_${process.pid}_${++tokenCounter}`
@@ -76,7 +75,7 @@ async function awaitResponse(bus: MessageBus, token: string, call: () => Promise
 }
 
 export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = async () => dbus.sessionBus()) {
-  return {
+  const self = {
     async available(): Promise<boolean> {
       let bus: MessageBus | null = null
       try {
@@ -92,7 +91,7 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
       }
     },
 
-    async bind(id: string, description: string, binding: PttBinding): Promise<BoundShortcut> {
+    async bindAll(specs: BindSpec[]): Promise<BoundSet> {
       const bus = await busFactory()
       const obj = await bus.getProxyObject(PORTAL_DEST, PORTAL_PATH)
       // Host (non-flatpak) apps have no implicit app id, and KDE's portal
@@ -103,7 +102,7 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
         const reg = obj.getInterface('org.freedesktop.host.portal.Registry') as ClientInterface
         await reg.Register('link.axi.axistream', {})
       } catch (e) {
-        console.warn('[ptt] host app-id registration unavailable', e instanceof Error ? e.message : e)
+        console.warn('[hotkeys] host app-id registration unavailable', e instanceof Error ? e.message : e)
       }
       const gs = obj.getInterface(GS_IFACE) as ClientInterface
 
@@ -115,22 +114,27 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
       }))
       const sessionHandle = String((createResults.session_handle as Variant).value)
 
-      const trigger = binding.modifier ? `${MODIFIER_LABELS[binding.modifier].toUpperCase()}+${binding.key.name}` : binding.key.name
+      const shortcuts = specs.map((s) => {
+        const b = s.binding
+        const trigger = b.modifier ? `${MODIFIER_LABELS[b.modifier].toUpperCase()}+${b.key.name}` : b.key.name
+        return [s.id, {
+          description: new Variant('s', s.description),
+          preferred_trigger: new Variant('s', trigger),
+        }] as const
+      })
       const bindToken = nextToken()
       await awaitResponse(bus, bindToken, () => gs.BindShortcuts(
-        sessionHandle,
-        [[id, { description: new Variant('s', description), preferred_trigger: new Variant('s', trigger) }]],
-        '',
-        { handle_token: new Variant('s', bindToken) },
+        sessionHandle, shortcuts, '', { handle_token: new Variant('s', bindToken) },
       ))
 
-      let onAct: (() => void) | null = null
-      let onDeact: (() => void) | null = null
+      let onAct: ((id: string) => void) | null = null
+      let onDeact: ((id: string) => void) | null = null
+      const ids = new Set(specs.map((s) => s.id))
       const activated = (handle: string, shortcutId: string) => {
-        if (handle === sessionHandle && shortcutId === id) onAct?.()
+        if (handle === sessionHandle && ids.has(shortcutId)) onAct?.(shortcutId)
       }
       const deactivated = (handle: string, shortcutId: string) => {
-        if (handle === sessionHandle && shortcutId === id) onDeact?.()
+        if (handle === sessionHandle && ids.has(shortcutId)) onDeact?.(shortcutId)
       }
       gs.on('Activated', activated)
       gs.on('Deactivated', deactivated)
@@ -150,4 +154,5 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
       }
     },
   }
+  return self
 }

@@ -284,6 +284,12 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .keypicker-k:hover { background: #222c38; border-color: #3a4552; }
 .keypicker-k.sel { background: rgba(38,211,238,.15); border-color: #26d3ee; color: #26d3ee; }
 
+/* Hotkey settings rows — label left, picker right, matching neighbouring rows. */
+.hotkey-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.hotkey-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid rgba(58,69,82,.4); }
+.hotkey-row:last-child { border-bottom: none; }
+.hotkey-label { color: #e6edf3; font-size: 13px; font-weight: 600; }
+
 /* Toast stack — discrete events only (conditions use .overlay). Sits below
    .wctl so window controls stay clickable, above .overlay and the preview.
    Inside the .dragbar band, so it must opt out of window dragging. */

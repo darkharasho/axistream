@@ -249,6 +249,30 @@ describe('AudioSettings', () => {
     expect(screen.getByText(/hold F15 to talk/i)).toBeInTheDocument()
   })
 
+  // state.ptt.keyName is a DISPLAY label (bindingLabel), so with a modifier
+  // set it reads "Ctrl + F18". Feeding it to KeyPicker as binding.key.name
+  // rendered "Ctrl + Ctrl + F18" AND persisted the label as the stored key
+  // name on the next edit, which then went to the portal as a malformed
+  // preferred_trigger: PTT binds to nothing, reports ok, arms, mic stuck
+  // muted. Every other ptt fixture here uses modifier: null, where
+  // bindingLabel happens to return the bare name — which is why it hid.
+  it('gives KeyPicker the real key name, not the "Ctrl + F18" display label', () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'Ctrl + F18', keyCode: 188, modifier: 'ctrl' }} />)
+
+    // One modifier chip, and the key button carries only the key name.
+    expect(screen.getByRole('button', { name: 'F18' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ctrl \+ F18/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Ctrl')).toBeInTheDocument()
+  })
+
+  it('persists the real key name when the modifier is removed from a modified binding', () => {
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'Ctrl + F18', keyCode: 188, modifier: 'ctrl' }} />)
+    fireEvent.click(screen.getByLabelText('remove modifier'))
+    // KeyPicker passes binding.key through verbatim — the label must never
+    // reach disk (or the portal's preferred_trigger) as the key name.
+    expect(axi.setPttBinding).toHaveBeenCalledWith({ key: { code: 188, name: 'F18' }, modifier: null })
+  })
+
   it('pass-through rebind captures a key', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
@@ -262,6 +286,13 @@ describe('AudioSettings', () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
     await waitFor(() => expect(screen.getByText('No key seen — timed out')).toBeInTheDocument())
+  })
+
+  it('pass-through rebind names the owning action when the captured key is already bound', async () => {
+    axi.capturePttKey.mockResolvedValueOnce({ reason: 'conflict', owner: 'Record' })
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
+    fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
+    await waitFor(() => expect(screen.getByText('Already bound to Record')).toBeInTheDocument())
   })
 
   it('exclusive rebind is a dropdown calling setPttBinding', async () => {

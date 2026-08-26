@@ -31,6 +31,10 @@ import { createRecordingFinalizer } from './record-finalize.js'
 import { isInAppNavigation } from './navigate-gate.js'
 import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
+import { HotkeyService, type HotkeyActions } from './HotkeyService.js'
+import { rebuildHotkeys as rebuildHotkeysCore, pttStateFields } from './rebuild-hotkeys.js'
+import { selectHotkeyBackend } from './select-backend.js'
+import { findConflict, findActionOwner, toBinding, toPersisted, type HotkeyBindings } from '../shared/hotkeys.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
 import { createWindowsKeys } from './windows-keys.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
@@ -393,14 +397,15 @@ if (primary) app.whenReady().then(async () => {
   const evdevBackend = createEvdevShortcuts()
   const windowsBackend = createWindowsKeys()
   let pttMode: 'passthrough' | 'exclusive' | null = null
-  // Probed at every enable (not boot-cached) so the pkexec unlock upgrades
-  // the running app without a restart.
-  const selectBackend = async () => {
-    if (process.platform === 'win32') return { backend: windowsBackend, mode: 'passthrough' as const }
-    return (await evdevBackend.available())
-      ? { backend: evdevBackend, mode: 'passthrough' as const }
-      : { backend: portalBackend, mode: 'exclusive' as const }
-  }
+  // Probed at every rebuild (not boot-cached) so the pkexec unlock upgrades
+  // the running app without a restart. The decision (including the win32
+  // availability gate) lives in select-backend.ts as a pure function.
+  const selectBackend = () => selectHotkeyBackend({
+    platform: process.platform,
+    windows: windowsBackend,
+    evdev: evdevBackend,
+    portal: portalBackend,
+  })
   const loadBinding = (): PttBinding => {
     const s = settings.load()
     return { key: { code: s.pttKeyCode, name: s.pttKeyName }, modifier: s.pttModifier === '' ? null : s.pttModifier }
@@ -418,20 +423,86 @@ if (primary) app.whenReady().then(async () => {
         unmuteById: (id: string) => execAsync('pactl', ['set-source-mute', id, '0']).catch(warn),
       }
   const ptt = new PttController({
-    portal: {
-      available: process.platform === 'win32'
-        ? () => windowsBackend.available()
-        : async () => (await evdevBackend.available()) || (await portalBackend.available()),
-      bind: async (id, description, binding) => {
-        const sel = await selectBackend()
-        pttMode = sel.mode
-        return sel.backend.bind(id, description, binding)
-      },
-    },
     muteOps: pttMuteOps,
     onActive: (active) => setState({ ptt: { ...state.ptt, active } }),
-    binding: loadBinding,
+    available: process.platform === 'win32'
+      ? () => windowsBackend.available()
+      : async () => (await evdevBackend.available()) || (await portalBackend.available()),
   })
+
+  // The single reader for every persisted hotkey binding — shared between
+  // HotkeyService's bindings() dep and the setHotkey conflict check so the
+  // four toBinding calls live in exactly one place.
+  const bindingsNow = (): HotkeyBindings => {
+    const h = settings.load().hotkeys
+    return { goLive: toBinding(h.goLive), micMute: toBinding(h.micMute), masks: toBinding(h.masks), record: toBinding(h.record) }
+  }
+
+  const hotkeyActions: HotkeyActions = {
+    phase: () => state.phase,
+    micEnabled: () => state.audio.micEnabled,
+    masksVisible: () => state.masksVisible,
+    recordingActive: () => state.recording.active,
+    pttEnabled: () => ptt.isEnabled(),
+    goLive: () => handlers.goLive(),
+    stopStream: () => handlers.stopStream(),
+    setMicEnabled: (e) => handlers.setMicEnabled(e),
+    setMasksVisible: (v) => handlers.setMasksVisible(v),
+    startRecording: () => handlers.startRecording(),
+    stopRecording: () => handlers.stopRecording(),
+    toast: (kind, message) => toast(win, { kind, message }),
+  }
+
+  const hotkeys = new HotkeyService({
+    selectBackend,
+    bindings: bindingsNow,
+    // Push-to-talk only occupies a slot in the shared session while enabled.
+    pttBinding: () => (settings.load().pttEnabled ? loadBinding() : null),
+    actions: hotkeyActions,
+    onPttEdge: (down) => ptt.onEdge(down),
+    onMode: (mode) => {
+      pttMode = mode
+      setState({ hotkeys: { ...state.hotkeys, mode } })
+    },
+    now: () => Date.now(),
+  })
+
+  // Set for the duration of capturePttKey's raw evdev probe: any OTHER
+  // handler's rebuildHotkeys() call during that window would reopen the
+  // shared session mid-capture (re-arming PTT, re-binding the four action
+  // hotkeys) while the probe is still reading the same devices — reopening
+  // the exact hole closed below. capturePttKey's own finally rebuilds
+  // unconditionally once the window closes, so a skipped rebuild self-heals.
+  let captureInFlight = false
+
+  // Every binding shares one session, so any change is a full close + bindAll.
+  // In that gap NO hotkey is live, push-to-talk included. PTT's failure mode
+  // is always "mic hot": arm (baseline-mute) ONLY on a successful rebuild —
+  // never on a failed one, and explicitly disarm on failure so a mute left
+  // over from a PREVIOUS successful arm doesn't strand the mic muted with no
+  // watcher left to ever unmute it. The actual decision lives in
+  // rebuild-hotkeys.ts, as a pure function, so it has direct unit coverage.
+  const rebuildHotkeys = async (): Promise<{ ok: boolean; error?: string }> => {
+    if (captureInFlight) return { ok: true }
+    const r = await rebuildHotkeysCore({
+      rebuild: () => hotkeys.rebuild(),
+      pttEnabled: () => settings.load().pttEnabled,
+      armPtt: () => ptt.arm(),
+      disarmPtt: () => ptt.disarm(),
+    })
+    setState({ hotkeys: { ...state.hotkeys, error: r.ok ? null : (r.error ?? 'failed') } })
+    return r
+  }
+
+  // The single reader for state.ptt after any rebuildHotkeys() call. The
+  // enabled/error/mode derivation is a pure function (rebuild-hotkeys.ts)
+  // with its own tests — see pttStateFields for why `error` is gated on
+  // intent (settings.pttEnabled), not on the post-rebuild armed state.
+  const pushPttState = (r: { ok: boolean; error?: string }) => {
+    const lb = loadBinding()
+    const fields = pttStateFields(r, { armed: ptt.isEnabled(), wantsPtt: settings.load().pttEnabled, mode: pttMode })
+    setState({ ptt: { ...state.ptt, ...fields, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
+  }
 
   const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
     execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
@@ -578,6 +649,10 @@ if (primary) app.whenReady().then(async () => {
       // settings.json regardless of whether capture is provisioned, so an
       // unprovisioned boot must not report a stale "Auto".
       quality: qualityViewOf(settings.load()),
+      // Same reasoning: the bindings live in settings.json regardless of
+      // whether capture is provisioned, so an unprovisioned boot must not
+      // report an empty registry.
+      hotkeys: { bindings: bindingsNow(), mode: state.hotkeys.mode, error: state.hotkeys.error },
     }),
     provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
     getCaptureTargets: async () => capture.captureTargets(),
@@ -837,54 +912,72 @@ if (primary) app.whenReady().then(async () => {
     },
     setPttEnabled: async (enabled) => {
       settings.patch({ pttEnabled: enabled })
-      if (enabled) {
-        const r = await ptt.enable()
-        const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
-      } else {
-        await ptt.disable()
-        const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: false, active: false, error: null, mode: null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
-      }
+      // Every binding shares one session: disabling is the one case that
+      // must ALSO disarm the local mute state explicitly — rebuildHotkeys'
+      // internal `if pttEnabled` re-arm gate is now false, so it won't do it
+      // for us. Enabling is handled entirely by that same gate.
+      if (!enabled) await ptt.disarm()
+      const r = await rebuildHotkeys()
+      pushPttState(r)
     },
     setPttBinding: async (b: PttBinding) => {
       settings.patch({ pttKeyCode: b.key.code, pttKeyName: b.key.name, pttModifier: b.modifier ?? '' })
       setState({ ptt: { ...state.ptt, keyName: bindingLabel(b), keyCode: b.key.code, modifier: b.modifier } })
-      if (ptt.isEnabled()) {
-        await ptt.disable()
-        const r = await ptt.enable()
-        setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(b), keyCode: b.key.code, modifier: b.modifier } })
-      }
+      const r = await rebuildHotkeys()
+      pushPttState(r)
     },
     capturePttKey: async (): Promise<PttCaptureResult> => {
       if (!(await evdevBackend.available())) return { reason: 'unavailable' }
       const wasEnabled = ptt.isEnabled()
-      // the pressed key must never transmit: capture with PTT disarmed.
-      // try/finally: captureNextKey never rejects today, but a future
-      // rejection path must not strand PTT disabled.
-      if (wasEnabled) await ptt.disable()
       let result: PttCaptureResult = { reason: 'timeout' }
+      // captureInFlight blocks any OTHER handler's rebuildHotkeys() from
+      // reopening the session while the raw probe below is reading the same
+      // devices — set before the close, cleared before the closing rebuild
+      // so that rebuild is the one that actually runs.
+      captureInFlight = true
       try {
+        // Close the WHOLE shared session for the capture window, not just
+        // PTT's local mute gate — the four action hotkeys stay bound
+        // otherwise, so a key already bound to (say) record or goLive would
+        // fire it while the user is only trying to press it for PTT capture.
+        // The pressed key must also never transmit through PTT's own mute
+        // gate, so disarm on top of the close. Both live inside this try so
+        // the finally below is the real "session never stays closed"
+        // guarantee, not just a comment.
+        await hotkeys.close()
+        if (wasEnabled) await ptt.disarm()
         result = await captureNextKey()
         if ('key' in result) {
-          settings.patch({ pttKeyCode: result.key.code, pttKeyName: result.key.name, pttModifier: '' })
-          setState({ ptt: { ...state.ptt, keyName: bindingLabel({ key: result.key, modifier: null }), keyCode: result.key.code, modifier: null } })
+          // Guard the PTT-against-actions leg findConflict doesn't cover: a
+          // key already bound to record/goLive/masks/micMute must not also
+          // become the PTT key, or both would fire on every press. Reject
+          // and name the owner instead of silently binding over it.
+          const owner = findActionOwner({ key: result.key, modifier: null }, bindingsNow())
+          if (owner) {
+            result = { reason: 'conflict', owner }
+          } else {
+            settings.patch({ pttKeyCode: result.key.code, pttKeyName: result.key.name, pttModifier: '' })
+            setState({ ptt: { ...state.ptt, keyName: bindingLabel({ key: result.key, modifier: null }), keyCode: result.key.code, modifier: null } })
+          }
         }
       } finally {
-        // re-sample intent: the user may have toggled PTT OFF while the
-        // capture window was open — never resurrect an explicit disable
-        if (wasEnabled && settings.load().pttEnabled) {
-          const r = await ptt.enable()
-          const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, active: false, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
-        }
+        // Rebuild unconditionally, even if the close, the capture, or the
+        // settings patch above threw, was cancelled, or timed out, and
+        // regardless of whether PTT itself was enabled (the other four
+        // hotkeys still need to come back).
+        captureInFlight = false
+        const r = await rebuildHotkeys()
+        pushPttState(r)
       }
       return result
     },
     unlockPassthrough: async () => {
       const r = await runInputUnlock(execAsync)
       if (r.ok && ptt.isEnabled()) {
-        // upgrade in place: closing the portal binding releases F18 to Discord
-        await ptt.disable()
-        const en = await ptt.enable()
-        const lb = loadBinding(); setState({ ptt: { ...state.ptt, enabled: en.ok, active: false, error: en.ok ? null : (en.error ?? 'failed'), mode: en.ok ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
+        // upgrade in place: rebuilding on the newly-unlocked evdev backend
+        // releases F18 back to Discord's own passthrough read.
+        const rr = await rebuildHotkeys()
+        pushPttState(rr)
       }
       return r
     },
@@ -1116,6 +1209,18 @@ if (primary) app.whenReady().then(async () => {
         setState({ capture: capture_ })
       }
     },
+    setHotkey: async (id, binding) => {
+      if (binding) {
+        const conflict = findConflict(id, binding, bindingsNow(), settings.load().pttEnabled ? loadBinding() : null)
+        if (conflict) return { ok: false, conflict }
+      }
+      const next = { ...settings.load().hotkeys, [id]: toPersisted(binding) }
+      settings.patch({ hotkeys: next })
+      setState({ hotkeys: { ...state.hotkeys, bindings: { ...state.hotkeys.bindings, [id]: binding } } })
+      const r = await rebuildHotkeys()
+      pushPttState(r)
+      return { ok: true }
+    },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
@@ -1235,6 +1340,14 @@ if (primary) app.whenReady().then(async () => {
     // flow, which silently no-ops headless and never pushes RTMP. Persists across
     // restarts, so it's a one-time switch in practice. Best-effort.
     await ensureCleanProfile({ call: (r, p) => sidecar.client().call(r as never, p as never) })
+    // Crash recovery (a previous run may have died source-muted) and the
+    // portal/evdev availability probe run regardless of provisioning: the
+    // mic-hot invariant does not get to wait on capture setup, and an
+    // unprovisioned boot with pttEnabled=true must not baseline-mute via the
+    // boot rebuildHotkeys() below without this unmute running first.
+    await ptt.restore()
+    const pttAvailable = await ptt.available()
+    const lbInit = loadBinding(); setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: bindingLabel(lbInit), keyCode: lbInit.key.code, modifier: lbInit.modifier } })
     const provisioned = config.load().provisioned
     if (provisioned) {
       const capture_ = await applyResolution()
@@ -1249,20 +1362,13 @@ if (primary) app.whenReady().then(async () => {
       setState({ audio: { desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice, gameAudioApps: a.gameAudioApps } })
       await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
       // PTT: install the desktop entry the portal Registry validates our host
-      // app id against, then crash recovery (a previous run may have died
-      // source-muted), then probe the portal and re-arm if the user had it on.
+      // app id against. Crash recovery and the availability probe already
+      // ran above, unconditionally.
       if (process.platform === 'linux') await ensureDesktopEntry(process.execPath, homedir(), {
         mkdir: (p) => fsPromises.mkdir(p, { recursive: true }),
         readFile: (p) => fsPromises.readFile(p, 'utf8'),
         writeFile: (p, c) => fsPromises.writeFile(p, c),
       })
-      await ptt.restore()
-      const pttAvailable = await ptt.available()
-      const lbInit = loadBinding(); setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: bindingLabel(lbInit), keyCode: lbInit.key.code, modifier: lbInit.modifier } })
-      if (pttAvailable && a.pttEnabled) {
-        const r = await ptt.enable()
-        const lbEn = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lbEn), keyCode: lbEn.key.code, modifier: lbEn.modifier } })
-      }
       setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true }, quality: qualityViewOf(a) })
       pushFitted()
       await applyMasksRespectingVisibility()
@@ -1288,6 +1394,12 @@ if (primary) app.whenReady().then(async () => {
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(await installer.detectInstalled(), []), error: null } })
       setState({ blurPlugin: { status: deriveBlurStatus(await blurInstaller.detectInstalled(), []), error: null }, maskStyle: settings.load().maskStyle })
     }
+    // Nothing here may block boot: bindings live in settings.json regardless
+    // of capture state, so this fires once boot has otherwise settled and
+    // reports into state.hotkeys/state.ptt whenever it resolves. .catch is
+    // required, not decorative — an uncaught throw here is an unhandled
+    // rejection on the boot path with no request context to report it.
+    void rebuildHotkeys().then((r) => pushPttState(r)).catch((e) => console.warn('[hotkeys] boot rebuild failed', e instanceof Error ? e.message : e))
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e)
     console.error('[boot] stream engine failed:', detail)

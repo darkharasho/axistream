@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { MAX_MASKS, type MaskRect, type WebcamCorner, type WebcamMode, type WebcamConfig, WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT, DEFAULT_WEBCAM, QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS } from '../shared/state.js'
+import { DEFAULT_HOTKEYS, HOTKEY_IDS, type PersistedBinding, type PersistedHotkeys } from '../shared/hotkeys.js'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
 export type MaskStyle = 'box' | 'blur'
@@ -37,6 +38,7 @@ export interface StreamSettingsData {
   /** True when the failed-go-live retry set preferSoftware, not the user.
    *  Affects the settings panel's help text only, never behavior. */
   preferSoftwareAuto: boolean
+  hotkeys: PersistedHotkeys
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   qualityFps: null,
   qualityBitrateKbps: null,
   preferSoftwareAuto: false,
+  hotkeys: DEFAULT_HOTKEYS,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -87,6 +90,26 @@ const bitrateOf = (raw: unknown): number | null =>
   typeof raw === 'number' && Number.isFinite(raw)
     ? Math.round(clamp(raw, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS))
     : null
+
+const MODIFIERS = ['ctrl', 'alt', 'shift', 'super']
+
+/** A malformed entry becomes null (unbound), never a fallback key: a corrupted
+ *  settings file must not silently grab a key away from the game. */
+function validBinding(raw: unknown): PersistedBinding | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  if (!Number.isInteger(r.code) || (r.code as number) < 1 || (r.code as number) > 767) return null
+  if (typeof r.name !== 'string' || !r.name) return null
+  if (r.modifier !== '' && !MODIFIERS.includes(r.modifier as string)) return null
+  return { code: r.code as number, name: r.name, modifier: r.modifier as PersistedBinding['modifier'] }
+}
+
+function validHotkeys(raw: unknown): PersistedHotkeys {
+  const src = (raw && typeof raw === 'object') ? raw as Record<string, unknown> : {}
+  const out = {} as PersistedHotkeys
+  for (const id of HOTKEY_IDS) out[id] = validBinding(src[id])
+  return out
+}
 
 export function sanitizeWebcam(raw: unknown): WebcamConfig {
   if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_WEBCAM }
@@ -186,6 +209,7 @@ export class StreamSettings {
         qualityFps: oneOf(raw.qualityFps, QUALITY_FPS),
         qualityBitrateKbps: bitrateOf(raw.qualityBitrateKbps),
         preferSoftwareAuto: typeof raw.preferSoftwareAuto === 'boolean' ? raw.preferSoftwareAuto : DEFAULT_SETTINGS.preferSoftwareAuto,
+        hotkeys: validHotkeys(raw.hotkeys),
       }
     } catch {
       return { ...DEFAULT_SETTINGS }
