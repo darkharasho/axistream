@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AboutSettings } from '../src/renderer/components/AboutSettings.js'
 
@@ -21,6 +21,7 @@ describe('AboutSettings', () => {
   // not only from the repository.
   it('attributes the bundled OBS with its version and license', async () => {
     render(<AboutSettings onRunSetup={() => {}} />)
+    await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())
 
     expect(screen.getByText(/OBS Studio 32\.1\.2/)).toBeInTheDocument()
     expect(screen.getByText(/GPL-2\.0-or-later/)).toBeInTheDocument()
@@ -28,6 +29,7 @@ describe('AboutSettings', () => {
 
   it('opens the OBS redistribution notes externally', async () => {
     render(<AboutSettings onRunSetup={() => {}} />)
+    await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())
 
     await userEvent.click(screen.getByRole('button', { name: /how we bundle obs/i }))
 
@@ -36,6 +38,7 @@ describe('AboutSettings', () => {
 
   it('links the corresponding source to the latest release', async () => {
     render(<AboutSettings onRunSetup={() => {}} />)
+    await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())
 
     await userEvent.click(screen.getByRole('button', { name: /source for the bundled obs/i }))
 
@@ -45,6 +48,7 @@ describe('AboutSettings', () => {
   it('reopens the wizard, so dismissing the banner is never a dead end', async () => {
     const onRunSetup = vi.fn()
     render(<AboutSettings onRunSetup={onRunSetup} />)
+    await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())
 
     await userEvent.click(screen.getByRole('button', { name: /run setup again/i }))
 
