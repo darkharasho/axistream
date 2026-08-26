@@ -274,3 +274,108 @@ describe('createEvdevShortcuts modifier gating', () => {
     expect(seq).toEqual(['down', 'up'])
   })
 })
+
+// fakeDeps: a single-device deps fake for bindAll, with an emit() helper that
+// encodes a JS input_event into the 24-byte wire frame and hands it to the
+// registered 'data' callback for that path.
+function fakeDeps(paths: string[]) {
+  const dataHandlers = new Map<string, Handler[]>()
+  const errorHandlers = new Map<string, Handler[]>()
+  const destroyed = new Set<string>()
+  const openStream = vi.fn((path: string) => {
+    dataHandlers.set(path, [])
+    errorHandlers.set(path, [])
+    return {
+      on: (ev: 'data' | 'error', cb: (arg: never) => void) => {
+        (ev === 'data' ? dataHandlers : errorHandlers).get(path)!.push(cb as Handler)
+      },
+      destroy: () => { destroyed.add(path) },
+    }
+  })
+  return {
+    listDevices: () => paths,
+    canRead: () => true,
+    openStream,
+    emit(path: string, event: { type: number; code: number; value: number }) {
+      const buf = frame(event.type, event.code, event.value)
+      dataHandlers.get(path)?.forEach((cb) => cb(buf))
+    },
+    destroyed,
+  }
+}
+
+describe('evdev bindAll', () => {
+  it('dispatches two different keys to their own ids from ONE pass over the devices', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } },
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 188, value: 1 })
+
+    expect(fired).toEqual(['masks', 'ptt'])
+    // One watcher, not one per spec: the whole point of the batch call.
+    expect(deps.openStream).toHaveBeenCalledTimes(1)
+    await set.close()
+  })
+
+  it('reports release edges with the id that pressed', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } },
+    ])
+    const down: string[] = []
+    const up: string[] = []
+    set.onActivated((id) => down.push(id))
+    set.onDeactivated((id) => up.push(id))
+
+    deps.emit('/dev/input/event0', { type: 1, code: 188, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 188, value: 0 })
+
+    expect(down).toEqual(['ptt'])
+    expect(up).toEqual(['ptt'])
+    await set.close()
+  })
+
+  it('gates a modified spec on its modifier while leaving an unmodified one alone', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: 'ctrl' } },
+      { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    // F13 with no Ctrl held: only the unmodified spec fires.
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 0 })
+    expect(fired).toEqual(['record'])
+
+    // Ctrl down, then F13: both specs match now.
+    fired.length = 0
+    deps.emit('/dev/input/event0', { type: 1, code: 29, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    expect(fired).toEqual(['masks', 'record'])
+    await set.close()
+  })
+
+  it('ignores auto-repeat (value 2)', async () => {
+    const deps = fakeDeps(['/dev/input/event0'])
+    const set = await createEvdevShortcuts(deps).bindAll([
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 1 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 2 })
+    deps.emit('/dev/input/event0', { type: 1, code: 183, value: 2 })
+
+    expect(fired).toEqual(['masks'])
+    await set.close()
+  })
+})

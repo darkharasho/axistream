@@ -1,5 +1,6 @@
 import { readdirSync, openSync, closeSync, readSync, constants } from 'node:fs'
 import { keyName, MODIFIER_CODES, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
+import type { BindSpec, BoundSet } from '../shared/hotkeys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
  *  s32 value — little-endian. */
@@ -94,24 +95,29 @@ const realDeps: EvdevDeps = {
  *  everything else) still receives the key. Non-keyboards simply never emit
  *  the bound code. */
 export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
-  return {
+  const self = {
     async available(): Promise<boolean> {
       return deps.listDevices().some((d) => deps.canRead(d))
     },
 
-    async bind(_id: string, _description: string, binding: PttBinding): Promise<BoundShortcut> {
-      const { key, modifier } = binding
-      const modCodes = modifier ? MODIFIER_CODES[modifier] : null
+    async bindAll(specs: BindSpec[]): Promise<BoundSet> {
       const readable = deps.listDevices().filter((d) => deps.canRead(d))
       if (readable.length === 0) throw new Error('no readable input devices — pass-through is locked')
-      let onAct: (() => void) | null = null
-      let onDeact: (() => void) | null = null
-      // modifier + active state are shared across ALL device streams — the
-      // modifier can come from the keyboard while the key comes from the
-      // mouse. A modifier already held before arming isn't seen until its
-      // next edge (accepted: worst case is one missed activation).
-      let modifierHeld = false
-      let active = false
+
+      let onAct: ((id: string) => void) | null = null
+      let onDeact: ((id: string) => void) | null = null
+
+      // Per-spec arm state; shared modifier state. A modifier already held
+      // before arming isn't seen until its next edge (accepted: worst case is
+      // one missed activation) — same trade-off the single-bind path made.
+      const watches = specs.map((s) => ({
+        id: s.id,
+        code: s.binding.key.code,
+        modCodes: s.binding.modifier ? MODIFIER_CODES[s.binding.modifier] : null,
+        active: false,
+      }))
+      const modifierHeld = new Set<number>()
+
       const streams = new Set<ReturnType<EvdevDeps['openStream']>>()
       readable.forEach((path) => {
         const stream = deps.openStream(path)
@@ -122,36 +128,56 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
           rest = parsed.rest
           for (const ev of parsed.events) {
             if (ev.type !== EV_KEY) continue
-            if (modCodes && (ev.code === modCodes[0] || ev.code === modCodes[1])) {
-              if (ev.value === 1) modifierHeld = true
-              else if (ev.value === 0) {
-                modifierHeld = false
-                if (active) { active = false; onDeact?.() }
+
+            // A code can be BOTH somebody's modifier and somebody's key, so
+            // modifier bookkeeping happens first and does not `continue` past
+            // the key matching below.
+            if (ev.value === 1) modifierHeld.add(ev.code)
+            else if (ev.value === 0) modifierHeld.delete(ev.code)
+
+            for (const w of watches) {
+              const modOk = !w.modCodes || w.modCodes.some((c) => modifierHeld.has(c))
+              if (w.modCodes && w.active && !modOk) {
+                // The modifier was released while the key is still down.
+                w.active = false
+                onDeact?.(w.id)
               }
-              continue
+              if (ev.code !== w.code) continue
+              if (ev.value === 1) {
+                if (modOk && !w.active) { w.active = true; onAct?.(w.id) }
+              } else if (ev.value === 0) {
+                if (w.active) { w.active = false; onDeact?.(w.id) }
+              }
+              // value 2 = auto-repeat: ignored (the key is already down)
             }
-            if (ev.code !== key.code) continue
-            if (ev.value === 1) {
-              if ((!modCodes || modifierHeld) && !active) { active = true; onAct?.() }
-            } else if (ev.value === 0) {
-              if (active) { active = false; onDeact?.() }
-            }
-            // value 2 = auto-repeat: ignored (the key is already down)
           }
         }) as never)
         stream.on('error', ((e: Error) => {
-          console.warn(`[ptt] evdev device dropped (${path}):`, e.message)
+          console.warn(`[hotkeys] evdev device dropped (${path}):`, e.message)
           streams.delete(stream)
           try { stream.destroy() } catch { /* ignore */ }
         }) as never)
       })
+
       return {
         onActivated: (cb) => { onAct = cb },
         onDeactivated: (cb) => { onDeact = cb },
         close: async () => { for (const s of streams) { try { s.destroy() } catch { /* ignore */ } } },
       }
     },
+
+    /** Transitional single-shortcut wrapper — Task 6 deletes this once
+     *  PttController consumes HotkeyService. */
+    async bind(id: string, description: string, binding: PttBinding): Promise<BoundShortcut> {
+      const set = await self.bindAll([{ id, description, binding }])
+      return {
+        onActivated: (cb) => set.onActivated(() => cb()),
+        onDeactivated: (cb) => set.onDeactivated(() => cb()),
+        close: () => set.close(),
+      }
+    },
   }
+  return self
 }
 
 /** Resolve the next keydown seen on any readable device — the press-to-bind

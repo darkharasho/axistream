@@ -358,3 +358,40 @@ describe('createWindowsKeys — key AND modifier held at arm time', () => {
     await sc.close()
   })
 })
+
+describe('windows bindAll', () => {
+  it('watches every bound VK from ONE timer and dispatches by id', async () => {
+    vi.useFakeTimers()
+    const down = new Set<number>()
+    const deps = { platform: 'win32' as const, keyDown: (vk: number) => down.has(vk) }
+    const set = await createWindowsKeys(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } },
+      { id: 'masks', description: 'Masks', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    down.add(0x7C) // F13
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['masks'])
+
+    down.add(0x81) // F18
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['masks', 'ptt'])
+
+    await set.close()
+    vi.useRealTimers()
+  })
+
+  it('skips a spec whose key has no Windows equivalent instead of failing the whole set', async () => {
+    vi.useFakeTimers()
+    const deps = { platform: 'win32' as const, keyDown: () => false }
+    const set = await createWindowsKeys(deps).bindAll([
+      { id: 'masks', description: 'Masks', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
+      { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])
+    // No throw: the unsupported spec is dropped with a warning, the rest arm.
+    await set.close()
+    vi.useRealTimers()
+  })
+})
