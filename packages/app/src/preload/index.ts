@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type LiveStats, type AxiApi, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type AudioLevels, type UpdateStatus, type ToastPayload, type DiscordTestResult, type AudioTestResult, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps, type SetHotkeyResult } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
+import type { Binding, HotkeyId } from '../shared/hotkeys.js'
 
 const sub = <T,>(channel: string, cb: (p: T) => void) => {
   const listener = (_e: unknown, p: T) => cb(p)
@@ -62,6 +63,7 @@ const api: AxiApi = {
   dismissSummary: () => ipcRenderer.invoke(CH.dismissSummary) as Promise<void>,
   setWebcam: (p) => ipcRenderer.invoke(CH.setWebcam, p) as Promise<void>,
   setQuality: (p) => ipcRenderer.invoke(CH.setQuality, p) as Promise<void>,
+  setHotkey: (id: HotkeyId, binding: Binding | null) => ipcRenderer.invoke(CH.setHotkey, id, binding) as Promise<SetHotkeyResult>,
   getWebcamDevices: () => ipcRenderer.invoke(CH.getWebcamDevices) as Promise<AudioDevice[]>,
   getWebcamProps: () => ipcRenderer.invoke(CH.getWebcamProps) as Promise<WebcamProps>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),

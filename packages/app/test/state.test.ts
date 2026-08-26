@@ -17,3 +17,19 @@ describe('isStreamingPhase', () => {
     expect(rest).toEqual(['SETTING_UP', 'PREPARING_CAPTURE', 'CHOOSING_CAPTURE', 'AWAITING_APPROVAL', 'NEEDS_YOUTUBE', 'NEEDS_TITLE', 'READY', 'ENDED', 'ERROR'])
   })
 })
+
+import { DEFAULT_HOTKEY_STATE, CH } from '../src/shared/state.js'
+
+describe('hotkey state slice', () => {
+  it('defaults to no bindings, no known mode, no error', () => {
+    expect(DEFAULT_HOTKEY_STATE).toEqual({
+      bindings: { goLive: null, micMute: null, masks: null, record: null },
+      mode: null,
+      error: null,
+    })
+  })
+
+  it('exposes a setHotkey channel', () => {
+    expect(CH.setHotkey).toBe('axi:setHotkey')
+  })
+})

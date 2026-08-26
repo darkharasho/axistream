@@ -1,4 +1,5 @@
 import type { PttBinding, PttCaptureResult } from './keys.js'
+import type { Binding, HotkeyBindings, HotkeyId } from './hotkeys.js'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'PREPARING_CAPTURE' | 'CHOOSING_CAPTURE' | 'AWAITING_APPROVAL'
@@ -93,6 +94,24 @@ export const DEFAULT_QUALITY: QualityView = {
 
 export interface GameAudioPluginView { status: GameAudioPluginStatus; error: string | null }
 
+export interface HotkeyState {
+  bindings: HotkeyBindings
+  /** exclusive = bound keys are taken from the game; passthrough = they still
+   *  reach it; null = nothing bound, or the backend could not arm. */
+  mode: 'passthrough' | 'exclusive' | null
+  error: string | null
+}
+
+export const DEFAULT_HOTKEY_STATE: HotkeyState = {
+  bindings: { goLive: null, micMute: null, masks: null, record: null },
+  mode: null,
+  error: null,
+}
+
+/** Refused when another action or push-to-talk already holds the key —
+ *  `conflict` carries that holder's label. */
+export type SetHotkeyResult = { ok: true } | { ok: false; conflict: string }
+
 export interface StreamSettingsView {
   titleTemplate: string
   dateFormat: string
@@ -169,6 +188,7 @@ export interface AppState {
    *  main-process local the renderer cannot see. */
   audioTestActive: boolean
   summary: StreamSummary | null
+  hotkeys: HotkeyState
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, captureTargets: [], stats: null, liveUnconfirmed: false, error: null,
@@ -189,6 +209,7 @@ export const INITIAL_STATE: AppState = {
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null },
   audioTestActive: false,
   summary: null,
+  hotkeys: DEFAULT_HOTKEY_STATE,
 }
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
@@ -287,6 +308,7 @@ export const CH = {
   getWebcamDevices: 'axi:getWebcamDevices',
   getWebcamProps: 'axi:getWebcamProps',
   setQuality: 'axi:setQuality',
+  setHotkey: 'axi:setHotkey',
 } as const
 
 export interface AxiApi {
@@ -345,6 +367,7 @@ export interface AxiApi {
   getWebcamDevices(): Promise<AudioDevice[]>
   getWebcamProps(): Promise<WebcamProps>
   setQuality(p: QualityPatch): Promise<void>
+  setHotkey(id: HotkeyId, binding: Binding | null): Promise<SetHotkeyResult>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void

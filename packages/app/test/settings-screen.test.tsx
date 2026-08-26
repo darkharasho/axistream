@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsScreen } from '../src/renderer/components/SettingsScreen.js'
 import type { AppState } from '../src/shared/state.js'
-import { DEFAULT_QUALITY } from '../src/shared/state.js'
+import { DEFAULT_QUALITY, DEFAULT_HOTKEY_STATE } from '../src/shared/state.js'
 
 const axi = {
   repairCapture: vi.fn(),
@@ -50,7 +50,7 @@ const base: AppState = {
   maskStyle: 'box',
   ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, liveUnconfirmed: false, watchUrl: null, webcam: { enabled: false, deviceId: null, deviceLabel: null, corner: 'br', sizePct: 0.22, mirrored: false, mode: null, available: true },
   quality: { ...DEFAULT_QUALITY },
-  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null,
+  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null, hotkeys: DEFAULT_HOTKEY_STATE,
 }
 
 describe('SettingsScreen', () => {

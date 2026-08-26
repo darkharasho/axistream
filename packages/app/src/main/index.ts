@@ -1116,6 +1116,8 @@ if (primary) app.whenReady().then(async () => {
         setState({ capture: capture_ })
       }
     },
+    // Real implementation lands with the hotkey wiring.
+    setHotkey: async () => ({ ok: true }),
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
