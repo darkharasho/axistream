@@ -28,6 +28,11 @@ export interface StreamSettingsData {
   pttKeyName: string
   pttModifier: '' | 'ctrl' | 'alt' | 'shift' | 'super'
   lastSeenVersion: string
+  /** The app version at which the user finished or dismissed the welcome
+   *  wizard. '' means it has never been seen. A string rather than a boolean
+   *  so a later release can re-run onboarding without a settings migration;
+   *  1.0 only ever asks whether it is empty. */
+  onboardedVersion: string
   recordDir: string
   webcam: WebcamConfig
   /** null = Auto. Auto tracks the monitor (capped at 1440) and 60fps, and
@@ -63,6 +68,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   pttKeyName: 'F18',
   pttModifier: '',
   lastSeenVersion: '',
+  onboardedVersion: '',
   recordDir: '',
   webcam: { ...DEFAULT_WEBCAM },
   qualityHeight: null,
@@ -203,6 +209,7 @@ export class StreamSettings {
         pttKeyName: typeof raw.pttKeyName === 'string' && raw.pttKeyName ? raw.pttKeyName : DEFAULT_SETTINGS.pttKeyName,
         pttModifier: raw.pttModifier === 'ctrl' || raw.pttModifier === 'alt' || raw.pttModifier === 'shift' || raw.pttModifier === 'super' ? raw.pttModifier : DEFAULT_SETTINGS.pttModifier,
         lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
+        onboardedVersion: typeof raw.onboardedVersion === 'string' ? raw.onboardedVersion : DEFAULT_SETTINGS.onboardedVersion,
         recordDir: typeof raw.recordDir === 'string' ? raw.recordDir : DEFAULT_SETTINGS.recordDir,
         webcam: sanitizeWebcam(raw.webcam),
         qualityHeight: oneOf(raw.qualityHeight, QUALITY_HEIGHTS),

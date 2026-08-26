@@ -50,7 +50,7 @@ const base: AppState = {
   maskStyle: 'box',
   ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, liveUnconfirmed: false, watchUrl: null, webcam: { enabled: false, deviceId: null, deviceLabel: null, corner: 'br', sizePct: 0.22, mirrored: false, mode: null, available: true },
   quality: { ...DEFAULT_QUALITY },
-  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null, hotkeys: DEFAULT_HOTKEY_STATE,
+  recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null, hotkeys: DEFAULT_HOTKEY_STATE, showWelcome: false,
 }
 
 describe('SettingsScreen', () => {

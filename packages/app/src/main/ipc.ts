@@ -44,6 +44,7 @@ export interface IpcHandlers {
   appVersion(): Promise<string>
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
+  dismissWelcome(): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
   openExternalUrl(url: string): Promise<boolean>
   exportDiagnostics(): Promise<DiagnosticsResult>
@@ -108,6 +109,7 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.appVersion, () => handlers.appVersion())
   ipcMain.handle(CH.getWhatsNew, () => handlers.getWhatsNew())
   ipcMain.handle(CH.setLastSeenVersion, (_e: unknown, v: string) => handlers.setLastSeenVersion(v))
+  ipcMain.handle(CH.dismissWelcome, () => handlers.dismissWelcome())
   ipcMain.handle(CH.copyToClipboard, (_e: unknown, text: string) => handlers.copyToClipboard(text))
   ipcMain.handle(CH.openExternalUrl, (_e: unknown, url: string) => handlers.openExternalUrl(url))
   ipcMain.handle(CH.exportDiagnostics, () => handlers.exportDiagnostics())

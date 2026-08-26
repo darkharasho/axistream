@@ -1037,6 +1037,10 @@ if (primary) app.whenReady().then(async () => {
       } catch { return { version, notes: null } }
     },
     setLastSeenVersion: async (v) => { settings.patch({ lastSeenVersion: v }) },
+    dismissWelcome: async () => {
+      settings.patch({ onboardedVersion: app.getVersion() })
+      setState({ showWelcome: false })
+    },
     // Copy via the main-process clipboard module: navigator.clipboard in the
     // renderer fails silently in Electron (denied by our permission handler,
     // and unavailable without a secure context / transient activation).
@@ -1384,7 +1388,7 @@ if (primary) app.whenReady().then(async () => {
         readFile: (p) => fsPromises.readFile(p, 'utf8'),
         writeFile: (p, c) => fsPromises.writeFile(p, c),
       })
-      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true }, quality: qualityViewOf(a) })
+      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true }, quality: qualityViewOf(a), showWelcome: a.onboardedVersion === '' })
       pushFitted()
       await applyMasksRespectingVisibility()
       // On a fresh install capture.start() only starts the sidecar — scene
