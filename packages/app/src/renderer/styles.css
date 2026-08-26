@@ -213,6 +213,20 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 .welcome-x:hover { color: #e6edf3; background: rgba(255,255,255,.08); }
 
+/* Wizard — the modal shell, plus a wider body than the title prompt needs. */
+.modal.wizard { min-width: 420px; max-width: 480px; gap: 12px; }
+.wizard-head { display: flex; align-items: center; justify-content: space-between; }
+.wizard-head h3 { margin: 0; }
+.wizard-dots { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.wizard-dots li { height: 3px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.1); }
+.wizard-dots li.done { background: rgba(34,211,238,.45); }
+.wizard-dots li.on { background: #22d3ee; }
+.wizard-body { display: flex; flex-direction: column; gap: 12px; min-height: 130px; }
+.wizard-body .muted { margin: 0; font-size: 12px; }
+.wizard-ok { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; color: #c7d0d9; }
+.wizard-ok svg { color: #22d3ee; flex: none; }
+.modal-actions .spacer { flex: 1; }
+
 /* Privacy-mask editor: sits over the preview video, under modals. */
 .mask-editor { position: absolute; inset: 0; z-index: 4; overflow: hidden; touch-action: none; }
 .mask-toolbar { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px;
@@ -360,35 +374,43 @@ input, textarea { -webkit-user-select: text; user-select: text; }
    checkbox should join these selector lists rather than restyle from scratch. */
 .webcam-settings { display: grid; gap: 12px; }
 .webcam-settings label,
-.quality-body label { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
+.quality-body label,
+.wizard-body label { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
 .webcam-settings select,
-.quality-body select {
+.quality-body select,
+.wizard-body select {
   appearance: none; -webkit-appearance: none;
   background: rgba(0,0,0,.4) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 10px center / 15px;
   border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
   padding: 9px 34px 9px 11px; color: #e6edf3; font-size: 13px; cursor: pointer;
 }
 .webcam-settings select:hover,
-.quality-body select:hover { border-color: rgba(34,211,238,.45); }
+.quality-body select:hover,
+.wizard-body select:hover { border-color: rgba(34,211,238,.45); }
 .webcam-settings select:focus-visible,
-.quality-body select:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+.quality-body select:focus-visible,
+.wizard-body select:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
 
 /* Checkbox rows read as a single line, so they opt out of the grid stacking. */
 .webcam-settings label.check,
-.quality-body label.check { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+.quality-body label.check,
+.wizard-body label.check { display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .webcam-settings input[type="checkbox"],
-.quality-body input[type="checkbox"] {
+.quality-body input[type="checkbox"],
+.wizard-body input[type="checkbox"] {
   appearance: none; -webkit-appearance: none; flex: none;
   width: 17px; height: 17px; margin: 0; border-radius: 5px;
   background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.2); cursor: pointer;
 }
 .webcam-settings input[type="checkbox"]:checked,
-.quality-body input[type="checkbox"]:checked {
+.quality-body input[type="checkbox"]:checked,
+.wizard-body input[type="checkbox"]:checked {
   background: #22d3ee url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306222a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") no-repeat center / 12px;
   border-color: #22d3ee;
 }
 .webcam-settings input[type="checkbox"]:focus-visible,
-.quality-body input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+.quality-body input[type="checkbox"]:focus-visible,
+.wizard-body input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
 
 /* Size slider: the value rides on the same line as the label. */
 .webcam-settings label.slider { grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; }

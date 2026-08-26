@@ -7,6 +7,7 @@ import { SettingsScreen } from './components/SettingsScreen.js'
 import { ToastHost } from './components/ToastHost.js'
 import { ErrorBoundary } from './components/ErrorBoundary.js'
 import { WelcomeBanner } from './components/WelcomeBanner.js'
+import { WelcomeWizard } from './components/WelcomeWizard.js'
 import { toastStore } from './toasts.js'
 import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
@@ -45,6 +46,9 @@ export function App() {
         <ToastHost />
         {state.showWelcome && nav === 'stream'
           ? <WelcomeBanner onSetUp={() => setWizard(true)} onDismiss={() => axi.dismissWelcome()} />
+          : null}
+        {wizard
+          ? <WelcomeWizard state={state} axi={axi} onClose={() => { setWizard(false); void axi.dismissWelcome() }} />
           : null}
         <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
         {nav === 'stream'
