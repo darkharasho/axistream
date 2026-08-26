@@ -11,6 +11,8 @@ name: OBS runtime
 # release.yml's `v*` trigger, so this never starts an app release.
 on:
   workflow_dispatch:
+  push:
+    branches: [feat/obs-runtime-prebuild]
 
 permissions:
   contents: write
