@@ -6,6 +6,7 @@ import { StreamScreen } from './components/StreamScreen.js'
 import { SettingsScreen } from './components/SettingsScreen.js'
 import { ToastHost } from './components/ToastHost.js'
 import { ErrorBoundary } from './components/ErrorBoundary.js'
+import { WelcomeBanner } from './components/WelcomeBanner.js'
 import { toastStore } from './toasts.js'
 import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
@@ -13,6 +14,7 @@ const axi = (globalThis as unknown as { axi: AxiApi }).axi
 
 export function App() {
   const [nav, setNav] = useState<'stream' | 'settings'>('stream')
+  const [wizard, setWizard] = useState(false)
   const [update, setUpdate] = useState<UpdateStatus | null>(null)
   const state = useSyncExternalStore(store.subscribe, store.getState)
   const preview = useSyncExternalStore(store.subscribe, store.getPreview)
@@ -41,6 +43,9 @@ export function App() {
       <div className="app">
         <div className="dragbar" />
         <ToastHost />
+        {state.showWelcome && nav === 'stream'
+          ? <WelcomeBanner onSetUp={() => setWizard(true)} onDismiss={() => axi.dismissWelcome()} />
+          : null}
         <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
         {nav === 'stream'
           ? <ErrorBoundary label="Stream"><StreamScreen state={state} preview={preview} axi={axi} store={store} /></ErrorBoundary>
