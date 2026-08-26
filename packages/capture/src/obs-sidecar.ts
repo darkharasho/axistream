@@ -101,20 +101,29 @@ export class ObsSidecar {
       }
     } catch (error) {
       this.expectExit = true
-      try { await this.obs?.disconnect() } catch { /* ignore */ }
-      this.obs = undefined
-      await this.opts.launcher.stopOwned()
-      this.handle = undefined
+      await this.teardown()
       throw error
     }
   }
 
   async stop(): Promise<void> {
     this.expectExit = true
+    await this.teardown()
+  }
+
+  // Ends OBS, then the process we actually spawned. Order matters on Linux,
+  // where the handle is the `cage` compositor hosting OBS: stopOwned() only
+  // reaches the Flatpak app inside it, so dropping the handle without killing
+  // it orphans cage — that is the OBS-in-the-taskbar-after-quit bug. Killing
+  // cage first would instead yank the compositor out from under a still-live
+  // OBS mid-shutdown. Clearing the handle first keeps stop() idempotent.
+  private async teardown(): Promise<void> {
+    const handle = this.handle
+    this.handle = undefined
     try { await this.obs?.disconnect() } catch { /* ignore */ }
     this.obs = undefined
     await this.opts.launcher.stopOwned()
-    this.handle = undefined
+    try { handle?.kill() } catch { /* ignore */ }
   }
 
   async restart(): Promise<void> {

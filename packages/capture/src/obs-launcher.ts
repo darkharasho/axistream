@@ -36,6 +36,7 @@ export class FlatpakObsLauncher implements ObsLauncher {
   constructor(
     private readonly appId = OWNED_OBS_APP_ID,
     private readonly spawnProcess: typeof nodeSpawn = nodeSpawn,
+    private readonly killTimeoutMs = 5000,
   ) {
     if (appId !== OWNED_OBS_APP_ID) throw new Error(`Refusing non-owned OBS Flatpak identity: ${appId}`)
   }
@@ -49,8 +50,21 @@ export class FlatpakObsLauncher implements ObsLauncher {
       onExit: (cb) => proc.on('exit', cb),
     }
   }
-  // Flatpak reparents the app out of the `flatpak run` child; kill the app itself.
-  stopOwned(): void {
-    try { this.spawnProcess('flatpak', ['kill', this.appId], { stdio: 'ignore' }) } catch { /* ignore */ }
+  // Flatpak reparents the app out of the `flatpak run` child; kill the app
+  // itself. Awaited so teardown can sequence behind it — a fire-and-forget
+  // spawn lets the app exit while OBS is still winding down. Best-effort: a
+  // wedged or missing `flatpak` resolves rather than holding quit open.
+  async stopOwned(): Promise<void> {
+    let proc: ReturnType<typeof nodeSpawn>
+    try {
+      proc = this.spawnProcess('flatpak', ['kill', this.appId], { stdio: 'ignore' })
+    } catch { return }
+    await new Promise<void>((resolve) => {
+      const done = () => { clearTimeout(timer); resolve() }
+      const timer = setTimeout(done, this.killTimeoutMs)
+      timer.unref?.()
+      proc.once('exit', done)
+      proc.once('error', done)
+    })
   }
 }

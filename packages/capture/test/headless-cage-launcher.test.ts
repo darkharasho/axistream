@@ -41,3 +41,21 @@ describe('HeadlessCageObsLauncher', () => {
     expect(fallback.stopOwned).toHaveBeenCalledOnce()
   })
 })
+
+describe('HeadlessCageObsLauncher teardown', () => {
+  it('stopOwned() awaits the wrapped launcher instead of dropping its promise', async () => {
+    let release: () => void = () => {}
+    const fallback = {
+      launch: vi.fn(),
+      stopOwned: vi.fn(() => new Promise<void>((r) => { release = r })),
+    }
+    const launcher = new HeadlessCageObsLauncher(fallback as never)
+    let settled = false
+    const stopped = Promise.resolve(launcher.stopOwned()).then(() => { settled = true })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    release()
+    await stopped
+    expect(settled).toBe(true)
+  })
+})
