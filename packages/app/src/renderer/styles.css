@@ -338,31 +338,41 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .webcam-settings .webcam-corners .btn { padding: 9px 12px; font-size: 12px; font-weight: 700; border-radius: 9px; }
 .webcam-modes { display: grid; gap: 10px; margin-top: 10px; }
 
-/* The camera panel's own controls. Native select/checkbox/range chrome is
-   light-themed on Linux and read as a different app pasted into the panel. */
+/* Shared panel controls. Native select/checkbox/range chrome is light-themed
+   on Linux and reads as a different app pasted into the panel, so the camera
+   and quality panels both opt out of it. Any new panel with a <select> or a
+   checkbox should join these selector lists rather than restyle from scratch. */
 .webcam-settings { display: grid; gap: 12px; }
-.webcam-settings label { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
-.webcam-settings select {
+.webcam-settings label,
+.quality-body label { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
+.webcam-settings select,
+.quality-body select {
   appearance: none; -webkit-appearance: none;
   background: rgba(0,0,0,.4) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 10px center / 15px;
   border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
   padding: 9px 34px 9px 11px; color: #e6edf3; font-size: 13px; cursor: pointer;
 }
-.webcam-settings select:hover { border-color: rgba(34,211,238,.45); }
-.webcam-settings select:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+.webcam-settings select:hover,
+.quality-body select:hover { border-color: rgba(34,211,238,.45); }
+.webcam-settings select:focus-visible,
+.quality-body select:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
 
 /* Checkbox rows read as a single line, so they opt out of the grid stacking. */
-.webcam-settings label.check { display: flex; align-items: center; gap: 9px; cursor: pointer; }
-.webcam-settings input[type="checkbox"] {
+.webcam-settings label.check,
+.quality-body label.check { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+.webcam-settings input[type="checkbox"],
+.quality-body input[type="checkbox"] {
   appearance: none; -webkit-appearance: none; flex: none;
   width: 17px; height: 17px; margin: 0; border-radius: 5px;
   background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.2); cursor: pointer;
 }
-.webcam-settings input[type="checkbox"]:checked {
+.webcam-settings input[type="checkbox"]:checked,
+.quality-body input[type="checkbox"]:checked {
   background: #22d3ee url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306222a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") no-repeat center / 12px;
   border-color: #22d3ee;
 }
-.webcam-settings input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+.webcam-settings input[type="checkbox"]:focus-visible,
+.quality-body input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
 
 /* Size slider: the value rides on the same line as the label. */
 .webcam-settings label.slider { grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; }
@@ -414,18 +424,37 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .dropup-item.danger { color: #ff8b9c; }
 .dropup-item .rec-elapsed { margin-left: auto; color: #8b949e; }
 
-.quality-header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  width: 100%;
-  padding: 0;
-  background: none;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
+/* Quality panel. Flat like every other settings card — the summary reads as
+   chips so the mode (Auto vs Custom) is scannable without parsing a sentence. */
+.quality-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.q-chip {
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+  font: 600 11px/1.5 inherit; color: #8b949e; white-space: nowrap;
 }
-.quality-header h3 { margin: 0; }
-.quality-body { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.quality-body input[type='number'] { width: 8ch; }
+/* The mode chip is the one you scan for, so it carries the accent. */
+.q-chip.mode { background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.4); color: #22d3ee; }
+.q-chip.mode.custom { background: #22d3ee; border-color: #22d3ee; color: #06222a; }
+
+.quality-body { display: flex; flex-direction: column; gap: 12px; }
+.quality-body input[type='number'] {
+  width: 9ch;
+  background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
+  padding: 8px 10px; color: #e6edf3; font-size: 13px;
+}
+.quality-body input[type='number']:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+/* A control that only exists because the checkbox above it is ticked, indented
+   so the dependency is visible rather than inferred. */
+.q-sub { margin-top: -2px; padding-left: 26px; }
+/* A consequence of editing these fields, not a hint — it gets a notice. */
+.q-note {
+  margin: 0; padding: 8px 11px; border-radius: 9px;
+  background: rgba(240,180,60,.1); border: 1px solid rgba(240,180,60,.3);
+  font-size: 12px; color: #e3b341;
+}
+/* State AxiStream chose for the user, which reads differently from advice. */
+.q-fallback {
+  margin: 0; padding: 2px 0 2px 10px;
+  border-left: 2px solid #22d3ee; font-size: 12px; color: #c7d0d9;
+}
+.quality-body .muted { margin: 0; font-size: 12px; }

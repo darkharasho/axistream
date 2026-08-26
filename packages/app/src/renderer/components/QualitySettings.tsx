@@ -3,7 +3,6 @@ import type { AppState, AxiApi } from '../../shared/state.js'
 import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_MAX_HEIGHT, AUTO_FPS, isStreamingPhase } from '../../shared/state.js'
 
 export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }) {
-  const [open, setOpen] = useState(false)
   const q = state.quality
   const { capture } = state
   const live = isStreamingPhase(state.phase)
@@ -11,7 +10,6 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   const isCustom = q.height !== null || q.fps !== null || q.bitrateKbps !== null || q.preferSoftware
   const resolved = capture ? `${capture.outputHeight}p${capture.fps}` : '—'
   const bitrate = state.videoBitrateKbps ? `${state.videoBitrateKbps} kbps` : '—'
-  const summary = `${isCustom ? 'Custom' : 'Auto'} · ${resolved} · ${bitrate} · ${state.encoder}`
 
   // Auto resolves from the monitor's NATIVE height, not the current output —
   // otherwise a custom 720p would make the Auto option label itself "720p".
@@ -52,80 +50,85 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
 
   return (
     <div className="quality-settings">
-      <button className="quality-header" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <h3>Quality</h3>
-        <span className="muted">{summary}</span>
-      </button>
-      {live ? <p className="muted">Applies to your next stream.</p> : null}
+      <h3>Quality</h3>
+      {/* What the stream is actually getting, as chips: the mode is what you
+          scan for, so it leads and carries the accent. */}
+      <div className="quality-chips">
+        <span className={isCustom ? 'q-chip mode custom' : 'q-chip mode'}>{isCustom ? 'Custom' : 'Auto'}</span>
+        <span className="q-chip">{resolved}</span>
+        <span className="q-chip">{bitrate}</span>
+        <span className="q-chip">{state.encoder}</span>
+      </div>
 
-      {open ? (
-        <div className="quality-body">
-          <label>
-            <span>Resolution</span>
-            <select
-              value={q.height === null ? 'auto' : String(q.height)}
-              onChange={(e) => void axi.setQuality({ height: e.target.value === 'auto' ? null : Number(e.target.value) })}
-            >
-              <option value="auto">{`Auto (${autoHeight}p)`}</option>
-              {heights.map((h) => <option key={h} value={h}>{`${h}p`}</option>)}
-              {phantomHeight !== null ? <option value={phantomHeight}>{`${phantomHeight}p (above this monitor)`}</option> : null}
-            </select>
-          </label>
+      <div className="quality-body">
+        {live ? <p className="q-note">Applies to your next stream.</p> : null}
+        <label>
+          <span>Resolution</span>
+          <select
+            value={q.height === null ? 'auto' : String(q.height)}
+            onChange={(e) => void axi.setQuality({ height: e.target.value === 'auto' ? null : Number(e.target.value) })}
+          >
+            <option value="auto">{`Auto (${autoHeight}p)`}</option>
+            {heights.map((h) => <option key={h} value={h}>{`${h}p`}</option>)}
+            {phantomHeight !== null ? <option value={phantomHeight}>{`${phantomHeight}p (above this monitor)`}</option> : null}
+          </select>
+        </label>
 
-          <label>
-            <span>Frame rate</span>
-            <select
-              value={q.fps === null ? 'auto' : String(q.fps)}
-              onChange={(e) => void axi.setQuality({ fps: e.target.value === 'auto' ? null : Number(e.target.value) })}
-            >
-              <option value="auto">{`Auto (${AUTO_FPS})`}</option>
-              {QUALITY_FPS.map((f) => <option key={f} value={f}>{String(f)}</option>)}
-            </select>
-          </label>
+        <label>
+          <span>Frame rate</span>
+          <select
+            value={q.fps === null ? 'auto' : String(q.fps)}
+            onChange={(e) => void axi.setQuality({ fps: e.target.value === 'auto' ? null : Number(e.target.value) })}
+          >
+            <option value="auto">{`Auto (${AUTO_FPS})`}</option>
+            {QUALITY_FPS.map((f) => <option key={f} value={f}>{String(f)}</option>)}
+          </select>
+        </label>
 
-          <label className="check">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={manualBitrate}
+            /* Seed from what auto had chosen so the box is never empty and
+               the first edit is a nudge, not a from-scratch guess. */
+            onChange={(e) => void axi.setQuality({ bitrateKbps: e.target.checked ? (state.videoBitrateKbps ?? 6000) : null })}
+          />
+          Set the bitrate manually
+        </label>
+
+        {manualBitrate ? (
+          <label className="q-sub">
+            <span>Bitrate (kbps)</span>
             <input
-              type="checkbox"
-              checked={manualBitrate}
-              /* Seed from what auto had chosen so the box is never empty and
-                 the first edit is a nudge, not a from-scratch guess. */
-              onChange={(e) => void axi.setQuality({ bitrateKbps: e.target.checked ? (state.videoBitrateKbps ?? 6000) : null })}
+              type="number"
+              min={MIN_BITRATE_KBPS}
+              max={MAX_BITRATE_KBPS}
+              step={500}
+              value={bitrateInput}
+              onChange={(e) => setBitrateInput(e.target.value)}
+              onFocus={() => { bitrateFocused.current = true }}
+              onBlur={() => { bitrateFocused.current = false; commitBitrate() }}
+              onKeyDown={(e) => { if (e.key === 'Enter') commitBitrate() }}
             />
-            Set the bitrate manually
           </label>
+        ) : null}
 
-          {manualBitrate ? (
-            <label>
-              <span>Bitrate (kbps)</span>
-              <input
-                type="number"
-                min={MIN_BITRATE_KBPS}
-                max={MAX_BITRATE_KBPS}
-                step={500}
-                value={bitrateInput}
-                onChange={(e) => setBitrateInput(e.target.value)}
-                onFocus={() => { bitrateFocused.current = true }}
-                onBlur={() => { bitrateFocused.current = false; commitBitrate() }}
-                onKeyDown={(e) => { if (e.key === 'Enter') commitBitrate() }}
-              />
-            </label>
-          ) : null}
-
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={q.preferSoftware}
-              onChange={(e) => void axi.setQuality({ preferSoftware: e.target.checked })}
-            />
-            Software encoding
-          </label>
-          <p className="muted">
-            {q.preferSoftware && q.preferSoftwareAuto
-              ? 'AxiStream switched to software encoding after a stream failed to start — untick to try your graphics card again.'
-              : 'Use the CPU instead of your graphics card. Slower, but works everywhere.'}
-          </p>
-        </div>
-      ) : null}
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={q.preferSoftware}
+            onChange={(e) => void axi.setQuality({ preferSoftware: e.target.checked })}
+          />
+          Software encoding
+        </label>
+        {/* A fallback the app chose is state, not advice — it gets its own
+            weight rather than sitting at hint level. */}
+        {q.preferSoftware && q.preferSoftwareAuto ? (
+          <p className="q-fallback">AxiStream switched to software encoding after a stream failed to start — untick to try your graphics card again.</p>
+        ) : (
+          <p className="muted">Use the CPU instead of your graphics card. Slower, but works everywhere.</p>
+        )}
+      </div>
     </div>
   )
 }

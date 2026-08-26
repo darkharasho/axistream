@@ -56,10 +56,10 @@ const base: AppState = {
 describe('SettingsScreen', () => {
   it('mounts the quality panel with its resolved summary', () => {
     render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
-    const header = screen.getByRole('button', { name: /quality/i })
-    expect(header).toHaveTextContent('Auto')
-    expect(header).toHaveTextContent('1440p60')
-    expect(header).toHaveTextContent('NVENC')
+    const chips = document.querySelector('.quality-chips')!
+    expect(chips).toHaveTextContent('Auto')
+    expect(chips).toHaveTextContent('1440p60')
+    expect(chips).toHaveTextContent('NVENC')
   })
 
   it('offers Re-set up capture', async () => {

@@ -16,31 +16,37 @@ const mk = (over: Partial<AppState> = {}): AppState => ({
   ...over,
 })
 
-const expand = async () => { await userEvent.click(screen.getByRole('button', { name: /quality/i })) }
-
 describe('QualitySettings', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('summarises what the stream is actually getting, without expanding', () => {
-    render(<QualitySettings state={mk()} axi={axi as never} />)
+  it('summarises what the stream is actually getting', () => {
+    const { container } = render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    const header = screen.getByRole('button', { name: /quality/i })
-    expect(header).toHaveTextContent('Auto')
-    expect(header).toHaveTextContent('1080p60')
-    expect(header).toHaveTextContent('9000 kbps')
-    expect(header).toHaveTextContent('NVENC')
-    expect(screen.queryByLabelText(/resolution/i)).toBeNull()
+    const chips = container.querySelector('.quality-chips')!
+    expect(chips).toHaveTextContent('Auto')
+    expect(chips).toHaveTextContent('1080p60')
+    expect(chips).toHaveTextContent('9000 kbps')
+    expect(chips).toHaveTextContent('NVENC')
   })
 
   it('says Custom once any field is overridden', () => {
-    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, fps: 30 } })} axi={axi as never} />)
+    const { container } = render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, fps: 30 } })} axi={axi as never} />)
 
-    expect(screen.getByRole('button', { name: /quality/i })).toHaveTextContent('Custom')
+    expect(container.querySelector('.quality-chips')).toHaveTextContent('Custom')
+  })
+
+  // The eight sibling settings cards are all flat, and the grid is CSS columns
+  // with break-inside: avoid — a taller card costs nothing, so the controls are
+  // always visible rather than hidden behind a disclosure.
+  it('shows the controls without needing to be expanded', () => {
+    render(<QualitySettings state={mk()} axi={axi as never} />)
+
+    expect(screen.getByLabelText(/resolution/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/frame rate/i)).toBeInTheDocument()
   })
 
   it('omits resolutions the monitor cannot produce', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
-    await expand()
 
     const opts = Array.from(screen.getByLabelText(/resolution/i).querySelectorAll('option')).map((o) => o.textContent)
     expect(opts).toContain('720p')
@@ -50,7 +56,6 @@ describe('QualitySettings', () => {
 
   it('labels Auto with the value it resolves to from the monitor, not the active override', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 720 }, capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1280, outputHeight: 720, fps: 60 } })} axi={axi as never} />)
-    await expand()
 
     const opts = Array.from(screen.getByLabelText(/resolution/i).querySelectorAll('option')).map((o) => o.textContent)
     expect(opts).toContain('Auto (1080p)')
@@ -60,7 +65,6 @@ describe('QualitySettings', () => {
     // e.g. settings.json carries qualityHeight: 1440 from a previous, bigger
     // monitor; this one only goes up to 1080p.
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 1440 } })} axi={axi as never} />)
-    await expand()
 
     const select = screen.getByLabelText(/resolution/i) as HTMLSelectElement
     expect(select.value).toBe('1440')
@@ -70,7 +74,6 @@ describe('QualitySettings', () => {
 
   it('sends the picked resolution', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
-    await expand()
 
     fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: '720' } })
 
@@ -79,7 +82,6 @@ describe('QualitySettings', () => {
 
   it('sends null when resolution goes back to Auto', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 720 } })} axi={axi as never} />)
-    await expand()
 
     fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: 'auto' } })
 
@@ -88,7 +90,6 @@ describe('QualitySettings', () => {
 
   it('sends the picked frame rate', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
-    await expand()
 
     fireEvent.change(screen.getByLabelText(/frame rate/i), { target: { value: '30' } })
 
@@ -97,7 +98,6 @@ describe('QualitySettings', () => {
 
   it('seeds the manual bitrate from what auto had chosen, so the box is never empty', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
-    await expand()
 
     await userEvent.click(screen.getByRole('checkbox', { name: /set the bitrate manually/i }))
 
@@ -106,7 +106,6 @@ describe('QualitySettings', () => {
 
   it('hides the bitrate box until manual is ticked, and returns to auto when unticked', async () => {
     const { rerender } = render(<QualitySettings state={mk()} axi={axi as never} />)
-    await expand()
     expect(screen.queryByLabelText(/bitrate \(kbps\)/i)).toBeNull()
 
     rerender(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 4500 } })} axi={axi as never} />)
@@ -118,7 +117,6 @@ describe('QualitySettings', () => {
 
   it('does not fire setQuality while the bitrate field is mid-edit', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
-    await expand()
 
     const input = screen.getByLabelText(/bitrate \(kbps\)/i)
     await userEvent.tripleClick(input)
@@ -130,7 +128,6 @@ describe('QualitySettings', () => {
 
   it('commits the typed bitrate once, on blur', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
-    await expand()
 
     const input = screen.getByLabelText(/bitrate \(kbps\)/i)
     await userEvent.tripleClick(input)
@@ -143,7 +140,6 @@ describe('QualitySettings', () => {
 
   it('commits the typed bitrate on Enter', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
-    await expand()
 
     const input = screen.getByLabelText(/bitrate \(kbps\)/i)
     await userEvent.tripleClick(input)
@@ -155,7 +151,6 @@ describe('QualitySettings', () => {
 
   it('re-syncs the local bitrate value when the prop changes and the field is not focused', async () => {
     const { rerender } = render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
-    await expand()
 
     expect(screen.getByLabelText(/bitrate \(kbps\)/i)).toHaveValue(9000)
 
@@ -166,7 +161,6 @@ describe('QualitySettings', () => {
 
   it('toggles software encoding', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
-    await expand()
 
     await userEvent.click(screen.getByRole('checkbox', { name: /software encoding/i }))
 
@@ -175,14 +169,12 @@ describe('QualitySettings', () => {
 
   it('explains a software fallback the app chose, not the user', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, preferSoftware: true, preferSoftwareAuto: true } })} axi={axi as never} />)
-    await expand()
 
     expect(screen.getByText(/switched to software encoding after a stream failed/i)).toBeInTheDocument()
   })
 
   it('gives the generic explanation when the user ticked it themselves', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, preferSoftware: true, preferSoftwareAuto: false } })} axi={axi as never} />)
-    await expand()
 
     expect(screen.queryByText(/switched to software encoding after a stream failed/i)).toBeNull()
     expect(screen.getByText(/use the cpu instead of your graphics card/i)).toBeInTheDocument()
