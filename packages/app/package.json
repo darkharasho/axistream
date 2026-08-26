@@ -2,6 +2,7 @@
   "name": "@axistream/app",
   "private": true,
   "version": "0.1.15",
+  "license": "MIT",
   "description": "Get live on YouTube in three clicks",
   "author": "AxiStream <project96@gmail.com>",
   "homepage": "https://stream.axi.link",
