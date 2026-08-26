@@ -22,3 +22,29 @@ export async function rebuildHotkeys(d: RebuildHotkeysDeps): Promise<{ ok: boole
   else if (!r.ok) await d.disarmPtt()
   return r
 }
+
+export interface PttStateFields {
+  enabled: boolean
+  active: false
+  error: string | null
+  mode: 'passthrough' | 'exclusive' | null
+}
+
+// Pure derivation of the post-rebuild state.ptt patch (minus the key-label
+// fields, which the caller already has). MUST gate `error` on the user's
+// INTENT (wantsPtt = settings.pttEnabled), not on `armed` — a failed
+// rebuild always disarms PTT (see rebuildHotkeys above), so gating on the
+// post-rebuild armed state would make a bind-failure error permanently
+// unreachable: the one case that needs to report it is exactly the case
+// that rebuildHotkeys just disarmed.
+export function pttStateFields(
+  r: { ok: boolean; error?: string },
+  opts: { armed: boolean; wantsPtt: boolean; mode: 'passthrough' | 'exclusive' | null },
+): PttStateFields {
+  return {
+    enabled: opts.armed,
+    active: false,
+    error: opts.wantsPtt ? (r.ok ? null : (r.error ?? 'failed')) : null,
+    mode: opts.armed ? opts.mode : null,
+  }
+}

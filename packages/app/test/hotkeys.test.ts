@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   HOTKEY_IDS, HOTKEY_LABELS, DEFAULT_HOTKEYS,
-  toBinding, toPersisted, findConflict,
+  toBinding, toPersisted, findConflict, findActionOwner,
 } from '../src/shared/hotkeys.js'
 
 const F13 = { code: 183, name: 'F13' }
@@ -83,5 +83,29 @@ describe('findConflict', () => {
   it('returns null when nothing holds the key', () => {
     expect(findConflict('masks', { key: { code: 185, name: 'F15' }, modifier: null }, bindings, ptt))
       .toBeNull()
+  })
+})
+
+describe('findActionOwner', () => {
+  // The inverse direction from findConflict — guards a NEW push-to-talk
+  // binding against the four action hotkeys.
+  const bindings = {
+    goLive: { key: F13, modifier: null },
+    micMute: null,
+    masks: null,
+    record: { key: F14, modifier: 'ctrl' as const },
+  }
+
+  it('names the action already holding the key', () => {
+    expect(findActionOwner({ key: F13, modifier: null }, bindings)).toBe(HOTKEY_LABELS.goLive)
+  })
+
+  it('treats a differing modifier as a different binding', () => {
+    expect(findActionOwner({ key: F14, modifier: null }, bindings)).toBeNull()
+    expect(findActionOwner({ key: F14, modifier: 'ctrl' }, bindings)).toBe(HOTKEY_LABELS.record)
+  })
+
+  it('returns null when nothing holds the key', () => {
+    expect(findActionOwner({ key: { code: 185, name: 'F15' }, modifier: null }, bindings)).toBeNull()
   })
 })

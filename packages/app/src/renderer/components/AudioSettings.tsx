@@ -52,6 +52,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
       if ('reason' in r) {
         setCaptureMsg(r.reason === 'cancelled' ? 'Cancelled'
           : r.reason === 'timeout' ? 'No key seen — timed out'
+          : r.reason === 'conflict' ? `Already bound to ${r.owner}`
           : 'Pass-through unavailable')
       }
     } finally {

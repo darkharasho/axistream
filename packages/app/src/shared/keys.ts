@@ -3,6 +3,10 @@ export interface PttKey { code: number; name: string }
 export type PttCaptureResult =
   | { key: PttKey }
   | { reason: 'timeout' | 'cancelled' | 'unavailable' }
+  // The captured key is already bound to one of the four hotkey actions —
+  // `owner` names it (e.g. "Record") so the user knows why the capture was
+  // refused instead of silently binding a key that would fire two things.
+  | { reason: 'conflict'; owner: string }
 
 // evdev keycodes from linux input-event-codes.h — the curated picker set.
 export const PTT_KEY_CHOICES: PttKey[] = [

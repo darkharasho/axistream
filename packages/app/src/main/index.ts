@@ -32,8 +32,8 @@ import { isInAppNavigation } from './navigate-gate.js'
 import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
 import { HotkeyService, type HotkeyActions } from './HotkeyService.js'
-import { rebuildHotkeys as rebuildHotkeysCore } from './rebuild-hotkeys.js'
-import { findConflict, toBinding, toPersisted, type HotkeyBindings } from '../shared/hotkeys.js'
+import { rebuildHotkeys as rebuildHotkeysCore, pttStateFields } from './rebuild-hotkeys.js'
+import { findConflict, findActionOwner, toBinding, toPersisted, type HotkeyBindings } from '../shared/hotkeys.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
 import { createWindowsKeys } from './windows-keys.js'
 import { ensureDesktopEntry } from './desktop-entry.js'
@@ -465,6 +465,14 @@ if (primary) app.whenReady().then(async () => {
     now: () => Date.now(),
   })
 
+  // Set for the duration of capturePttKey's raw evdev probe: any OTHER
+  // handler's rebuildHotkeys() call during that window would reopen the
+  // shared session mid-capture (re-arming PTT, re-binding the four action
+  // hotkeys) while the probe is still reading the same devices — reopening
+  // the exact hole closed below. capturePttKey's own finally rebuilds
+  // unconditionally once the window closes, so a skipped rebuild self-heals.
+  let captureInFlight = false
+
   // Every binding shares one session, so any change is a full close + bindAll.
   // In that gap NO hotkey is live, push-to-talk included. PTT's failure mode
   // is always "mic hot": arm (baseline-mute) ONLY on a successful rebuild —
@@ -473,6 +481,7 @@ if (primary) app.whenReady().then(async () => {
   // watcher left to ever unmute it. The actual decision lives in
   // rebuild-hotkeys.ts, as a pure function, so it has direct unit coverage.
   const rebuildHotkeys = async (): Promise<{ ok: boolean; error?: string }> => {
+    if (captureInFlight) return { ok: true }
     const r = await rebuildHotkeysCore({
       rebuild: () => hotkeys.rebuild(),
       pttEnabled: () => settings.load().pttEnabled,
@@ -483,15 +492,14 @@ if (primary) app.whenReady().then(async () => {
     return r
   }
 
-  // The single reader for state.ptt after any rebuildHotkeys() call. The ptt
-  // slot only shares the rebuild's fate when it was actually part of the
-  // bound set (i.e. currently enabled) — attributing an unrelated action's
-  // bind failure to push-to-talk would mislead the user, so a rebuild
-  // failure while PTT is disabled reports no ptt error at all.
+  // The single reader for state.ptt after any rebuildHotkeys() call. The
+  // enabled/error/mode derivation is a pure function (rebuild-hotkeys.ts)
+  // with its own tests — see pttStateFields for why `error` is gated on
+  // intent (settings.pttEnabled), not on the post-rebuild armed state.
   const pushPttState = (r: { ok: boolean; error?: string }) => {
     const lb = loadBinding()
-    const enabled = ptt.isEnabled()
-    setState({ ptt: { ...state.ptt, enabled, active: false, error: enabled ? (r.ok ? null : (r.error ?? 'failed')) : null, mode: enabled ? pttMode : null, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
+    const fields = pttStateFields(r, { armed: ptt.isEnabled(), wantsPtt: settings.load().pttEnabled, mode: pttMode })
+    setState({ ptt: { ...state.ptt, ...fields, keyName: bindingLabel(lb), keyCode: lb.key.code, modifier: lb.modifier } })
   }
 
   const flatpakExec = (cmd: string, args: string[], timeoutMs: number) => new Promise<{ code: number; output: string }>((resolve, reject) => {
@@ -919,26 +927,43 @@ if (primary) app.whenReady().then(async () => {
     capturePttKey: async (): Promise<PttCaptureResult> => {
       if (!(await evdevBackend.available())) return { reason: 'unavailable' }
       const wasEnabled = ptt.isEnabled()
-      // Close the WHOLE shared session for the capture window, not just
-      // PTT's local mute gate — the four action hotkeys stay bound
-      // otherwise, so a key already bound to (say) record or goLive would
-      // fire it while the user is only trying to press it for PTT capture.
-      // The pressed key must also never transmit through PTT's own mute
-      // gate, so disarm on top of the close.
-      await hotkeys.close()
-      if (wasEnabled) await ptt.disarm()
       let result: PttCaptureResult = { reason: 'timeout' }
+      // captureInFlight blocks any OTHER handler's rebuildHotkeys() from
+      // reopening the session while the raw probe below is reading the same
+      // devices — set before the close, cleared before the closing rebuild
+      // so that rebuild is the one that actually runs.
+      captureInFlight = true
       try {
+        // Close the WHOLE shared session for the capture window, not just
+        // PTT's local mute gate — the four action hotkeys stay bound
+        // otherwise, so a key already bound to (say) record or goLive would
+        // fire it while the user is only trying to press it for PTT capture.
+        // The pressed key must also never transmit through PTT's own mute
+        // gate, so disarm on top of the close. Both live inside this try so
+        // the finally below is the real "session never stays closed"
+        // guarantee, not just a comment.
+        await hotkeys.close()
+        if (wasEnabled) await ptt.disarm()
         result = await captureNextKey()
         if ('key' in result) {
-          settings.patch({ pttKeyCode: result.key.code, pttKeyName: result.key.name, pttModifier: '' })
-          setState({ ptt: { ...state.ptt, keyName: bindingLabel({ key: result.key, modifier: null }), keyCode: result.key.code, modifier: null } })
+          // Guard the PTT-against-actions leg findConflict doesn't cover: a
+          // key already bound to record/goLive/masks/micMute must not also
+          // become the PTT key, or both would fire on every press. Reject
+          // and name the owner instead of silently binding over it.
+          const owner = findActionOwner({ key: result.key, modifier: null }, bindingsNow())
+          if (owner) {
+            result = { reason: 'conflict', owner }
+          } else {
+            settings.patch({ pttKeyCode: result.key.code, pttKeyName: result.key.name, pttModifier: '' })
+            setState({ ptt: { ...state.ptt, keyName: bindingLabel({ key: result.key, modifier: null }), keyCode: result.key.code, modifier: null } })
+          }
         }
       } finally {
-        // The session must never stay closed — rebuild unconditionally, even
-        // if capture threw, was cancelled, or timed out, and regardless of
-        // whether PTT itself was enabled (the other four hotkeys still need
-        // to come back).
+        // Rebuild unconditionally, even if the close, the capture, or the
+        // settings patch above threw, was cancelled, or timed out, and
+        // regardless of whether PTT itself was enabled (the other four
+        // hotkeys still need to come back).
+        captureInFlight = false
         const r = await rebuildHotkeys()
         pushPttState(r)
       }

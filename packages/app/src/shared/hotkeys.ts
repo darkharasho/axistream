@@ -90,3 +90,16 @@ export function findConflict(
   if (ptt && sameBinding(ptt, binding)) return 'Push to talk'
   return null
 }
+
+/** The inverse direction from findConflict: the label of whichever hotkey
+ *  ACTION already holds this binding, or null if none does. Guards a NEW
+ *  push-to-talk binding against the four action hotkeys (findConflict guards
+ *  an action's candidate binding against the other actions + the existing
+ *  ptt binding — this is the missing PTT-against-actions leg). */
+export function findActionOwner(binding: Binding, bindings: HotkeyBindings): string | null {
+  for (const id of HOTKEY_IDS) {
+    const held = bindings[id]
+    if (held && sameBinding(held, binding)) return HOTKEY_LABELS[id]
+  }
+  return null
+}

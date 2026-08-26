@@ -264,6 +264,13 @@ describe('AudioSettings', () => {
     await waitFor(() => expect(screen.getByText('No key seen — timed out')).toBeInTheDocument())
   })
 
+  it('pass-through rebind names the owning action when the captured key is already bound', async () => {
+    axi.capturePttKey.mockResolvedValueOnce({ reason: 'conflict', owner: 'Record' })
+    render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'passthrough', keyName: 'F18', keyCode: 188, modifier: null }} />)
+    fireEvent.click(screen.getByRole('button', { name: /rebind/i }))
+    await waitFor(() => expect(screen.getByText('Already bound to Record')).toBeInTheDocument())
+  })
+
   it('exclusive rebind is a dropdown calling setPttBinding', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18', keyCode: 188, modifier: null }} />)
     fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: 'F13' } })
