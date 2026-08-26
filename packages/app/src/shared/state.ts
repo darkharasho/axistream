@@ -14,6 +14,17 @@ export type WebcamCorner = 'tl' | 'tr' | 'bl' | 'br'
 export const WEBCAM_MIN_SIZE_PCT = 0.15
 export const WEBCAM_MAX_SIZE_PCT = 0.35
 
+export const QUALITY_HEIGHTS = [720, 1080, 1440]
+export const QUALITY_FPS = [30, 60]
+export const MIN_BITRATE_KBPS = 1000
+export const MAX_BITRATE_KBPS = 51000
+/** What Auto resolves to. The cap matches applyCaptureResolution's own
+ *  default, so "Auto" and "no override" are the same stream. Shared because
+ *  main resolves with them and the renderer labels the Auto option with them —
+ *  two copies would be two places to get out of sync. */
+export const AUTO_MAX_HEIGHT = 1440
+export const AUTO_FPS = 60
+
 // All three OBS v4l2 properties, set together. Picking a resolution without
 // its pixel format is what produces the 5fps YUYV case this override escapes.
 export interface WebcamMode { pixelformat: string; resolution: string; framerate: string }
