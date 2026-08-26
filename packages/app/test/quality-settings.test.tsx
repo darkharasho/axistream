@@ -56,6 +56,18 @@ describe('QualitySettings', () => {
     expect(opts).toContain('Auto (1080p)')
   })
 
+  it('shows a persisted height above the monitor as its own honest option, not a phantom Auto', async () => {
+    // e.g. settings.json carries qualityHeight: 1440 from a previous, bigger
+    // monitor; this one only goes up to 1080p.
+    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 1440 } })} axi={axi as never} />)
+    await expand()
+
+    const select = screen.getByLabelText(/resolution/i) as HTMLSelectElement
+    expect(select.value).toBe('1440')
+    expect(select.selectedOptions[0].textContent).toMatch(/1440/)
+    expect(select.selectedOptions[0].textContent?.toLowerCase()).not.toContain('auto')
+  })
+
   it('sends the picked resolution', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
     await expand()
@@ -104,6 +116,54 @@ describe('QualitySettings', () => {
     expect(axi.setQuality).toHaveBeenCalledWith({ bitrateKbps: null })
   })
 
+  it('does not fire setQuality while the bitrate field is mid-edit', async () => {
+    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
+    await expand()
+
+    const input = screen.getByLabelText(/bitrate \(kbps\)/i)
+    await userEvent.tripleClick(input)
+    await userEvent.keyboard('3')
+
+    expect(axi.setQuality).not.toHaveBeenCalled()
+    expect(input).toHaveValue(3)
+  })
+
+  it('commits the typed bitrate once, on blur', async () => {
+    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
+    await expand()
+
+    const input = screen.getByLabelText(/bitrate \(kbps\)/i)
+    await userEvent.tripleClick(input)
+    await userEvent.keyboard('3000')
+    input.blur()
+
+    expect(axi.setQuality).toHaveBeenCalledTimes(1)
+    expect(axi.setQuality).toHaveBeenCalledWith({ bitrateKbps: 3000 })
+  })
+
+  it('commits the typed bitrate on Enter', async () => {
+    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
+    await expand()
+
+    const input = screen.getByLabelText(/bitrate \(kbps\)/i)
+    await userEvent.tripleClick(input)
+    await userEvent.keyboard('4200{Enter}')
+
+    expect(axi.setQuality).toHaveBeenCalledTimes(1)
+    expect(axi.setQuality).toHaveBeenCalledWith({ bitrateKbps: 4200 })
+  })
+
+  it('re-syncs the local bitrate value when the prop changes and the field is not focused', async () => {
+    const { rerender } = render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 9000 } })} axi={axi as never} />)
+    await expand()
+
+    expect(screen.getByLabelText(/bitrate \(kbps\)/i)).toHaveValue(9000)
+
+    rerender(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, bitrateKbps: 5000 } })} axi={axi as never} />)
+
+    expect(screen.getByLabelText(/bitrate \(kbps\)/i)).toHaveValue(5000)
+  })
+
   it('toggles software encoding', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
     await expand()
@@ -133,6 +193,18 @@ describe('QualitySettings', () => {
 
     expect(screen.getByText(/applies to your next stream/i)).toBeInTheDocument()
   })
+
+  // Regression: main's setQuality handler defers to the next stream for
+  // GOING_LIVE and STARTING_ON_YOUTUBE too (OBS is already streaming), so the
+  // panel must agree — both derive from the same isStreamingPhase predicate.
+  it.each(['GOING_LIVE', 'STARTING_ON_YOUTUBE', 'RECONNECTING'] as const)(
+    'also says deferred during %s, matching main\'s live guard',
+    (phase) => {
+      render(<QualitySettings state={mk({ phase })} axi={axi as never} />)
+
+      expect(screen.getByText(/applies to your next stream/i)).toBeInTheDocument()
+    },
+  )
 
   it('says nothing about deferral when not live', () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)

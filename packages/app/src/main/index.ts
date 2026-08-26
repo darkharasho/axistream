@@ -45,7 +45,7 @@ import { createLogSink, installLogSink } from './log.js'
 import { collectDiagnostics } from './diagnostics.js'
 import { scrubLine } from './redact.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
-import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type QualityPatch, type StreamSettingsView, type WebcamConfig } from '../shared/state.js'
+import { CH, INITIAL_STATE, isStreamingPhase, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type QualityPatch, type StreamSettingsView, type WebcamConfig } from '../shared/state.js'
 import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
@@ -515,7 +515,11 @@ if (primary) app.whenReady().then(async () => {
   // tell the renderer to (re)acquire it. After an OBS restart the v4l2 device
   // node can persist while its feed stops, so the renderer's stream freezes black
   // without firing 'ended'/'devicechange' — an explicit signal is what unsticks it.
+  // Tracked in virtualCamActive so applyResolutionLive knows whether it needs
+  // to bracket SetVideoSettings.
+  let virtualCamActive = false
   const startVirtualCam = () => {
+    virtualCamActive = true
     try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ }
     push(CH.evtCaptureChanged, null)
   }
@@ -543,6 +547,25 @@ if (primary) app.whenReady().then(async () => {
       return { sourceLabel: 'Guild Wars 2', width: v.baseWidth, height: v.baseHeight, outputWidth: v.outputWidth, outputHeight: v.outputHeight, fps }
     } catch {
       return { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }
+    }
+  }
+
+  // applyResolution's SetVideoSettings does obs_reset_video, which OBS refuses
+  // with OBS_VIDEO_CURRENTLY_ACTIVE while any output is active — including the
+  // virtual cam that drives the in-app preview. provision/repairCapture/
+  // switchSource/boot all call applyResolution before the cam is ever started,
+  // so they're unaffected. goLive and setQuality can run with the cam already
+  // live, so they go through this instead: stop the cam, apply, restart it.
+  // Best-effort throughout — a stop/restart failure must never throw out of
+  // goLive or setQuality. The preview blinks on a resolution change; accepted.
+  const applyResolutionLive = async (): Promise<CaptureMeta> => {
+    if (!virtualCamActive) return applyResolution()
+    try { await sidecar.client().call('StopVirtualCam') } catch { /* best-effort */ }
+    virtualCamActive = false
+    try {
+      return await applyResolution()
+    } finally {
+      startVirtualCam()
     }
   }
 
@@ -579,7 +602,7 @@ if (primary) app.whenReady().then(async () => {
         // than flag-guarded: it is idempotent, best-effort, and cannot
         // desync the way a pending-change flag can.
         if (state.capture) {
-          const capture_ = await applyResolution()
+          const capture_ = await applyResolutionLive()
           // Bounded retries: applyEncoderSettings otherwise falls back to
           // callReady's 25 tries x 800ms, and a websocket-level failure looks
           // retryable, so four SetProfileParameter calls could wedge
@@ -1085,10 +1108,10 @@ if (primary) app.whenReady().then(async () => {
       // size, so masks and the webcam do not shift. Deferred once OBS is
       // streaming — which starts at GOING_LIVE, not at LIVE — so an edit made
       // mid-transition lands at the next go-live instead of hitting a live OBS.
-      const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING' ||
-        state.phase === 'GOING_LIVE' || state.phase === 'STARTING_ON_YOUTUBE'
-      if (!live && state.capture) {
-        const capture_ = await applyResolution()
+      // isStreamingPhase is shared with the renderer's Quality panel so the
+      // two can never disagree about what counts as live.
+      if (!isStreamingPhase(state.phase) && state.capture) {
+        const capture_ = await applyResolutionLive()
         await applyEncoderPreset(capture_.outputHeight, capture_.fps)
         setState({ capture: capture_ })
       }

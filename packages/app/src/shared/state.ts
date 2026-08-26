@@ -5,6 +5,16 @@ export type StreamPhase =
   | 'NEEDS_YOUTUBE' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ENDED' | 'ERROR'
 
+/** True from the moment OBS starts streaming (GOING_LIVE) through to the
+ *  moment it stops (LIVE/RECONNECTING). A quality edit made in any of these
+ *  phases must defer to the next stream rather than touch a live OBS — used
+ *  both by main (to decide whether to apply now or defer) and by the Quality
+ *  panel (to decide whether to show the "Applies to your next stream" note),
+ *  so the two can never disagree about what counts as live. */
+export function isStreamingPhase(phase: StreamPhase): boolean {
+  return phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE' || phase === 'LIVE' || phase === 'RECONNECTING'
+}
+
 export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
 
 export interface MaskRect { id: string; x: number; y: number; w: number; h: number }

@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AppState, AxiApi } from '../../shared/state.js'
-import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_MAX_HEIGHT, AUTO_FPS } from '../../shared/state.js'
+import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_MAX_HEIGHT, AUTO_FPS, isStreamingPhase } from '../../shared/state.js'
 
 export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }) {
   const [open, setOpen] = useState(false)
   const q = state.quality
   const { capture } = state
-  const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING'
+  const live = isStreamingPhase(state.phase)
 
   const isCustom = q.height !== null || q.fps !== null || q.bitrateKbps !== null || q.preferSoftware
   const resolved = capture ? `${capture.outputHeight}p${capture.fps}` : '—'
@@ -17,8 +17,38 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   // otherwise a custom 720p would make the Auto option label itself "720p".
   const autoHeight = capture ? Math.min(capture.height, AUTO_MAX_HEIGHT) : AUTO_MAX_HEIGHT
   const heights = QUALITY_HEIGHTS.filter((h) => !capture || h <= capture.height)
+  // A persisted height can outlive the monitor it was set on (e.g. settings.json
+  // still carries 1440 after moving to a 1080p display). Behaviorally harmless —
+  // applyCaptureResolution never upscales — but the <select> would otherwise land
+  // on a value with no matching <option> and silently fall back to displaying
+  // "Auto", contradicting the "Custom" summary above it. Surface it honestly
+  // instead of hiding it.
+  const phantomHeight = q.height !== null && !heights.includes(q.height) ? q.height : null
 
   const manualBitrate = q.bitrateKbps !== null
+
+  // The bitrate field is a controlled input backed by local state rather than
+  // q.bitrateKbps directly: main clamps every write to [MIN, MAX] and pushes
+  // the clamped value straight back, which — if the field mirrored the prop
+  // live — stomps every keystroke of a value below the clamp floor (typing
+  // "3" of "3000" round-trips as "1000" before the next digit lands). Local
+  // state lets the user finish typing; the edit is only sent (and only then
+  // subject to clamping) on blur or Enter. Re-synced from the prop whenever
+  // it changes and the field isn't focused, so external changes (e.g. the
+  // seed-from-auto checkbox, or another window) still show up.
+  const [bitrateInput, setBitrateInput] = useState(() => String(q.bitrateKbps ?? ''))
+  const bitrateFocused = useRef(false)
+  useEffect(() => {
+    if (!bitrateFocused.current) setBitrateInput(String(q.bitrateKbps ?? ''))
+  }, [q.bitrateKbps])
+  const commitBitrate = () => {
+    const n = Number(bitrateInput)
+    if (Number.isFinite(n) && bitrateInput.trim() !== '') void axi.setQuality({ bitrateKbps: n })
+    // An empty/invalid field (e.g. the user cleared it and blurred) has
+    // nothing to commit — fall back to the last known-good value rather than
+    // leaving the box empty forever.
+    else setBitrateInput(String(q.bitrateKbps ?? ''))
+  }
 
   return (
     <div className="quality-settings">
@@ -38,6 +68,7 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
             >
               <option value="auto">{`Auto (${autoHeight}p)`}</option>
               {heights.map((h) => <option key={h} value={h}>{`${h}p`}</option>)}
+              {phantomHeight !== null ? <option value={phantomHeight}>{`${phantomHeight}p (above this monitor)`}</option> : null}
             </select>
           </label>
 
@@ -71,8 +102,11 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
                 min={MIN_BITRATE_KBPS}
                 max={MAX_BITRATE_KBPS}
                 step={500}
-                value={q.bitrateKbps ?? 0}
-                onChange={(e) => void axi.setQuality({ bitrateKbps: Number(e.target.value) })}
+                value={bitrateInput}
+                onChange={(e) => setBitrateInput(e.target.value)}
+                onFocus={() => { bitrateFocused.current = true }}
+                onBlur={() => { bitrateFocused.current = false; commitBitrate() }}
+                onKeyDown={(e) => { if (e.key === 'Enter') commitBitrate() }}
               />
             </label>
           ) : null}
