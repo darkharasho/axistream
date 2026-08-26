@@ -1,0 +1,114 @@
+// Post an AxiStream release announcement to a Discord channel via the bot,
+// mirroring how AxiForge / AxiBridge announce their releases (but using the bot
+// token rather than a webhook). Reads DISCORD_BOT_TOKEN from .env and the
+// matching `## Version vX.Y.Z` section out of RELEASE_NOTES.md, then posts a
+// newsprint-styled embed.
+//
+//   node scripts/post-discord-release.mjs <channel_id> [vX.Y.Z]
+//
+// Without a tag it uses the version from package.json. The bot needs View
+// Channel + Send Messages + Embed Links in the target channel.
+
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { extractNotes } from './release-notes.mjs'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+function loadEnv(text) {
+  const env = {}
+  for (const raw of text.split('\n')) {
+    const line = raw.trim()
+    if (!line || line.startsWith('#')) continue
+    const eq = line.indexOf('=')
+    if (eq === -1) continue
+    const key = line.slice(0, eq).trim()
+    let val = line.slice(eq + 1).trim()
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    }
+    env[key] = val
+  }
+  return env
+}
+
+/**
+ * Collapse hard-wrapped prose into one line per paragraph so Discord (which
+ * renders every newline literally) doesn't show random mid-sentence breaks.
+ * Headings, list items, blockquotes, and blank lines keep their own lines.
+ */
+function reflowNotes(md) {
+  const out = []
+  let para = []
+  const flush = () => {
+    if (para.length) out.push(para.join(' '))
+    para = []
+  }
+  for (const raw of md.split('\n')) {
+    const t = raw.trim()
+    if (t === '') {
+      flush()
+      out.push('')
+    } else if (/^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>)/.test(t)) {
+      flush()
+      out.push(t)
+    } else {
+      para.push(t)
+    }
+  }
+  flush()
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+async function main() {
+  const channelId = process.argv[2]
+  if (!channelId) {
+    console.error('Usage: node scripts/post-discord-release.mjs <channel_id> [vX.Y.Z]')
+    process.exit(1)
+  }
+  const tag = process.argv[3] || `v${JSON.parse(await readFile(join(root, 'packages/app/package.json'), 'utf8')).version}`
+
+  // Prefer the ambient env (CI passes DISCORD_BOT_TOKEN as a secret); fall back
+  // to .env for local runs.
+  const env = loadEnv(await readFile(join(root, '.env'), 'utf8').catch(() => ''))
+  const token = process.env.DISCORD_BOT_TOKEN || env.DISCORD_BOT_TOKEN
+  if (!token) {
+    console.error('DISCORD_BOT_TOKEN not set (env or .env)')
+    process.exit(1)
+  }
+
+  const md = await readFile(join(root, 'RELEASE_NOTES.md'), 'utf8')
+  let notes = reflowNotes(extractNotes(md, tag))
+  if (!notes) {
+    console.error(`No RELEASE_NOTES.md section found for ${tag}. Add a "## Version ${tag} — <date>" entry.`)
+    process.exit(1)
+  }
+  if (notes.length > 4000) notes = notes.slice(0, 4000) + '\n\n*… see full notes on GitHub*'
+
+  const embed = {
+    title: `AxiStream ${tag}`,
+    url: `https://github.com/darkharasho/axistream/releases/tag/${tag}`,
+    description: notes,
+    color: 0x22d3ee, // AxiStream accent (--accent)
+    thumbnail: { url: `https://raw.githubusercontent.com/darkharasho/axistream/main/packages/app/build/icon.png?v=${tag}` },
+    footer: { text: 'AxiStream Release' }
+  }
+
+  const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ embeds: [embed] })
+  })
+  if (!res.ok) {
+    console.error(`Discord post failed: ${res.status} ${await res.text()}`)
+    process.exit(1)
+  }
+  const msg = await res.json()
+  console.log(`Posted AxiStream ${tag} release to channel ${channelId} (message ${msg.id}).`)
+}
+
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
