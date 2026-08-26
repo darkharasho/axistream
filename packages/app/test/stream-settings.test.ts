@@ -362,3 +362,46 @@ describe('StreamSettings quality fields', () => {
     expect(d.preferSoftwareAuto).toBe(false)
   })
 })
+
+describe('hotkeys persistence', () => {
+  const loadWith = (obj: unknown) => {
+    const f = tmpFile()
+    writeFileSync(f, JSON.stringify(obj))
+    return new StreamSettings(f).load()
+  }
+
+  it('defaults every action to unbound', () => {
+    const s = loadWith({})
+    expect(s.hotkeys).toEqual({ goLive: null, micMute: null, masks: null, record: null })
+  })
+
+  it('round-trips a valid binding', () => {
+    const s = loadWith({ hotkeys: { goLive: { code: 183, name: 'F13', modifier: 'ctrl' }, micMute: null, masks: null, record: null } })
+    expect(s.hotkeys.goLive).toEqual({ code: 183, name: 'F13', modifier: 'ctrl' })
+  })
+
+  it('drops a malformed entry to null rather than to a key', () => {
+    const s = loadWith({ hotkeys: { goLive: { code: 'nope', name: 'F13', modifier: '' }, micMute: null, masks: null, record: null } })
+    expect(s.hotkeys.goLive).toBeNull()
+  })
+
+  it('drops an out-of-range keycode to null', () => {
+    const s = loadWith({ hotkeys: { goLive: { code: 9999, name: 'X', modifier: '' }, micMute: null, masks: null, record: null } })
+    expect(s.hotkeys.goLive).toBeNull()
+  })
+
+  it('drops an unknown modifier to null', () => {
+    const s = loadWith({ hotkeys: { goLive: { code: 183, name: 'F13', modifier: 'hyper' }, micMute: null, masks: null, record: null } })
+    expect(s.hotkeys.goLive).toBeNull()
+  })
+
+  it('survives hotkeys being a non-object', () => {
+    const s = loadWith({ hotkeys: 'yes' })
+    expect(s.hotkeys).toEqual({ goLive: null, micMute: null, masks: null, record: null })
+  })
+
+  it('fills in a missing action key', () => {
+    const s = loadWith({ hotkeys: { goLive: { code: 183, name: 'F13', modifier: '' } } })
+    expect(s.hotkeys.record).toBeNull()
+  })
+})
