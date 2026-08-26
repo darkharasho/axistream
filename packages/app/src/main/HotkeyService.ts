@@ -66,8 +66,12 @@ export class HotkeyService {
    *  settings double-click reach this concurrently, and the portal's
    *  BindShortcuts can sit on an interactive approval dialog for a minute. */
   rebuild(): Promise<{ ok: boolean; error?: string }> {
-    if (!this.current) return this.run()
+    // `next` is checked FIRST: between `current` being nulled in run()'s
+    // finally and the queued chain resuming to claim it, `current` is null
+    // while `next` is still pending. Checking `current` first in that window
+    // starts a second run() alongside the queued one — two live sessions.
     if (this.next) return this.next
+    if (!this.current) return this.run()
     const after = this.current
     this.next = (async () => {
       // run() never rejects (doRebuild catches), but be defensive.
@@ -122,7 +126,12 @@ export class HotkeyService {
    *  key can't fire an action, and closing ahead of a rebuild that is about
    *  to install a fresh session would leave one live underneath it. */
   async close(): Promise<void> {
-    if (this.current) await this.current.catch(() => {})
+    // Wait on the TRAILING rebuild when one is queued: awaiting only
+    // `current` returns while the queued rebuild is still about to install a
+    // fresh session underneath the caller. captureInFlight does not help —
+    // the queued rebuild is already past that guard.
+    const inflight = this.next ?? this.current
+    if (inflight) await inflight.catch(() => {})
     await this.closeSession()
   }
 
