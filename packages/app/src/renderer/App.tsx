@@ -53,7 +53,7 @@ export function App() {
         <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
         {nav === 'stream'
           ? <ErrorBoundary label="Stream"><StreamScreen state={state} preview={preview} axi={axi} store={store} /></ErrorBoundary>
-          : <ErrorBoundary label="Settings"><SettingsScreen state={state} axi={axi} /></ErrorBoundary>}
+          : <ErrorBoundary label="Settings"><SettingsScreen state={state} axi={axi} onRunSetup={() => setWizard(true)} /></ErrorBoundary>}
         <div className="wctl">
           <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}><Minus size={15} /></button>
           <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}><Square size={13} /></button>

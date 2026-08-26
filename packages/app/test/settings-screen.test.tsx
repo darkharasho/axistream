@@ -30,6 +30,7 @@ const axi = {
   getWebcamDevices: vi.fn(async () => []),
   getWebcamProps: vi.fn(async () => ({ pixelformats: [], resolutions: [], framerates: [] })),
   setQuality: vi.fn(async () => {}),
+  openExternalUrl: vi.fn(async () => true),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
@@ -55,7 +56,7 @@ const base: AppState = {
 
 describe('SettingsScreen', () => {
   it('mounts the quality panel with its resolved summary', () => {
-    render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
+    render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} onRunSetup={() => {}} />)
     const chips = document.querySelector('.quality-chips')!
     expect(chips).toHaveTextContent('Auto')
     expect(chips).toHaveTextContent('1440p60')
@@ -63,7 +64,7 @@ describe('SettingsScreen', () => {
   })
 
   it('offers Re-set up capture', async () => {
-    render(<SettingsScreen state={base} axi={axi as any} />)
+    render(<SettingsScreen state={base} axi={axi as any} onRunSetup={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /re-set up capture/i }))
     expect(axi.repairCapture).toHaveBeenCalledOnce()
     await waitFor(() => expect(axi.getSettings).toHaveBeenCalled())

@@ -7,8 +7,9 @@ import { DiagnosticsSettings } from './DiagnosticsSettings.js'
 import { RecordingSettings } from './RecordingSettings.js'
 import { WebcamSettings } from './WebcamSettings.js'
 import { QualitySettings } from './QualitySettings.js'
+import { AboutSettings } from './AboutSettings.js'
 
-export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
+export function SettingsScreen({ state, axi, onRunSetup }: { state: AppState; axi: AxiApi; onRunSetup: () => void }) {
   return (
     <div className="hero settings-panel">
       <div className="settings-inner">
@@ -54,6 +55,8 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
           <section className="setting">
             <UpdatesSettings />
           </section>
+
+          <AboutSettings onRunSetup={onRunSetup} />
         </div>
       </div>
     </div>
