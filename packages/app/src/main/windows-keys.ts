@@ -53,6 +53,10 @@ const realDeps: WindowsKeysDeps = {
 
 const POLL_MS = 25
 
+// Mirrors HotkeyService's PTT_ID. Duplicated rather than imported to keep this
+// backend free of any dependency on the service that drives it.
+const PTT_SPEC_ID = 'ptt'
+
 export function createWindowsKeys(deps: WindowsKeysDeps = realDeps) {
   const self = {
     async available(): Promise<boolean> {
@@ -73,10 +77,15 @@ export function createWindowsKeys(deps: WindowsKeysDeps = realDeps) {
       // press again). Consequence: worst case is one missed activation on the
       // very first use, matching the evdev modifier-held-before-arm note.
       // A spec whose key has no Windows VK equivalent is dropped — one
-      // unsupported key must not disarm every other action.
+      // unsupported action key must not disarm every other action.
+      // Push-to-talk is the sole exception: silently dropping it would return
+      // a healthy BoundSet, the caller would arm PTT (baseline-muting the
+      // mic) and no watcher would ever deliver the unmute edge. PTT's failure
+      // mode must always be "mic hot", so its loss fails the whole set.
       const watches = specs.flatMap((s) => {
         const keyVk = evdevToVk(s.binding.key.code)
         if (keyVk === null) {
+          if (s.id === PTT_SPEC_ID) throw new Error(`key not supported on Windows: ${keyName(s.binding.key.code)}`)
           console.warn(`[hotkeys] key not supported on Windows, skipping "${s.id}": ${keyName(s.binding.key.code)}`)
           return []
         }

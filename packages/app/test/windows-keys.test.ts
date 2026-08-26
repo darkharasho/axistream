@@ -380,15 +380,60 @@ describe('windows bindAll', () => {
     vi.useRealTimers()
   })
 
-  it('skips a spec whose key has no Windows equivalent instead of failing the whole set', async () => {
+  it('skips an ACTION spec whose key has no Windows equivalent instead of failing the whole set', async () => {
     vi.useFakeTimers()
-    const deps = { platform: 'win32' as const, keyDown: () => false }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const down = new Set<number>()
+    const deps = { platform: 'win32' as const, keyDown: (vk: number) => down.has(vk) }
     const set = await createWindowsKeys(deps).bindAll([
       { id: 'masks', description: 'Masks', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
       { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
     ])
-    // No throw: the unsupported spec is dropped with a warning, the rest arm.
+    const fired: string[] = []
+    set.onActivated((id) => fired.push(id))
+
+    // The unsupported spec is dropped with a warning...
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0].join(' '))).toMatch(/masks/)
+
+    // ...and the surviving binding really is armed: drive a live edge on it.
+    down.add(0x7C) // VK_F13
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['record'])
+    down.delete(0x7C)
+    vi.advanceTimersByTime(30)
+    expect(fired).toEqual(['record'])
+
+    // The dropped id never fires.
+    expect(fired).not.toContain('masks')
+
     await set.close()
+    warn.mockRestore()
+    vi.useRealTimers()
+  })
+
+  // Push-to-talk is the one spec whose loss must fail the whole set. A silent
+  // drop returns a healthy BoundSet, the caller arms PTT (baseline-muting the
+  // mic) and no watcher ever delivers the unmute edge: the user streams with
+  // no voice while the UI says everything is fine. Base threw here; the
+  // flatMap drop turned that failure into a silent success.
+  it('THROWS when the ptt spec is the unmappable one — never half-succeeds', async () => {
+    const deps = { platform: 'win32' as const, keyDown: () => false }
+    await expect(createWindowsKeys(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
+      { id: 'record', description: 'Record', binding: { key: { code: 183, name: 'F13' }, modifier: null } },
+    ])).rejects.toThrow(/not supported on Windows/)
+  })
+
+  it('leaves no timer running when the ptt spec fails the set', async () => {
+    vi.useFakeTimers()
+    const deps = { platform: 'win32' as const, keyDown: vi.fn(() => false) }
+    await expect(createWindowsKeys(deps).bindAll([
+      { id: 'ptt', description: 'Push to talk', binding: { key: { code: 999, name: 'KEY_999' }, modifier: null } },
+    ])).rejects.toThrow()
+    deps.keyDown.mockClear()
+    vi.advanceTimersByTime(500)
+    expect(deps.keyDown).not.toHaveBeenCalled()
     vi.useRealTimers()
   })
 })

@@ -33,6 +33,7 @@ import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
 import { HotkeyService, type HotkeyActions } from './HotkeyService.js'
 import { rebuildHotkeys as rebuildHotkeysCore, pttStateFields } from './rebuild-hotkeys.js'
+import { selectHotkeyBackend } from './select-backend.js'
 import { findConflict, findActionOwner, toBinding, toPersisted, type HotkeyBindings } from '../shared/hotkeys.js'
 import { createWin32MuteOps } from './win32-mute-ops.js'
 import { createWindowsKeys } from './windows-keys.js'
@@ -397,13 +398,14 @@ if (primary) app.whenReady().then(async () => {
   const windowsBackend = createWindowsKeys()
   let pttMode: 'passthrough' | 'exclusive' | null = null
   // Probed at every rebuild (not boot-cached) so the pkexec unlock upgrades
-  // the running app without a restart.
-  const selectBackend = async () => {
-    if (process.platform === 'win32') return { backend: windowsBackend, mode: 'passthrough' as const }
-    return (await evdevBackend.available())
-      ? { backend: evdevBackend, mode: 'passthrough' as const }
-      : { backend: portalBackend, mode: 'exclusive' as const }
-  }
+  // the running app without a restart. The decision (including the win32
+  // availability gate) lives in select-backend.ts as a pure function.
+  const selectBackend = () => selectHotkeyBackend({
+    platform: process.platform,
+    windows: windowsBackend,
+    evdev: evdevBackend,
+    portal: portalBackend,
+  })
   const loadBinding = (): PttBinding => {
     const s = settings.load()
     return { key: { code: s.pttKeyCode, name: s.pttKeyName }, modifier: s.pttModifier === '' ? null : s.pttModifier }
