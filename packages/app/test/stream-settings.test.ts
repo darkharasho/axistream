@@ -303,3 +303,62 @@ describe('webcam settings', () => {
     expect(sanitizeWebcam('nope')).toEqual(DEFAULT_WEBCAM)
   })
 })
+
+describe('StreamSettings quality fields', () => {
+  it('defaults every quality field to auto', () => {
+    const d = new StreamSettings(file).load()
+
+    expect(d.qualityHeight).toBeNull()
+    expect(d.qualityFps).toBeNull()
+    expect(d.qualityBitrateKbps).toBeNull()
+    expect(d.preferSoftwareAuto).toBe(false)
+  })
+
+  it('round-trips valid quality values', () => {
+    new StreamSettings(file).patch({ qualityHeight: 720, qualityFps: 30, qualityBitrateKbps: 4500, preferSoftwareAuto: true })
+
+    const d = new StreamSettings(file).load()
+    expect(d.qualityHeight).toBe(720)
+    expect(d.qualityFps).toBe(30)
+    expect(d.qualityBitrateKbps).toBe(4500)
+    expect(d.preferSoftwareAuto).toBe(true)
+  })
+
+  it('reverts an off-list height or fps to auto rather than encoding something impossible', () => {
+    new StreamSettings(file).patch({ qualityHeight: 999, qualityFps: 144 })
+
+    const d = new StreamSettings(file).load()
+    expect(d.qualityHeight).toBeNull()
+    expect(d.qualityFps).toBeNull()
+  })
+
+  it('clamps bitrate into the ingest range instead of dropping it', () => {
+    const s = new StreamSettings(file)
+
+    s.patch({ qualityBitrateKbps: 60000 })
+    expect(s.load().qualityBitrateKbps).toBe(51000)
+
+    s.patch({ qualityBitrateKbps: 10 })
+    expect(s.load().qualityBitrateKbps).toBe(1000)
+  })
+
+  it('treats a non-numeric bitrate as auto', () => {
+    const s = new StreamSettings(file)
+
+    s.patch({ qualityBitrateKbps: 'fast' as unknown as number })
+
+    expect(s.load().qualityBitrateKbps).toBeNull()
+  })
+
+  it('loads a settings file written before this feature as fully auto', () => {
+    const older = tmpFile()
+    writeFileSync(older, JSON.stringify({ titleTemplate: 'x', gameAudioApps: [], preferSoftware: true }))
+
+    const d = new StreamSettings(older).load()
+    expect(d.qualityHeight).toBeNull()
+    expect(d.qualityFps).toBeNull()
+    expect(d.qualityBitrateKbps).toBeNull()
+    expect(d.preferSoftware).toBe(true)
+    expect(d.preferSoftwareAuto).toBe(false)
+  })
+})

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { MAX_MASKS, type MaskRect, type WebcamCorner, type WebcamMode, type WebcamConfig, WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT, DEFAULT_WEBCAM } from '../shared/state.js'
+import { MAX_MASKS, type MaskRect, type WebcamCorner, type WebcamMode, type WebcamConfig, WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT, DEFAULT_WEBCAM, QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS } from '../shared/state.js'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
 export type MaskStyle = 'box' | 'blur'
@@ -29,6 +29,14 @@ export interface StreamSettingsData {
   lastSeenVersion: string
   recordDir: string
   webcam: WebcamConfig
+  /** null = Auto. Auto tracks the monitor (capped at 1440) and 60fps, and
+   *  derives bitrate from those two — see choosePreset in @axistream/capture. */
+  qualityHeight: number | null
+  qualityFps: number | null
+  qualityBitrateKbps: number | null
+  /** True when the failed-go-live retry set preferSoftware, not the user.
+   *  Affects the settings panel's help text only, never behavior. */
+  preferSoftwareAuto: boolean
 }
 
 export const DEFAULT_SETTINGS: StreamSettingsData = {
@@ -55,6 +63,10 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   lastSeenVersion: '',
   recordDir: '',
   webcam: { ...DEFAULT_WEBCAM },
+  qualityHeight: null,
+  qualityFps: null,
+  qualityBitrateKbps: null,
+  preferSoftwareAuto: false,
 }
 
 const PRIVACIES: Privacy[] = ['public', 'unlisted', 'private']
@@ -63,6 +75,18 @@ const MASK_STYLES: MaskStyle[] = ['box', 'blur']
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
 const CORNERS: WebcamCorner[] = ['tl', 'tr', 'bl', 'br']
+
+/** An off-list value means a hand-edited or corrupt file — degrade to Auto
+ *  rather than asking an encoder for a resolution nothing can produce. */
+const oneOf = (raw: unknown, allowed: number[]): number | null =>
+  typeof raw === 'number' && allowed.includes(raw) ? raw : null
+
+/** Bitrate is a continuous range, so a plausible out-of-range number is a
+ *  typo worth clamping rather than discarding. */
+const bitrateOf = (raw: unknown): number | null =>
+  typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.round(clamp(raw, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS))
+    : null
 
 export function sanitizeWebcam(raw: unknown): WebcamConfig {
   if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_WEBCAM }
@@ -158,6 +182,10 @@ export class StreamSettings {
         lastSeenVersion: typeof raw.lastSeenVersion === 'string' ? raw.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
         recordDir: typeof raw.recordDir === 'string' ? raw.recordDir : DEFAULT_SETTINGS.recordDir,
         webcam: sanitizeWebcam(raw.webcam),
+        qualityHeight: oneOf(raw.qualityHeight, QUALITY_HEIGHTS),
+        qualityFps: oneOf(raw.qualityFps, QUALITY_FPS),
+        qualityBitrateKbps: bitrateOf(raw.qualityBitrateKbps),
+        preferSoftwareAuto: typeof raw.preferSoftwareAuto === 'boolean' ? raw.preferSoftwareAuto : DEFAULT_SETTINGS.preferSoftwareAuto,
       }
     } catch {
       return { ...DEFAULT_SETTINGS }

@@ -61,6 +61,7 @@ const api: AxiApi = {
   openRecording: (path: string) => ipcRenderer.invoke(CH.openRecording, path) as Promise<OpenResult>,
   dismissSummary: () => ipcRenderer.invoke(CH.dismissSummary) as Promise<void>,
   setWebcam: (p) => ipcRenderer.invoke(CH.setWebcam, p) as Promise<void>,
+  setQuality: (p) => ipcRenderer.invoke(CH.setQuality, p) as Promise<void>,
   getWebcamDevices: () => ipcRenderer.invoke(CH.getWebcamDevices) as Promise<AudioDevice[]>,
   getWebcamProps: () => ipcRenderer.invoke(CH.getWebcamProps) as Promise<WebcamProps>,
   onState: (cb) => sub<Partial<AppState>>(CH.evtState, cb),

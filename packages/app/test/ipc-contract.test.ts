@@ -30,6 +30,7 @@ describe('ipc contract', () => {
       CH.startRecording, CH.stopRecording, CH.chooseRecordDir, CH.openRecording, CH.dismissSummary,
       CH.openExternalUrl,
       CH.setWebcam, CH.getWebcamDevices, CH.getWebcamProps,
+      CH.setQuality,
     ]
     for (const ch of commandChannels) expect(handled.has(ch)).toBe(true)
   })

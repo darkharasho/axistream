@@ -186,7 +186,7 @@ git commit -m "feat(capture): let choosePreset take an explicit bitrate override
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: four fields on `StreamSettingsData` — `qualityHeight: number | null`, `qualityFps: number | null`, `qualityBitrateKbps: number | null`, `preferSoftwareAuto: boolean` — plus four constants exported from **`packages/app/src/shared/state.ts`**: `QUALITY_HEIGHTS: number[]`, `QUALITY_FPS: number[]`, `MIN_BITRATE_KBPS: number`, `MAX_BITRATE_KBPS: number`. Task 4 reads the fields; Task 5 imports the constants for its option lists.
+- Produces: four fields on `StreamSettingsData` — `qualityHeight: number | null`, `qualityFps: number | null`, `qualityBitrateKbps: number | null`, `preferSoftwareAuto: boolean` — plus four constants exported from **`packages/app/src/shared/state.ts`**: `QUALITY_HEIGHTS: number[]`, `QUALITY_FPS: number[]`, `MIN_BITRATE_KBPS: number`, `MAX_BITRATE_KBPS: number`, `AUTO_MAX_HEIGHT: number` (1440), `AUTO_FPS: number` (60). Task 4 reads the fields and the two AUTO constants; Task 5 imports all six.
 
 The constants go in `shared/state.ts` rather than beside the settings they validate because the renderer needs them and **no renderer file imports from `src/main/` anywhere in this codebase** — `StreamSettings.ts` imports `node:fs` at module scope, so pulling it into the renderer bundle would be a real break, not a style preference.
 
@@ -294,6 +294,12 @@ export const QUALITY_HEIGHTS = [720, 1080, 1440]
 export const QUALITY_FPS = [30, 60]
 export const MIN_BITRATE_KBPS = 1000
 export const MAX_BITRATE_KBPS = 51000
+/** What Auto resolves to. The cap matches applyCaptureResolution's own
+ *  default, so "Auto" and "no override" are the same stream. Shared because
+ *  main resolves with them and the renderer labels the Auto option with them —
+ *  two copies would be two places to get out of sync. */
+export const AUTO_MAX_HEIGHT = 1440
+export const AUTO_FPS = 60
 ```
 
 Then add the guards to `packages/app/src/main/StreamSettings.ts`, next to the existing `PRIVACIES`/`MASK_STYLES`/`clamp` block, importing the constants by extending the file's existing `'../shared/state.js'` import with `QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS`:
@@ -536,13 +542,8 @@ Create `packages/app/src/main/quality.ts`:
 
 ```ts
 import type { QualityOverrides } from '@axistream/capture'
-import type { QualityView } from '../shared/state.js'
+import { AUTO_MAX_HEIGHT, AUTO_FPS, type QualityView } from '../shared/state.js'
 import type { StreamSettingsData } from './StreamSettings.js'
-
-/** Auto's resolved values. The cap matches applyCaptureResolution's own
- *  default, so "Auto" and "no override" are the same stream. */
-const AUTO_MAX_HEIGHT = 1440
-const AUTO_FPS = 60
 
 export interface QualityApplyArgs {
   maxHeight: number
@@ -708,6 +709,7 @@ git commit -m "feat(main): apply quality overrides and re-apply them at go-live"
 - Create: `packages/app/test/quality-settings.test.tsx`
 - Modify: `packages/app/src/renderer/components/SettingsScreen.tsx:28-34` (replace the read-only Quality section)
 - Modify: `packages/app/src/renderer/styles.css`
+- Modify: `packages/app/test/settings-screen.test.tsx:54-57` (asserts the markup this task removes)
 
 **Interfaces:**
 - Consumes: `AppState.quality` / `QualityView` / `AxiApi.setQuality` (Task 3); `QUALITY_HEIGHTS`, `QUALITY_FPS`, `MIN_BITRATE_KBPS`, `MAX_BITRATE_KBPS` from `../../shared/state.js` (Task 2).
@@ -877,12 +879,7 @@ Create `packages/app/src/renderer/components/QualitySettings.tsx`:
 ```tsx
 import { useState } from 'react'
 import type { AppState, AxiApi } from '../../shared/state.js'
-import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS } from '../../shared/state.js'
-
-/** Auto's resolved cap, mirroring qualityOf in the main process. Used only to
- *  label the Auto option truthfully. */
-const AUTO_MAX_HEIGHT = 1440
-const AUTO_FPS = 60
+import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_MAX_HEIGHT, AUTO_FPS } from '../../shared/state.js'
 
 export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }) {
   const [open, setOpen] = useState(false)
@@ -1022,7 +1019,31 @@ Add the styles to `packages/app/src/renderer/styles.css`:
 .quality-body input[type='number'] { width: 8ch; }
 ```
 
-- [ ] **Step 5: Run the tests, the typecheck, and a renderer build**
+- [ ] **Step 5: Replace the settings-screen test that asserts the removed markup**
+
+`packages/app/test/settings-screen.test.tsx:54-57` asserts the read-only line this task deletes:
+
+```tsx
+  it('shows the auto-chosen quality line', () => {
+    render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
+    expect(screen.getByText('Quality')).toBeInTheDocument()
+    expect(screen.getByText(/NVENC · 24 Mbps — chosen automatically for 1440p60/)).toBeInTheDocument()
+  })
+```
+
+Replace the whole `it` block with one asserting the panel is mounted and summarising. Detailed panel behavior is `quality-settings.test.tsx`'s job; this only proves SettingsScreen still carries a Quality section:
+
+```tsx
+  it('mounts the quality panel with its resolved summary', () => {
+    render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
+    const header = screen.getByRole('button', { name: /quality/i })
+    expect(header).toHaveTextContent('Auto')
+    expect(header).toHaveTextContent('1440p60')
+    expect(header).toHaveTextContent('NVENC')
+  })
+```
+
+- [ ] **Step 6: Run the tests, the typecheck, and a renderer build**
 
 ```bash
 npm -w @axistream/app run test
@@ -1031,10 +1052,10 @@ cd packages/app && npx tsc --noEmit -p tsconfig.json && npm run build; cd -
 
 Expected: all tests PASS, typecheck clean, build succeeds.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add packages/app/src/renderer/components/QualitySettings.tsx packages/app/test/quality-settings.test.tsx packages/app/src/renderer/components/SettingsScreen.tsx packages/app/src/renderer/styles.css
+git add packages/app/src/renderer/components/QualitySettings.tsx packages/app/test/quality-settings.test.tsx packages/app/src/renderer/components/SettingsScreen.tsx packages/app/src/renderer/styles.css packages/app/test/settings-screen.test.tsx
 git commit -m "feat(ui): make the Quality settings section editable"
 ```
 

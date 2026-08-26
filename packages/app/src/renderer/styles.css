@@ -407,3 +407,19 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .dropup-item:disabled { opacity: .45; cursor: default; }
 .dropup-item.danger { color: #ff8b9c; }
 .dropup-item .rec-elapsed { margin-left: auto; color: #8b949e; }
+
+.quality-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.quality-header h3 { margin: 0; }
+.quality-body { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.quality-body input[type='number'] { width: 8ch; }

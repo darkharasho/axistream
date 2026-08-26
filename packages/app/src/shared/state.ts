@@ -5,6 +5,16 @@ export type StreamPhase =
   | 'NEEDS_YOUTUBE' | 'NEEDS_TITLE' | 'READY'
   | 'GOING_LIVE' | 'STARTING_ON_YOUTUBE' | 'LIVE' | 'RECONNECTING' | 'ENDED' | 'ERROR'
 
+/** True from the moment OBS starts streaming (GOING_LIVE) through to the
+ *  moment it stops (LIVE/RECONNECTING). A quality edit made in any of these
+ *  phases must defer to the next stream rather than touch a live OBS — used
+ *  both by main (to decide whether to apply now or defer) and by the Quality
+ *  panel (to decide whether to show the "Applies to your next stream" note),
+ *  so the two can never disagree about what counts as live. */
+export function isStreamingPhase(phase: StreamPhase): boolean {
+  return phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE' || phase === 'LIVE' || phase === 'RECONNECTING'
+}
+
 export type GameAudioPluginStatus = 'missing' | 'installing' | 'installed' | 'ready' | 'error' | 'unsupported'
 
 export interface MaskRect { id: string; x: number; y: number; w: number; h: number }
@@ -13,6 +23,17 @@ export const MAX_MASKS = 8
 export type WebcamCorner = 'tl' | 'tr' | 'bl' | 'br'
 export const WEBCAM_MIN_SIZE_PCT = 0.15
 export const WEBCAM_MAX_SIZE_PCT = 0.35
+
+export const QUALITY_HEIGHTS = [720, 1080, 1440]
+export const QUALITY_FPS = [30, 60]
+export const MIN_BITRATE_KBPS = 1000
+export const MAX_BITRATE_KBPS = 51000
+/** What Auto resolves to. The cap matches applyCaptureResolution's own
+ *  default, so "Auto" and "no override" are the same stream. Shared because
+ *  main resolves with them and the renderer labels the Auto option with them —
+ *  two copies would be two places to get out of sync. */
+export const AUTO_MAX_HEIGHT = 1440
+export const AUTO_FPS = 60
 
 // All three OBS v4l2 properties, set together. Picking a resolution without
 // its pixel format is what produces the 5fps YUYV case this override escapes.
@@ -47,6 +68,27 @@ export const DEFAULT_WEBCAM: WebcamConfig = {
   sizePct: 0.22,
   mirrored: false,
   mode: null,
+}
+
+export interface QualityView {
+  height: number | null
+  fps: number | null
+  bitrateKbps: number | null
+  preferSoftware: boolean
+  preferSoftwareAuto: boolean
+}
+
+/** A partial edit from the renderer. Keys map to the `quality*` settings
+ *  fields; `null` means "back to Auto". */
+export interface QualityPatch {
+  height?: number | null
+  fps?: number | null
+  bitrateKbps?: number | null
+  preferSoftware?: boolean
+}
+
+export const DEFAULT_QUALITY: QualityView = {
+  height: null, fps: null, bitrateKbps: null, preferSoftware: false, preferSoftwareAuto: false,
 }
 
 export interface GameAudioPluginView { status: GameAudioPluginStatus; error: string | null }
@@ -120,6 +162,7 @@ export interface AppState {
   masksVisible: boolean
   watchUrl: string | null
   webcam: WebcamView
+  quality: QualityView
   recording: RecordingState
   /** The six-second audio test owns OBS's single record output while it runs,
    *  so Record must refuse. A condition, so it lives here rather than as a
@@ -142,6 +185,7 @@ export const INITIAL_STATE: AppState = {
   masksVisible: true,
   watchUrl: null,
   webcam: { ...DEFAULT_WEBCAM, available: true },
+  quality: { ...DEFAULT_QUALITY },
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null },
   audioTestActive: false,
   summary: null,
@@ -242,6 +286,7 @@ export const CH = {
   setWebcam: 'axi:setWebcam',
   getWebcamDevices: 'axi:getWebcamDevices',
   getWebcamProps: 'axi:getWebcamProps',
+  setQuality: 'axi:setQuality',
 } as const
 
 export interface AxiApi {
@@ -299,6 +344,7 @@ export interface AxiApi {
   setWebcam(p: Partial<WebcamConfig>): Promise<void>
   getWebcamDevices(): Promise<AudioDevice[]>
   getWebcamProps(): Promise<WebcamProps>
+  setQuality(p: QualityPatch): Promise<void>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void

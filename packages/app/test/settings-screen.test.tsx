@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsScreen } from '../src/renderer/components/SettingsScreen.js'
 import type { AppState } from '../src/shared/state.js'
+import { DEFAULT_QUALITY } from '../src/shared/state.js'
 
 const axi = {
   repairCapture: vi.fn(),
@@ -28,6 +29,7 @@ const axi = {
   setWebcam: vi.fn(async () => {}),
   getWebcamDevices: vi.fn(async () => []),
   getWebcamProps: vi.fn(async () => ({ pixelformats: [], resolutions: [], framerates: [] })),
+  setQuality: vi.fn(async () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
@@ -47,14 +49,17 @@ const base: AppState = {
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
   ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, liveUnconfirmed: false, watchUrl: null, webcam: { enabled: false, deviceId: null, deviceLabel: null, corner: 'br', sizePct: 0.22, mirrored: false, mode: null, available: true },
+  quality: { ...DEFAULT_QUALITY },
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null,
 }
 
 describe('SettingsScreen', () => {
-  it('shows the auto-chosen quality line', () => {
+  it('mounts the quality panel with its resolved summary', () => {
     render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
-    expect(screen.getByText('Quality')).toBeInTheDocument()
-    expect(screen.getByText(/NVENC · 24 Mbps — chosen automatically for 1440p60/)).toBeInTheDocument()
+    const header = screen.getByRole('button', { name: /quality/i })
+    expect(header).toHaveTextContent('Auto')
+    expect(header).toHaveTextContent('1440p60')
+    expect(header).toHaveTextContent('NVENC')
   })
 
   it('offers Re-set up capture', async () => {
