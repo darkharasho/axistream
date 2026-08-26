@@ -22,6 +22,11 @@ export interface HotkeyActions {
   setMasksVisible(visible: boolean): Promise<void>
   startRecording(): Promise<{ ok: boolean; error?: string }>
   stopRecording(): Promise<{ ok: boolean; error?: string }>
+  /** Must never throw. `fire` is the sole error boundary on the hotkey
+   *  path, and it calls this from its own catch handler to report a
+   *  failure — a throwing `toast` has nowhere left to be caught and would
+   *  escape as an unhandled rejection. Implementations must be best-effort
+   *  (catch and log internally), never propagate. */
   toast(kind: 'info' | 'success' | 'error', message: string): void
 }
 
@@ -120,7 +125,9 @@ export class HotkeyService {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.warn(`[hotkeys] ${id} failed`, msg)
-      a.toast('error', msg)
+      // toast is documented as never-throwing, but this is the sole error
+      // boundary on the hotkey path — a broken dep must not escape it.
+      try { a.toast('error', msg) } catch { /* best-effort */ }
     }
   }
 

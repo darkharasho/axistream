@@ -136,6 +136,90 @@ describe('failure containment', () => {
     await expect(h.svc.fire('masks')).resolves.toBeUndefined()
     expect(h.toasts.at(-1)!.kind).toBe('error')
   })
+
+  it('never lets a throwing toast escape either — fire is the sole error boundary', async () => {
+    const h = harness({
+      setMasksVisible: vi.fn(async () => { throw new Error('obs died') }),
+      toast: () => { throw new Error('toast died') },
+    })
+    await expect(h.svc.fire('masks')).resolves.toBeUndefined()
+  })
+})
+
+const flush = () => new Promise((r) => setImmediate(r))
+
+describe('ptt vs action routing', () => {
+  function routingHarness() {
+    let activated: ((id: string) => void) | null = null
+    let deactivated: ((id: string) => void) | null = null
+    const onPttEdge = vi.fn()
+    const actions = {
+      phase: () => 'READY',
+      micEnabled: () => true,
+      masksVisible: () => true,
+      recordingActive: () => false,
+      pttEnabled: () => false,
+      goLive: vi.fn(async () => {}),
+      stopStream: vi.fn(async () => {}),
+      setMicEnabled: vi.fn(async () => {}),
+      setMasksVisible: vi.fn(async () => {}),
+      startRecording: vi.fn(async () => ({ ok: true })),
+      stopRecording: vi.fn(async () => ({ ok: true })),
+      toast: () => {},
+    }
+    const svc = new HotkeyService({
+      selectBackend: async () => ({
+        backend: {
+          available: async () => true,
+          bindAll: async () => ({
+            onActivated(cb: (id: string) => void) { activated = cb },
+            onDeactivated(cb: (id: string) => void) { deactivated = cb },
+            close: async () => {},
+          }),
+        },
+        mode: 'exclusive',
+      }),
+      bindings: () => ({ goLive: null, micMute: null, masks: { key: F13, modifier: null }, record: null }),
+      pttBinding: () => ({ key: { code: 188, name: 'F18' }, modifier: null }),
+      actions: actions as never,
+      onPttEdge,
+      onMode: () => {},
+      now: () => 0,
+    })
+    return {
+      svc,
+      actions,
+      onPttEdge,
+      activate: (id: string) => { activated!(id) },
+      deactivate: (id: string) => { deactivated!(id) },
+    }
+  }
+
+  it('routes ptt activation to onPttEdge and dispatches no action', async () => {
+    const h = routingHarness()
+    await h.svc.rebuild()
+    h.activate('ptt')
+    await flush()
+    expect(h.onPttEdge).toHaveBeenCalledWith(true)
+    expect(h.actions.setMasksVisible).not.toHaveBeenCalled()
+  })
+
+  it('routes a hotkey activation to its action and never touches onPttEdge', async () => {
+    const h = routingHarness()
+    await h.svc.rebuild()
+    h.activate('masks')
+    await flush()
+    expect(h.actions.setMasksVisible).toHaveBeenCalledWith(false)
+    expect(h.onPttEdge).not.toHaveBeenCalled()
+  })
+
+  it('routes ptt deactivation to onPttEdge(false)', async () => {
+    const h = routingHarness()
+    await h.svc.rebuild()
+    h.deactivate('ptt')
+    await flush()
+    expect(h.onPttEdge).toHaveBeenCalledWith(false)
+  })
 })
 
 describe('rebuild', () => {
