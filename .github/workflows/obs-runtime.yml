@@ -1,0 +1,61 @@
+name: OBS runtime
+
+# Builds the owned Linux OBS runtime from source and republishes it as a pinned,
+# hash-verified download. Compiling OBS + CEF takes ~30 minutes, which used to be
+# the whole critical path of every AxiStream release even though the runtime only
+# changes when resources/obs-runtime/manifest.json bumps obsVersion, sourceCommit
+# or a plugin commit. Run this by hand after such a bump, then paste the `prebuilt`
+# block it prints into manifest.json — release.yml downloads it from then on.
+#
+# The tag it publishes to (obs-runtime-<version>) deliberately does not match
+# release.yml's `v*` trigger, so this never starts an app release.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Install OBS build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      - name: Read the pin
+        id: pin
+        run: |
+          version=$(node -p "require('./resources/obs-runtime/manifest.json').linux.obsVersion")
+          bundle=$(node -p "require('./resources/obs-runtime/manifest.json').linux.bundleFile")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "bundle=$bundle" >> "$GITHUB_OUTPUT"
+          echo "tag=obs-runtime-$version" >> "$GITHUB_OUTPUT"
+      - name: Build the runtime from source
+        # --from-source ignores any existing `prebuilt` block; this job is what
+        # produces it, so trusting it here would build nothing at all.
+        run: npm run prepare:obs-runtime -- --platform=linux --from-source
+      - name: Publish the runtime
+        run: |
+          set -euo pipefail
+          tag='${{ steps.pin.outputs.tag }}'
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" \
+            --target "$GITHUB_SHA" \
+            --title "OBS runtime ${{ steps.pin.outputs.version }}" \
+            --notes "Owned Linux OBS runtime for AxiStream, built from the pin in resources/obs-runtime/manifest.json. Not an AxiStream release."
+          gh release upload "$tag" --clobber \
+            "resources/obs-runtime/linux/${{ steps.pin.outputs.bundle }}" \
+            "resources/obs-runtime/linux/runtime-manifest.json" \
+            "resources/obs-runtime/notices/obs-studio-${{ steps.pin.outputs.version }}-axistream-corresponding-source.tar.xz"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Print the manifest block to paste
+        run: node scripts/print-obs-runtime-pin.mjs "${{ steps.pin.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"

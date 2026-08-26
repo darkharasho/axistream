@@ -46,3 +46,21 @@ export async function verifyRuntimeAssets(platform, root, manifest) {
     }
   }
 }
+
+// The pinned Linux runtime is built once per OBS/plugin pin and republished as a
+// downloadable bundle, so an AxiStream release never recompiles OBS (~30min).
+// `--from-source` is how obs-runtime.yml produces that bundle in the first place.
+export function selectLinuxRuntimeSource(linux, { fromSource = false } = {}) {
+  if (fromSource) return 'source'
+  const prebuilt = linux.prebuilt
+  if (!prebuilt) return 'source'
+  // A bumped obsVersion with a stale prebuilt block would silently ship the old
+  // runtime under the new version's name. Refuse rather than guess.
+  if (prebuilt.obsVersion !== linux.obsVersion) {
+    throw new Error(
+      `Prebuilt Linux OBS runtime is pinned to ${prebuilt.obsVersion} but the manifest wants ${linux.obsVersion}. ` +
+      'Run the obs-runtime workflow for the new pin and update manifest.json.',
+    )
+  }
+  return 'prebuilt'
+}

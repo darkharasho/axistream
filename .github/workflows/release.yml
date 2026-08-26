@@ -46,16 +46,13 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      - name: Install Linux OBS build dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       - name: Prepare owned Windows OBS runtime
         if: runner.os == 'Windows'
         run: npm run prepare:obs-runtime -- --platform=windows
       - name: Prepare owned Linux OBS runtime
+        # Downloads the bundle pinned in resources/obs-runtime/manifest.json —
+        # built once by obs-runtime.yml, not recompiled here. Rebuilding OBS from
+        # source on every tag cost ~30min and produced the same runtime each time.
         if: runner.os == 'Linux'
         run: npm run prepare:obs-runtime -- --platform=linux
       - name: Sync package version from tag

@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { sha256File } from './obs-runtime-lib.mjs'
+import { selectLinuxRuntimeSource, sha256File } from './obs-runtime-lib.mjs'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const assetRoot = join(repoRoot, 'resources', 'obs-runtime')
@@ -79,9 +79,22 @@ async function prepareWindows() {
   await downloadVerified(manifest.linux.sourceUrl, join(assetRoot, 'notices', 'obs-studio-32.1.2-source.tar.gz'), manifest.linux.sourceSha256)
 }
 
-async function prepareLinux() {
-  if (process.arch !== 'x64') throw new Error('The pinned Linux OBS runtime currently supports x86_64 only')
-  const cfg = manifest.linux
+// Fetch the runtime that obs-runtime.yml already built for this pin. Everything
+// the from-source path derives locally — the bundle, the descriptor carrying the
+// ostree commit, the GPL corresponding source — comes down hash-verified instead.
+async function prepareLinuxFromPrebuilt(cfg) {
+  const { prebuilt } = cfg
+  await downloadVerified(prebuilt.bundleUrl, join(assetRoot, 'linux', cfg.bundleFile), prebuilt.bundleSha256)
+  await downloadVerified(prebuilt.descriptorUrl, join(assetRoot, 'linux', 'runtime-manifest.json'), prebuilt.descriptorSha256)
+  await downloadVerified(
+    prebuilt.correspondingSourceUrl,
+    join(assetRoot, 'notices', `obs-studio-${cfg.obsVersion}-axistream-corresponding-source.tar.xz`),
+    prebuilt.correspondingSourceSha256,
+  )
+  await downloadVerified(cfg.sourceUrl, join(assetRoot, 'notices', 'obs-studio-32.1.2-source.tar.gz'), cfg.sourceSha256)
+}
+
+async function buildLinuxFromSource(cfg) {
   await run('flatpak', ['install', '--user', '--noninteractive', '--or-update', 'flathub', cfg.runtime, cfg.sdk])
   const workRoot = join(repoRoot, '.cache', 'obs-flatpak-build')
   const buildDir = join(workRoot, 'build')
@@ -153,6 +166,14 @@ async function prepareLinux() {
   }
   writeFileSync(join(outputDir, 'runtime-manifest.json'), `${JSON.stringify(descriptor, null, 2)}\n`)
   await downloadVerified(cfg.sourceUrl, join(assetRoot, 'notices', 'obs-studio-32.1.2-source.tar.gz'), cfg.sourceSha256)
+}
+
+async function prepareLinux() {
+  if (process.arch !== 'x64') throw new Error('The pinned Linux OBS runtime currently supports x86_64 only')
+  const cfg = manifest.linux
+  const source = selectLinuxRuntimeSource(cfg, { fromSource: process.argv.includes('--from-source') })
+  if (source === 'prebuilt') return prepareLinuxFromPrebuilt(cfg)
+  return buildLinuxFromSource(cfg)
 }
 
 if (requested === 'windows') await prepareWindows()
