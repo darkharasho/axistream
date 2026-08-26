@@ -4,7 +4,7 @@ import type { AxiApi, AudioDevice, AppState, AudioLevels } from '../../shared/st
 import { staleOption } from '../device-options.js'
 import { GameAudioSettings } from './GameAudioSettings.js'
 import { AudioPulse } from './AudioPulse.js'
-import { PTT_KEY_CHOICES, keyName } from '../../shared/keys.js'
+import { PTT_KEY_CHOICES } from '../../shared/keys.js'
 import { KeyPicker } from './KeyPicker.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
@@ -205,7 +205,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
           {ptt.enabled && ptt.mode === 'passthrough' && (
             <>
               <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
-              <KeyPicker keyName={keyName(ptt.keyCode)} keyCode={ptt.keyCode} modifier={ptt.modifier}
+              <KeyPicker binding={{ key: { code: ptt.keyCode, name: ptt.keyName }, modifier: ptt.modifier }}
                 onBind={(b) => axi().setPttBinding(b)} />
               {capturing
                 ? <span className="muted">Press any key… {captureLeft}s (Esc cancels)</span>
