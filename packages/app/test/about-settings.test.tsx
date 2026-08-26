@@ -45,6 +45,19 @@ describe('AboutSettings', () => {
     expect(axi.openExternalUrl).toHaveBeenCalledWith('https://github.com/darkharasho/axistream/releases/latest')
   })
 
+  // Spec §5: both the app's own licence and the third-party notices have to
+  // be reachable from the About panel, not only from the repository.
+  it('links the app licence and the third-party notices', async () => {
+    render(<AboutSettings onRunSetup={() => {}} />)
+    await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())
+
+    await userEvent.click(screen.getByRole('button', { name: /license \(mit\)/i }))
+    expect(axi.openExternalUrl).toHaveBeenCalledWith('https://github.com/darkharasho/axistream/blob/main/LICENSE')
+
+    await userEvent.click(screen.getByRole('button', { name: /third-party licenses/i }))
+    expect(axi.openExternalUrl).toHaveBeenCalledWith('https://github.com/darkharasho/axistream/blob/main/THIRD_PARTY_NOTICES.md')
+  })
+
   it('reopens the wizard, so dismissing the banner is never a dead end', async () => {
     const onRunSetup = vi.fn()
     render(<AboutSettings onRunSetup={onRunSetup} />)

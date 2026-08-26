@@ -7,7 +7,8 @@ const REPO = 'https://github.com/darkharasho/axistream'
 const LINKS = [
   { label: 'How we bundle OBS', url: `${REPO}/blob/main/docs/obs-redistribution.md` },
   { label: 'Source for the bundled OBS', url: `${REPO}/releases/latest` },
-  { label: 'Licenses', url: `${REPO}/blob/main/THIRD_PARTY_NOTICES.md` },
+  { label: 'License (MIT)', url: `${REPO}/blob/main/LICENSE` },
+  { label: 'Third-party licenses', url: `${REPO}/blob/main/THIRD_PARTY_NOTICES.md` },
   { label: 'Privacy policy', url: `${REPO}/blob/main/PRIVACY.md` },
   { label: 'Repository', url: REPO },
   { label: 'Report an issue', url: `${REPO}/issues/new` },

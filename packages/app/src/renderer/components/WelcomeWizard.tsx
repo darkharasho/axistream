@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Loader2, X } from 'lucide-react'
-import type { AppState, AudioDevice, AxiApi } from '../../shared/state.js'
+import type { AppState, AudioDevice, AxiApi, CaptureTargetOption } from '../../shared/state.js'
 import { useModalKeys } from '../use-modal-keys.js'
 
 const STEPS = ['Capture', 'YouTube', 'Microphone', 'Ready'] as const
 
-export function WelcomeWizard({ state, axi, onClose }: { state: AppState; axi: AxiApi; onClose: () => void }) {
+export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppState; axi: AxiApi; onClose: () => void; onGoLive: () => void }) {
   const [step, setStep] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   useModalKeys(ref, onClose)
@@ -21,6 +21,28 @@ export function WelcomeWizard({ state, axi, onClose }: { state: AppState; axi: A
   // a stream key set later in Settings is a legitimate path, and a user who
   // knows their mic works should not have to prove it.
   const canAdvance = step !== 0 || capture !== null
+
+  // Same shape as StreamScreen.runSetup: provision restarts the sidecar and
+  // polls for a non-black frame, seconds of silence in which a user will click
+  // again and fire a second concurrent rebuild. The .catch is required, not
+  // decorative — main publishes the human-readable ERROR state, and without it
+  // an IPC rejection becomes an unhandled renderer promise.
+  const [setupPending, setSetupPending] = useState(false)
+  const setupInFlight = useRef(false)
+  const runSetup = (target?: CaptureTargetOption) => {
+    if (setupInFlight.current) return
+    setupInFlight.current = true
+    setSetupPending(true)
+    Promise.resolve(axi.provision(target)).catch(() => {}).finally(() => {
+      setupInFlight.current = false
+      setSetupPending(false)
+    })
+  }
+  // On Windows with more than one display provision returns CHOOSING_TARGET,
+  // and StreamScreen's picker renders underneath this modal's backdrop. The
+  // wizard has to offer the list itself or step 0 is a dead end.
+  const choosing = state.phase === 'CHOOSING_CAPTURE'
+  const preparing = state.phase === 'PREPARING_CAPTURE' || setupPending
 
   const runMicTest = async () => {
     setTest({ st: 'recording' })
@@ -51,7 +73,16 @@ export function WelcomeWizard({ state, axi, onClose }: { state: AppState; axi: A
             <p className="muted">AxiStream captures one screen or window — the one showing your game.</p>
             {capture
               ? <p className="wizard-ok"><Check size={14} /> Capturing {capture.sourceLabel}</p>
-              : <button className="btn primary sm" onClick={() => void axi.provision()}>Choose what to capture</button>}
+              : choosing
+              ? <div className="capture-target-list" role="list" aria-label="Available displays">
+                  {state.captureTargets.map((target) => (
+                    <button key={`${target.property}:${String(target.value)}`} className="btn target"
+                      disabled={setupPending} onClick={() => runSetup(target)}>{target.label}</button>
+                  ))}
+                </div>
+              : <button className="btn primary sm" disabled={preparing} onClick={() => runSetup()}>
+                  {preparing ? <><Loader2 size={13} className="spin" /> Preparing capture…</> : 'Choose what to capture'}
+                </button>}
           </div>
         ) : null}
 
@@ -100,7 +131,7 @@ export function WelcomeWizard({ state, axi, onClose }: { state: AppState; axi: A
           <span className="spacer" />
           <button className="btn ghost sm" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
           {step === STEPS.length - 1
-            ? <button className="btn primary sm" onClick={onClose}>Go live</button>
+            ? <button className="btn primary sm" onClick={onGoLive}>Go live</button>
             : <button className="btn primary sm" disabled={!canAdvance} onClick={() => setStep((s) => s + 1)}>Next</button>}
         </div>
       </div>

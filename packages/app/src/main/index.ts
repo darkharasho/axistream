@@ -12,6 +12,7 @@ import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, sanitizeWebcam, type StreamSettingsData } from './StreamSettings.js'
 import { qualityOf, qualityPatchOf, qualityViewOf } from './quality.js'
+import { shouldShowWelcome } from './onboarding.js'
 import { WebcamController } from './WebcamController.js'
 import { webcamToast } from './webcam-availability.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
@@ -1367,6 +1368,10 @@ if (primary) app.whenReady().then(async () => {
     await ptt.restore()
     const pttAvailable = await ptt.available()
     const lbInit = loadBinding(); setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: bindingLabel(lbInit), keyCode: lbInit.key.code, modifier: lbInit.modifier } })
+    // Derived on every boot path, above the provisioned split: a fresh install
+    // is unprovisioned, and deriving this only in the provisioned branch left
+    // showWelcome at its `false` default for the one user it exists for.
+    setState({ showWelcome: shouldShowWelcome(settings.load().onboardedVersion) })
     const provisioned = config.load().provisioned
     if (provisioned) {
       const capture_ = await applyResolution()
@@ -1388,7 +1393,7 @@ if (primary) app.whenReady().then(async () => {
         readFile: (p) => fsPromises.readFile(p, 'utf8'),
         writeFile: (p, c) => fsPromises.writeFile(p, c),
       })
-      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true }, quality: qualityViewOf(a), showWelcome: a.onboardedVersion === '' })
+      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true }, quality: qualityViewOf(a) })
       pushFitted()
       await applyMasksRespectingVisibility()
       // On a fresh install capture.start() only starts the sidecar — scene

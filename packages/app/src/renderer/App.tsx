@@ -22,6 +22,11 @@ export function App() {
 
   useEffect(() => { if (state.phase === 'AWAITING_APPROVAL') setNav('stream') }, [state.phase])
 
+  // Skip setup, the X and Escape only dismiss. "Go live" also navigates —
+  // the wizard is reachable from Settings ▸ About, and closing it there
+  // otherwise strands the user on the Settings grid with no Go Live control.
+  const closeWizard = () => { setWizard(false); void axi.dismissWelcome() }
+
   useEffect(() => {
     const offs = [
       axi.onState((p) => store.applyState(p)),
@@ -48,7 +53,8 @@ export function App() {
           ? <WelcomeBanner onSetUp={() => setWizard(true)} onDismiss={() => axi.dismissWelcome()} />
           : null}
         {wizard
-          ? <WelcomeWizard state={state} axi={axi} onClose={() => { setWizard(false); void axi.dismissWelcome() }} />
+          ? <WelcomeWizard state={state} axi={axi} onClose={closeWizard}
+              onGoLive={() => { closeWizard(); setNav('stream') }} />
           : null}
         <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
         {nav === 'stream'

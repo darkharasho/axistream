@@ -16,8 +16,8 @@ const axi = {
 const cap = { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1920, outputHeight: 1080, fps: 60 }
 const mk = (over: Partial<AppState> = {}): AppState => ({ ...INITIAL_STATE, phase: 'READY', capture: cap, ...over })
 
-const open = async (over: Partial<AppState> = {}, onClose = vi.fn()) => {
-  render(<WelcomeWizard state={mk(over)} axi={axi as never} onClose={onClose} />)
+const open = async (over: Partial<AppState> = {}, onClose = vi.fn(), onGoLive = vi.fn()) => {
+  render(<WelcomeWizard state={mk(over)} axi={axi as never} onClose={onClose} onGoLive={onGoLive} />)
   // Flush the mounting getAudioDevices() fetch before handing control back —
   // otherwise its state update can land after a test's assertions already
   // ran, tripping React's act() warning on stderr.
@@ -52,6 +52,58 @@ describe('WelcomeWizard', () => {
     await userEvent.click(screen.getByRole('button', { name: /choose what to capture/i }))
 
     expect(axi.provision).toHaveBeenCalledOnce()
+  })
+
+  // On Windows with more than one display, provision() answers
+  // CHOOSING_TARGET and StreamScreen's picker renders underneath this modal's
+  // backdrop, out of reach. The wizard has to offer the list itself.
+  it('offers the display list itself when provisioning asks which one', async () => {
+    await open({
+      capture: null,
+      phase: 'CHOOSING_CAPTURE',
+      captureTargets: [
+        { label: 'Display 1', property: 'monitor_id', value: 'a' },
+        { label: 'Display 2', property: 'monitor_id', value: 'b' },
+      ],
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Display 2' }))
+
+    expect(axi.provision).toHaveBeenCalledWith({ label: 'Display 2', property: 'monitor_id', value: 'b' })
+  })
+
+  it('shows a pending state while capture is being prepared', async () => {
+    await open({ capture: null, phase: 'PREPARING_CAPTURE' })
+
+    expect(screen.getByRole('button', { name: /preparing capture/i })).toBeDisabled()
+  })
+
+  // provision() restarts the sidecar and polls for a non-black frame: seconds
+  // of silence in which an impatient user fires a second concurrent rebuild.
+  it('ignores a second click while provisioning is in flight', async () => {
+    let release = () => {}
+    axi.provision.mockImplementationOnce(() => new Promise<void>((r) => { release = () => r() }))
+    await open({ capture: null })
+
+    await userEvent.click(screen.getByRole('button', { name: /choose what to capture/i }))
+    await userEvent.click(screen.getByRole('button', { name: /preparing capture/i }))
+
+    expect(axi.provision).toHaveBeenCalledOnce()
+    release()
+    await waitFor(() => expect(screen.getByRole('button', { name: /choose what to capture/i })).toBeEnabled())
+  })
+
+  // An IPC rejection must not surface as an unhandled renderer promise, and it
+  // must clear the in-flight guard so a retry is possible.
+  it('survives a rejected provision and re-arms the button', async () => {
+    axi.provision.mockRejectedValueOnce(new Error('sidecar died'))
+    await open({ capture: null })
+
+    await userEvent.click(screen.getByRole('button', { name: /choose what to capture/i }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /choose what to capture/i })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: /choose what to capture/i }))
+    expect(axi.provision).toHaveBeenCalledTimes(2)
   })
 
   it('connects YouTube on the second step', async () => {
@@ -123,14 +175,20 @@ describe('WelcomeWizard', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('dismisses when finished', async () => {
-    const onClose = await open()
+  // "Go live" takes the navigating exit — the wizard is reachable from
+  // Settings ▸ About, where merely closing it strands the user on the
+  // Settings grid with no Go Live control.
+  it('takes the go-live exit when finished', async () => {
+    const onClose = vi.fn()
+    const onGoLive = vi.fn()
+    await open({}, onClose, onGoLive)
 
     await userEvent.click(screen.getByRole('button', { name: /next/i }))
     await userEvent.click(screen.getByRole('button', { name: /next/i }))
     await userEvent.click(screen.getByRole('button', { name: /next/i }))
     await userEvent.click(screen.getByRole('button', { name: /go live/i }))
 
-    expect(onClose).toHaveBeenCalledOnce()
+    expect(onGoLive).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
