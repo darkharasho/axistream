@@ -5,6 +5,7 @@ import { UpdatesSettings } from './UpdatesSettings.js'
 import { DiagnosticsSettings } from './DiagnosticsSettings.js'
 import { RecordingSettings } from './RecordingSettings.js'
 import { WebcamSettings } from './WebcamSettings.js'
+import { QualitySettings } from './QualitySettings.js'
 
 export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi }) {
   return (
@@ -26,12 +27,7 @@ export function SettingsScreen({ state, axi }: { state: AppState; axi: AxiApi })
           </section>
 
           <section className="setting">
-            <h3>Quality</h3>
-            <p className="muted">
-              {state.encoder}
-              {state.videoBitrateKbps ? ` · ${state.videoBitrateKbps / 1000} Mbps` : ''}
-              {state.capture ? ` — chosen automatically for ${state.capture.outputHeight}p${state.capture.fps}` : ' — chosen automatically'}
-            </p>
+            <QualitySettings state={state} axi={axi} />
           </section>
 
           <section className="setting">

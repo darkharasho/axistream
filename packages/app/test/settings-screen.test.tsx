@@ -54,10 +54,12 @@ const base: AppState = {
 }
 
 describe('SettingsScreen', () => {
-  it('shows the auto-chosen quality line', () => {
+  it('mounts the quality panel with its resolved summary', () => {
     render(<SettingsScreen state={{ ...base, encoder: 'NVENC', videoBitrateKbps: 24000, capture: { sourceLabel: 'GW2', width: 3440, height: 1440, outputWidth: 3440, outputHeight: 1440, fps: 60 } }} axi={axi as any} />)
-    expect(screen.getByText('Quality')).toBeInTheDocument()
-    expect(screen.getByText(/NVENC · 24 Mbps — chosen automatically for 1440p60/)).toBeInTheDocument()
+    const header = screen.getByRole('button', { name: /quality/i })
+    expect(header).toHaveTextContent('Auto')
+    expect(header).toHaveTextContent('1440p60')
+    expect(header).toHaveTextContent('NVENC')
   })
 
   it('offers Re-set up capture', async () => {
