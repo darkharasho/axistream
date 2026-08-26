@@ -4,7 +4,7 @@ import { PTT_KEY_GROUPS, MODIFIER_LABELS, MODIFIER_CODES, type PttBinding, type 
 const TYPING_GROUPS = new Set(['Letters', 'Numbers'])
 const typingKey = (code: number) => PTT_KEY_GROUPS.some((g) => TYPING_GROUPS.has(g.label) && g.keys.some((k) => k.code === code))
 
-export function PttKeyPicker({ keyName, keyCode, modifier, onBind }: {
+export function KeyPicker({ keyName, keyCode, modifier, onBind }: {
   keyName: string
   keyCode: number
   modifier: PttModifier | null
