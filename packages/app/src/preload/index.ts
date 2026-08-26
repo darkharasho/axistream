@@ -53,6 +53,7 @@ const api: AxiApi = {
   appVersion: () => ipcRenderer.invoke(CH.appVersion) as Promise<string>,
   getWhatsNew: () => ipcRenderer.invoke(CH.getWhatsNew) as Promise<{ version: string; notes: string | null }>,
   setLastSeenVersion: (v: string) => ipcRenderer.invoke(CH.setLastSeenVersion, v) as Promise<void>,
+  dismissWelcome: () => ipcRenderer.invoke(CH.dismissWelcome) as Promise<void>,
   copyToClipboard: (text: string) => ipcRenderer.invoke(CH.copyToClipboard, text) as Promise<boolean>,
   openExternalUrl: (url: string) => ipcRenderer.invoke(CH.openExternalUrl, url) as Promise<boolean>,
   exportDiagnostics: () => ipcRenderer.invoke(CH.exportDiagnostics) as Promise<DiagnosticsResult>,

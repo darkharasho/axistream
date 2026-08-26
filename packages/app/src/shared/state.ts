@@ -189,6 +189,11 @@ export interface AppState {
   audioTestActive: boolean
   summary: StreamSummary | null
   hotkeys: HotkeyState
+  /** True until the welcome wizard is finished or dismissed. Derived in main
+   *  from settings.onboardedVersion so the renderer never learns the settings
+   *  shape. Deliberately NOT conditioned on capture being set up — someone who
+   *  bounced off the capture picker still needs the path back. */
+  showWelcome: boolean
 }
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, captureTargets: [], stats: null, liveUnconfirmed: false, error: null,
@@ -210,6 +215,7 @@ export const INITIAL_STATE: AppState = {
   audioTestActive: false,
   summary: null,
   hotkeys: DEFAULT_HOTKEY_STATE,
+  showWelcome: false,
 }
 
 export interface AudioLevels { desktop: number; mic: number; game: number }
@@ -296,6 +302,7 @@ export const CH = {
   appVersion: 'app:version',
   getWhatsNew: 'app:getWhatsNew',
   setLastSeenVersion: 'app:setLastSeenVersion',
+  dismissWelcome: 'app:dismissWelcome',
   copyToClipboard: 'app:copyToClipboard',
   openExternalUrl: 'app:openExternalUrl',
   exportDiagnostics: 'axi:exportDiagnostics',
@@ -355,6 +362,7 @@ export interface AxiApi {
   appVersion(): Promise<string>
   getWhatsNew(): Promise<{ version: string; notes: string | null }>
   setLastSeenVersion(v: string): Promise<void>
+  dismissWelcome(): Promise<void>
   copyToClipboard(text: string): Promise<boolean>
   openExternalUrl(url: string): Promise<boolean>
   exportDiagnostics(): Promise<DiagnosticsResult>

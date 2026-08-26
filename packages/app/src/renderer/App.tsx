@@ -6,6 +6,8 @@ import { StreamScreen } from './components/StreamScreen.js'
 import { SettingsScreen } from './components/SettingsScreen.js'
 import { ToastHost } from './components/ToastHost.js'
 import { ErrorBoundary } from './components/ErrorBoundary.js'
+import { WelcomeBanner } from './components/WelcomeBanner.js'
+import { WelcomeWizard } from './components/WelcomeWizard.js'
 import { toastStore } from './toasts.js'
 import type { AxiApi, UpdateStatus } from '../shared/state.js'
 
@@ -13,11 +15,17 @@ const axi = (globalThis as unknown as { axi: AxiApi }).axi
 
 export function App() {
   const [nav, setNav] = useState<'stream' | 'settings'>('stream')
+  const [wizard, setWizard] = useState(false)
   const [update, setUpdate] = useState<UpdateStatus | null>(null)
   const state = useSyncExternalStore(store.subscribe, store.getState)
   const preview = useSyncExternalStore(store.subscribe, store.getPreview)
 
   useEffect(() => { if (state.phase === 'AWAITING_APPROVAL') setNav('stream') }, [state.phase])
+
+  // Skip setup, the X and Escape only dismiss. "Go live" also navigates —
+  // the wizard is reachable from Settings ▸ About, and closing it there
+  // otherwise strands the user on the Settings grid with no Go Live control.
+  const closeWizard = () => { setWizard(false); void axi.dismissWelcome() }
 
   useEffect(() => {
     const offs = [
@@ -41,10 +49,17 @@ export function App() {
       <div className="app">
         <div className="dragbar" />
         <ToastHost />
+        {state.showWelcome && nav === 'stream'
+          ? <WelcomeBanner onSetUp={() => setWizard(true)} onDismiss={() => axi.dismissWelcome()} />
+          : null}
+        {wizard
+          ? <WelcomeWizard state={state} axi={axi} onClose={closeWizard}
+              onGoLive={() => { closeWizard(); setNav('stream') }} />
+          : null}
         <Sidebar active={nav} state={state} onNav={setNav} axi={axi} update={update} />
         {nav === 'stream'
           ? <ErrorBoundary label="Stream"><StreamScreen state={state} preview={preview} axi={axi} store={store} /></ErrorBoundary>
-          : <ErrorBoundary label="Settings"><SettingsScreen state={state} axi={axi} /></ErrorBoundary>}
+          : <ErrorBoundary label="Settings"><SettingsScreen state={state} axi={axi} onRunSetup={() => setWizard(true)} /></ErrorBoundary>}
         <div className="wctl">
           <button className="wbtn" aria-label="Minimize" onClick={() => axi.windowMinimize()}><Minus size={15} /></button>
           <button className="wbtn" aria-label="Maximize" onClick={() => axi.windowToggleMaximize()}><Square size={13} /></button>

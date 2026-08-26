@@ -19,6 +19,8 @@ jobs:
         run: npm ci
       - name: Unit tests
         run: npm test
+      - name: Release-notes extractor self-test
+        run: node scripts/test-release-notes.mjs
       - name: Typecheck
         run: npx tsc --noEmit -p packages/app/tsconfig.json
       - name: Build

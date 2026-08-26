@@ -12,6 +12,7 @@ import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, sanitizeWebcam, type StreamSettingsData } from './StreamSettings.js'
 import { qualityOf, qualityPatchOf, qualityViewOf } from './quality.js'
+import { shouldShowWelcome } from './onboarding.js'
 import { WebcamController } from './WebcamController.js'
 import { webcamToast } from './webcam-availability.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
@@ -1037,6 +1038,10 @@ if (primary) app.whenReady().then(async () => {
       } catch { return { version, notes: null } }
     },
     setLastSeenVersion: async (v) => { settings.patch({ lastSeenVersion: v }) },
+    dismissWelcome: async () => {
+      settings.patch({ onboardedVersion: app.getVersion() })
+      setState({ showWelcome: false })
+    },
     // Copy via the main-process clipboard module: navigator.clipboard in the
     // renderer fails silently in Electron (denied by our permission handler,
     // and unavailable without a secure context / transient activation).
@@ -1363,6 +1368,10 @@ if (primary) app.whenReady().then(async () => {
     await ptt.restore()
     const pttAvailable = await ptt.available()
     const lbInit = loadBinding(); setState({ ptt: { ...state.ptt, available: pttAvailable, keyName: bindingLabel(lbInit), keyCode: lbInit.key.code, modifier: lbInit.modifier } })
+    // Derived on every boot path, above the provisioned split: a fresh install
+    // is unprovisioned, and deriving this only in the provisioned branch left
+    // showWelcome at its `false` default for the one user it exists for.
+    setState({ showWelcome: shouldShowWelcome(settings.load().onboardedVersion) })
     const provisioned = config.load().provisioned
     if (provisioned) {
       const capture_ = await applyResolution()
