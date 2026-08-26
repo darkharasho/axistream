@@ -11,6 +11,7 @@ import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, sanitizeWebcam, type StreamSettingsData } from './StreamSettings.js'
+import { qualityOf, qualityViewOf } from './quality.js'
 import { WebcamController } from './WebcamController.js'
 import { webcamToast } from './webcam-availability.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
@@ -44,7 +45,7 @@ import { createLogSink, installLogSink } from './log.js'
 import { collectDiagnostics } from './diagnostics.js'
 import { scrubLine } from './redact.js'
 import { selectReleaseNotes, type GithubRelease } from './version-notes.js'
-import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type StreamSettingsView, type WebcamConfig } from '../shared/state.js'
+import { CH, INITIAL_STATE, type AppState, type CaptureMeta, type CaptureTargetOption, type MaskRect, type QualityPatch, type StreamSettingsView, type WebcamConfig } from '../shared/state.js'
 import { bindingLabel, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
 import { computeWindowSize, toggleWindowSize, isFittedWidth } from './window-size.js'
 import { enforceSingleInstance } from './single-instance.js'
@@ -443,12 +444,13 @@ if (primary) app.whenReady().then(async () => {
   const installer = new PluginInstaller({ exec: flatpakExec, ref: GAME_AUDIO_PLUGIN_REF })
   const blurInstaller = new PluginInstaller({ exec: flatpakExec, ref: BLUR_PLUGIN_REF })
 
-  let encoderKind: EncoderKind = settings.load().preferSoftware
+  const detectKind = (): EncoderKind => settings.load().preferSoftware
     ? 'x264'
     : detectEncoder({ platform: process.platform, existsSync, readdirSync })
+  let encoderKind: EncoderKind = detectKind()
   let currentPreset: EncoderPreset | null = null
   const applyEncoderPreset = async (outputHeight: number, fps: number, opts?: { tries?: number }): Promise<boolean> => {
-    currentPreset = choosePreset(encoderKind, outputHeight, fps)
+    currentPreset = choosePreset(encoderKind, outputHeight, fps, qualityOf(settings.load()).overrides)
     setState({ encoder: currentPreset.label, videoBitrateKbps: currentPreset.videoBitrateKbps })
     return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never), tries: opts?.tries }, currentPreset)
   }
@@ -471,7 +473,8 @@ if (primary) app.whenReady().then(async () => {
       }
       if (p === 'LIVE' && pendingSoftwareFlip) {
         pendingSoftwareFlip = false
-        settings.patch({ preferSoftware: true })
+        const next = settings.patch({ preferSoftware: true, preferSoftwareAuto: true })
+        setState({ quality: qualityViewOf(next) })
       } else if ((p === 'ERROR' || p === 'READY') && pendingSoftwareFlip) {
         pendingSoftwareFlip = false
       }
@@ -525,7 +528,12 @@ if (primary) app.whenReady().then(async () => {
   // why the UI used to show the 1080p fallback even on a 3440×1440 monitor.
   // GetVideoSettings is always populated and persisted, so it never races.
   const applyResolution = async (): Promise<CaptureMeta> => {
-    await applyCaptureResolution({ call: (r, p) => sidecar.client().call(r as never, p as never) })
+    const q = qualityOf(settings.load())
+    await applyCaptureResolution({
+      call: (r, p) => sidecar.client().call(r as never, p as never),
+      maxHeight: q.maxHeight,
+      fps: q.fps,
+    })
     try {
       const v = await sidecar.client().call('GetVideoSettings') as {
         baseWidth: number; baseHeight: number; outputWidth: number; outputHeight: number
@@ -562,6 +570,15 @@ if (primary) app.whenReady().then(async () => {
           (tpl && renderTitle(tpl, { now: new Date(), counter: s.counter + 1, dateFormat: s.dateFormat, gw2 }))
         if (!title) { setState({ phase: 'NEEDS_TITLE' }); return }
         setState({ phase: 'GOING_LIVE' })
+        // Bitrate and encoder are profile parameters OBS only reads at
+        // StartStream, so a quality edit lands here. Unconditional rather
+        // than flag-guarded: it is idempotent, best-effort, and cannot
+        // desync the way a pending-change flag can.
+        if (state.capture) {
+          const capture_ = await applyResolution()
+          await applyEncoderPreset(capture_.outputHeight, capture_.fps)
+          setState({ capture: capture_ })
+        }
         summaryAcc.reset()
         sessionRecordingPath = null
         setState({ summary: null })
@@ -1047,6 +1064,31 @@ if (primary) app.whenReady().then(async () => {
     },
     getWebcamDevices: () => webcamCtl.devices(),
     getWebcamProps: () => webcamCtl.props(),
+
+    setQuality: async (p: QualityPatch) => {
+      const patch: Partial<StreamSettingsData> = {}
+      if ('height' in p) patch.qualityHeight = p.height ?? null
+      if ('fps' in p) patch.qualityFps = p.fps ?? null
+      if ('bitrateKbps' in p) patch.qualityBitrateKbps = p.bitrateKbps ?? null
+      // A user touching the checkbox takes ownership of the choice, so the
+      // "AxiStream switched this for you" explanation stops applying.
+      if ('preferSoftware' in p) { patch.preferSoftware = p.preferSoftware === true; patch.preferSoftwareAuto = false }
+      settings.patch(patch)
+      // Read back rather than trusting the patch: load() is where clamping
+      // and off-list rejection happen, so this is the value that will be used.
+      const next = settings.load()
+      setState({ quality: qualityViewOf(next) })
+      if ('preferSoftware' in p) encoderKind = detectKind()
+      // Applying now keeps the preview and the stat chips truthful. Safe
+      // because only the output scale moves — base stays the monitor's native
+      // size, so masks and the webcam do not shift. Deferred while live.
+      const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING'
+      if (!live && state.capture) {
+        const capture_ = await applyResolution()
+        await applyEncoderPreset(capture_.outputHeight, capture_.fps)
+        setState({ capture: capture_ })
+      }
+    },
   }
   registerIpc({ ipcMain, handlers, bindPush: () => {} })
 
@@ -1194,7 +1236,7 @@ if (primary) app.whenReady().then(async () => {
         const r = await ptt.enable()
         const lbEn = loadBinding(); setState({ ptt: { ...state.ptt, enabled: r.ok, error: r.ok ? null : (r.error ?? 'failed'), mode: r.ok ? pttMode : null, keyName: bindingLabel(lbEn), keyCode: lbEn.key.code, modifier: lbEn.modifier } })
       }
-      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true } })
+      setState({ masks: a.masks, masksVisible: a.masksVisible, webcam: { ...a.webcam, available: true }, quality: qualityViewOf(a) })
       pushFitted()
       await applyMasksRespectingVisibility()
       // On a fresh install capture.start() only starts the sidecar — scene
