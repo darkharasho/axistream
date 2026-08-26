@@ -24,9 +24,15 @@ export function WelcomeWizard({ state, axi, onClose }: { state: AppState; axi: A
 
   const runMicTest = async () => {
     setTest({ st: 'recording' })
-    const r = await axi.recordAudioTest()
-    if (r.ok && r.clip) setTest({ st: 'ready', url: URL.createObjectURL(new Blob([r.clip as BlobPart], { type: r.mime ?? 'audio/mp4' })) })
-    else setTest({ st: 'error', error: r.error ?? 'Test failed' })
+    try {
+      const r = await axi.recordAudioTest()
+      if (r.ok && r.clip) setTest({ st: 'ready', url: URL.createObjectURL(new Blob([r.clip as BlobPart], { type: r.mime ?? 'audio/mp4' })) })
+      else setTest({ st: 'error', error: r.error ?? 'Test failed' })
+    } catch (err) {
+      // Best-effort like every other OBS/device call — a rejection must not
+      // strand the UI on "Recording — speak now…" forever.
+      setTest({ st: 'error', error: err instanceof Error ? err.message : 'Test failed' })
+    }
   }
 
   return (
