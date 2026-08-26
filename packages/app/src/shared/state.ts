@@ -60,6 +60,27 @@ export const DEFAULT_WEBCAM: WebcamConfig = {
   mode: null,
 }
 
+export interface QualityView {
+  height: number | null
+  fps: number | null
+  bitrateKbps: number | null
+  preferSoftware: boolean
+  preferSoftwareAuto: boolean
+}
+
+/** A partial edit from the renderer. Keys map to the `quality*` settings
+ *  fields; `null` means "back to Auto". */
+export interface QualityPatch {
+  height?: number | null
+  fps?: number | null
+  bitrateKbps?: number | null
+  preferSoftware?: boolean
+}
+
+export const DEFAULT_QUALITY: QualityView = {
+  height: null, fps: null, bitrateKbps: null, preferSoftware: false, preferSoftwareAuto: false,
+}
+
 export interface GameAudioPluginView { status: GameAudioPluginStatus; error: string | null }
 
 export interface StreamSettingsView {
@@ -131,6 +152,7 @@ export interface AppState {
   masksVisible: boolean
   watchUrl: string | null
   webcam: WebcamView
+  quality: QualityView
   recording: RecordingState
   /** The six-second audio test owns OBS's single record output while it runs,
    *  so Record must refuse. A condition, so it lives here rather than as a
@@ -153,6 +175,7 @@ export const INITIAL_STATE: AppState = {
   masksVisible: true,
   watchUrl: null,
   webcam: { ...DEFAULT_WEBCAM, available: true },
+  quality: { ...DEFAULT_QUALITY },
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null },
   audioTestActive: false,
   summary: null,
@@ -253,6 +276,7 @@ export const CH = {
   setWebcam: 'axi:setWebcam',
   getWebcamDevices: 'axi:getWebcamDevices',
   getWebcamProps: 'axi:getWebcamProps',
+  setQuality: 'axi:setQuality',
 } as const
 
 export interface AxiApi {
@@ -310,6 +334,7 @@ export interface AxiApi {
   setWebcam(p: Partial<WebcamConfig>): Promise<void>
   getWebcamDevices(): Promise<AudioDevice[]>
   getWebcamProps(): Promise<WebcamProps>
+  setQuality(p: QualityPatch): Promise<void>
   onUpdateStatus(cb: (s: UpdateStatus) => void): () => void
   onToast(cb: (t: ToastPayload) => void): () => void
   onState(cb: (s: Partial<AppState>) => void): () => void

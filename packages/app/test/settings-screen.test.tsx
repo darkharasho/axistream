@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsScreen } from '../src/renderer/components/SettingsScreen.js'
 import type { AppState } from '../src/shared/state.js'
+import { DEFAULT_QUALITY } from '../src/shared/state.js'
 
 const axi = {
   repairCapture: vi.fn(),
@@ -28,6 +29,7 @@ const axi = {
   setWebcam: vi.fn(async () => {}),
   getWebcamDevices: vi.fn(async () => []),
   getWebcamProps: vi.fn(async () => ({ pixelformats: [], resolutions: [], framerates: [] })),
+  setQuality: vi.fn(async () => {}),
 }
 beforeEach(() => { (globalThis as any).axi = axi; vi.clearAllMocks() })
 
@@ -47,6 +49,7 @@ const base: AppState = {
   blurPlugin: { status: 'missing', error: null },
   maskStyle: 'box',
   ptt: { available: false, enabled: false, active: false, error: null, mode: null, keyName: 'F18', keyCode: 188, modifier: null }, windowFitted: false, masksVisible: true, liveUnconfirmed: false, watchUrl: null, webcam: { enabled: false, deviceId: null, deviceLabel: null, corner: 'br', sizePct: 0.22, mirrored: false, mode: null, available: true },
+  quality: { ...DEFAULT_QUALITY },
   recording: { active: false, startedAt: null, dir: '', lastPath: null, error: null }, audioTestActive: false, summary: null,
 }
 

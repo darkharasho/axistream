@@ -1,4 +1,4 @@
-import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps } from '../shared/state.js'
+import { CH, type AppState, type AudioDevice, type StreamSettingsView, type MaskRect, type GameAudioPluginView, type DiscordTestResult, type AudioTestResult, type CaptureTargetOption, type DiagnosticsResult, type RecordStartResult, type RecordStopResult, type ChooseDirResult, type OpenResult, type WebcamConfig, type WebcamProps, type QualityPatch } from '../shared/state.js'
 import type { PttBinding, PttCaptureResult } from '../shared/keys.js'
 
 export interface IpcHandlers {
@@ -54,6 +54,7 @@ export interface IpcHandlers {
   setWebcam(p: Partial<WebcamConfig>): Promise<void>
   getWebcamDevices(): Promise<AudioDevice[]>
   getWebcamProps(): Promise<WebcamProps>
+  setQuality(p: QualityPatch): Promise<void>
 }
 
 export interface IpcDeps {
@@ -116,5 +117,6 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.setWebcam, (_e: unknown, p: Partial<WebcamConfig>) => handlers.setWebcam(p))
   ipcMain.handle(CH.getWebcamDevices, () => handlers.getWebcamDevices())
   ipcMain.handle(CH.getWebcamProps, () => handlers.getWebcamProps())
+  ipcMain.handle(CH.setQuality, (_e: unknown, p: QualityPatch) => handlers.setQuality(p))
   d.bindPush((channel, payload) => { /* bound to webContents.send by caller */ void channel; void payload })
 }
