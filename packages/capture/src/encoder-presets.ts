@@ -7,6 +7,11 @@ export interface EncoderPreset {
   label: string            // shown in the stats chip
 }
 
+/** User overrides layered over the auto-detected preset. `null`/absent = auto. */
+export interface QualityOverrides {
+  videoBitrateKbps?: number | null
+}
+
 const ENCODERS: Record<EncoderKind, { streamEncoder: string; label: string }> = {
   nvenc: { streamEncoder: 'nvenc', label: 'NVENC' },
   vaapi: { streamEncoder: 'ffmpeg_vaapi', label: 'VAAPI' },
@@ -22,7 +27,13 @@ function videoBitrate(outputHeight: number, fps: number): number {
   return 2500
 }
 
-export function choosePreset(kind: EncoderKind, outputHeight: number, fps: number): EncoderPreset {
+export function choosePreset(
+  kind: EncoderKind, outputHeight: number, fps: number, overrides?: QualityOverrides,
+): EncoderPreset {
   const e = ENCODERS[kind]
-  return { ...e, videoBitrateKbps: videoBitrate(outputHeight, fps), audioBitrateKbps: 160 }
+  return {
+    ...e,
+    videoBitrateKbps: overrides?.videoBitrateKbps ?? videoBitrate(outputHeight, fps),
+    audioBitrateKbps: 160,
+  }
 }

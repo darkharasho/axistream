@@ -71,3 +71,46 @@ describe('applyCaptureResolution', () => {
     await expect(applyCaptureResolution({ call })).resolves.toBeNull()
   })
 })
+
+describe('applyCaptureResolution quality deps', () => {
+  const client = (sourceWidth: number, sourceHeight: number) => {
+    const calls: { req: string; params?: object }[] = []
+    const call = vi.fn(async (req: string, params?: object) => {
+      calls.push({ req, params })
+      if (req === 'GetSceneItemId') return { sceneItemId: 7 }
+      if (req === 'GetSceneItemTransform') return { sceneItemTransform: { sourceWidth, sourceHeight } }
+      return {}
+    })
+    return { call: call as unknown as ResolutionDeps['call'], calls }
+  }
+
+  it('caps the output at a supplied maxHeight and uses the supplied fps', async () => {
+    const c = client(3840, 2160)
+
+    const r = await applyCaptureResolution({ call: c.call, maxHeight: 720, fps: 30 })
+
+    expect(r).toEqual({ baseWidth: 3840, baseHeight: 2160, outputWidth: 1280, outputHeight: 720, fps: 30 })
+    const set = c.calls.find((x) => x.req === 'SetVideoSettings')
+    expect(set?.params).toMatchObject({
+      baseWidth: 3840, baseHeight: 2160,
+      outputWidth: 1280, outputHeight: 720,
+      fpsNumerator: 30, fpsDenominator: 1,
+    })
+  })
+
+  it('defaults to a 1440 cap at 60fps when the deps are omitted', async () => {
+    const c = client(3840, 2160)
+
+    const r = await applyCaptureResolution({ call: c.call })
+
+    expect(r).toMatchObject({ outputWidth: 2560, outputHeight: 1440, fps: 60 })
+  })
+
+  it('never upscales past the monitor even when maxHeight is higher', async () => {
+    const c = client(1920, 1080)
+
+    const r = await applyCaptureResolution({ call: c.call, maxHeight: 1440, fps: 60 })
+
+    expect(r).toMatchObject({ outputWidth: 1920, outputHeight: 1080 })
+  })
+})

@@ -27,4 +27,21 @@ describe('choosePreset', () => {
     expect(choosePreset('nvenc', 1440, 60).audioBitrateKbps).toBe(160)
     expect(choosePreset('x264', 480, 30).audioBitrateKbps).toBe(160)
   })
+
+  it('uses an explicit bitrate override instead of the height/fps table', () => {
+    expect(choosePreset('nvenc', 1080, 60, { videoBitrateKbps: 4500 }).videoBitrateKbps).toBe(4500)
+    expect(choosePreset('x264', 720, 30, { videoBitrateKbps: 20000 }).videoBitrateKbps).toBe(20000)
+  })
+
+  it('falls back to the table when the override is null, undefined, or absent', () => {
+    expect(choosePreset('x264', 1080, 60, { videoBitrateKbps: null }).videoBitrateKbps).toBe(9000)
+    expect(choosePreset('x264', 1080, 60, { videoBitrateKbps: undefined }).videoBitrateKbps).toBe(9000)
+    expect(choosePreset('x264', 1080, 60, {}).videoBitrateKbps).toBe(9000)
+    expect(choosePreset('x264', 1080, 60).videoBitrateKbps).toBe(9000)
+  })
+
+  it('leaves encoder identity and audio bitrate untouched by an override', () => {
+    const p = choosePreset('vaapi', 1440, 60, { videoBitrateKbps: 3000 })
+    expect(p).toMatchObject({ streamEncoder: 'ffmpeg_vaapi', label: 'VAAPI', audioBitrateKbps: 160 })
+  })
 })
