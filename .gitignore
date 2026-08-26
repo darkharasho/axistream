@@ -18,3 +18,4 @@ resources/obs-runtime/linux/*.flatpak
 resources/obs-runtime/linux/runtime-manifest.json
 resources/obs-runtime/notices/*.tar.gz
 resources/obs-runtime/notices/*.tar.xz
+.archive/

@@ -172,7 +172,8 @@ if (primary) app.whenReady().then(async () => {
   setupUpdater(() => win)
   try { writeFileSync(join(app.getPath('userData'), 'axiom-version'), app.getVersion()) } catch { /* non-fatal */ }
 
-  // AxiStream's own tray icon (OBS's is disabled via hideObsTray below).
+  // AxiStream's own tray icon. OBS has no tray of its own to collide with:
+  // it runs headless under cage on its own AxiStream profile.
   const showWin = () => { if (win.isMinimized()) win.restore(); win.show(); win.focus() }
   focusMain = showWin
   const tray = new Tray(nativeImage.createFromPath(join(import.meta.dirname, '../../build/icon.png')).resize({ width: 22, height: 22 }))
