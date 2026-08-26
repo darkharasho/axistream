@@ -28,6 +28,7 @@ import { RecordController } from './RecordController.js'
 import { defaultRecordDir, validateRecordDir, RECORD_DIR_ERROR } from './record-dir.js'
 import { recordStartRejection } from './record-gate.js'
 import { createRecordingFinalizer } from './record-finalize.js'
+import { createSidecarTeardown } from './quit-teardown.js'
 import { isInAppNavigation } from './navigate-gate.js'
 import { createSummaryAccumulator } from './stream-summary.js'
 import { PttController } from './PttController.js'
@@ -1266,6 +1267,8 @@ if (primary) app.whenReady().then(async () => {
   // Answered once: finalizing a recording defers the close and fires this
   // handler a second time, which must not re-ask.
   let closeConfirmed = false
+  const teardownSidecar = createSidecarTeardown({ stopSidecar: () => sidecar.stop() })
+  let teardownStarted = false
   win.on('close', (e) => {
     const live = stream.isLive()
     if (!closeConfirmed && (live || state.recording.active)) {
@@ -1299,11 +1302,22 @@ if (primary) app.whenReady().then(async () => {
       })
       return
     }
+    // The re-close below lands here again; let that one through to destroy
+    // the window instead of tearing everything down a second time.
+    if (teardownStarted) return
+    teardownStarted = true
     preview.stop()
     void meter.stop()
     try { void sidecar.client().call('StopVirtualCam').catch(() => {}) } catch { /* ignore */ }
     if (ptt.isEnabled()) void ptt.restore()
-    void sidecar.stop()
+    // Defer the close until OBS is actually gone, the same way the recording
+    // finalizer above does. Destroying the window here reaches
+    // window-all-closed -> app.quit(), which kills us mid-teardown and leaves
+    // OBS (and the cage compositor hosting it) running with nothing left to
+    // close it. teardownSidecar boxes the wait, so a hung OBS still lets us
+    // quit.
+    e.preventDefault()
+    void teardownSidecar().finally(() => { if (!win.isDestroyed()) win.close() })
   })
 
   // No before-quit arm: it fires on quits the close handler then cancels
