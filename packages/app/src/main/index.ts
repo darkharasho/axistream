@@ -11,7 +11,7 @@ import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
 import { TokenStore } from './TokenStore.js'
 import { StreamSettings, sanitizeMasks, sanitizeGameAudioApps, sanitizeWebcam, type StreamSettingsData } from './StreamSettings.js'
-import { qualityOf, qualityViewOf } from './quality.js'
+import { qualityOf, qualityPatchOf, qualityViewOf } from './quality.js'
 import { WebcamController } from './WebcamController.js'
 import { webcamToast } from './webcam-availability.js'
 import { YouTubeAuth } from './YouTubeAuth.js'
@@ -551,6 +551,10 @@ if (primary) app.whenReady().then(async () => {
       ...state,
       youtube: { connected: auth.isConnected(), channel: auth.channelTitle() },
       settings: viewOf(settings.load()),
+      // Seeded here as well as at the provisioned boot: the overrides live in
+      // settings.json regardless of whether capture is provisioned, so an
+      // unprovisioned boot must not report a stale "Auto".
+      quality: qualityViewOf(settings.load()),
     }),
     provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
     getCaptureTargets: async () => capture.captureTargets(),
@@ -576,7 +580,11 @@ if (primary) app.whenReady().then(async () => {
         // desync the way a pending-change flag can.
         if (state.capture) {
           const capture_ = await applyResolution()
-          await applyEncoderPreset(capture_.outputHeight, capture_.fps)
+          // Bounded retries: applyEncoderSettings otherwise falls back to
+          // callReady's 25 tries x 800ms, and a websocket-level failure looks
+          // retryable, so four SetProfileParameter calls could wedge
+          // GOING_LIVE for ~80s before startSession is even attempted.
+          await applyEncoderPreset(capture_.outputHeight, capture_.fps, { tries: 3 })
           setState({ capture: capture_ })
         }
         summaryAcc.reset()
@@ -1066,14 +1074,7 @@ if (primary) app.whenReady().then(async () => {
     getWebcamProps: () => webcamCtl.props(),
 
     setQuality: async (p: QualityPatch) => {
-      const patch: Partial<StreamSettingsData> = {}
-      if ('height' in p) patch.qualityHeight = p.height ?? null
-      if ('fps' in p) patch.qualityFps = p.fps ?? null
-      if ('bitrateKbps' in p) patch.qualityBitrateKbps = p.bitrateKbps ?? null
-      // A user touching the checkbox takes ownership of the choice, so the
-      // "AxiStream switched this for you" explanation stops applying.
-      if ('preferSoftware' in p) { patch.preferSoftware = p.preferSoftware === true; patch.preferSoftwareAuto = false }
-      settings.patch(patch)
+      settings.patch(qualityPatchOf(p))
       // Read back rather than trusting the patch: load() is where clamping
       // and off-list rejection happen, so this is the value that will be used.
       const next = settings.load()
@@ -1081,8 +1082,11 @@ if (primary) app.whenReady().then(async () => {
       if ('preferSoftware' in p) encoderKind = detectKind()
       // Applying now keeps the preview and the stat chips truthful. Safe
       // because only the output scale moves — base stays the monitor's native
-      // size, so masks and the webcam do not shift. Deferred while live.
-      const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING'
+      // size, so masks and the webcam do not shift. Deferred once OBS is
+      // streaming — which starts at GOING_LIVE, not at LIVE — so an edit made
+      // mid-transition lands at the next go-live instead of hitting a live OBS.
+      const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING' ||
+        state.phase === 'GOING_LIVE' || state.phase === 'STARTING_ON_YOUTUBE'
       if (!live && state.capture) {
         const capture_ = await applyResolution()
         await applyEncoderPreset(capture_.outputHeight, capture_.fps)

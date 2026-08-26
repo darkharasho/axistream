@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { qualityOf, qualityViewOf } from '../src/main/quality.js'
+import { qualityOf, qualityPatchOf, qualityViewOf } from '../src/main/quality.js'
 import { DEFAULT_SETTINGS } from '../src/main/StreamSettings.js'
 
 const s = (over: Partial<typeof DEFAULT_SETTINGS> = {}) => ({ ...DEFAULT_SETTINGS, ...over })
@@ -27,5 +27,37 @@ describe('qualityViewOf', () => {
 
   it('reports a stock install as fully auto', () => {
     expect(qualityViewOf(s())).toEqual({ height: null, fps: null, bitrateKbps: null, preferSoftware: false, preferSoftwareAuto: false })
+  })
+})
+
+describe('qualityPatchOf', () => {
+  it('writes every field when the renderer sends all of them', () => {
+    expect(qualityPatchOf({ height: 1080, fps: 30, bitrateKbps: 6000, preferSoftware: true }))
+      .toEqual({ qualityHeight: 1080, qualityFps: 30, qualityBitrateKbps: 6000, preferSoftware: true, preferSoftwareAuto: false })
+  })
+
+  it('touches nothing for an empty patch — absent keys are left alone', () => {
+    expect(qualityPatchOf({})).toEqual({})
+  })
+
+  it('writes only the key that is present', () => {
+    expect(qualityPatchOf({ fps: 30 })).toEqual({ qualityFps: 30 })
+    expect(qualityPatchOf({ height: 720 })).toEqual({ qualityHeight: 720 })
+    expect(qualityPatchOf({ bitrateKbps: 4500 })).toEqual({ qualityBitrateKbps: 4500 })
+  })
+
+  it('clears a field back to auto when the key is present as null', () => {
+    expect(qualityPatchOf({ height: null })).toEqual({ qualityHeight: null })
+    expect(qualityPatchOf({ fps: null })).toEqual({ qualityFps: null })
+    expect(qualityPatchOf({ bitrateKbps: null })).toEqual({ qualityBitrateKbps: null })
+  })
+
+  it('clears preferSoftwareAuto whichever way the user sets the checkbox', () => {
+    expect(qualityPatchOf({ preferSoftware: true })).toEqual({ preferSoftware: true, preferSoftwareAuto: false })
+    expect(qualityPatchOf({ preferSoftware: false })).toEqual({ preferSoftware: false, preferSoftwareAuto: false })
+  })
+
+  it('leaves preferSoftwareAuto alone when the checkbox is not part of the patch', () => {
+    expect(qualityPatchOf({ height: 1440 })).not.toHaveProperty('preferSoftwareAuto')
   })
 })

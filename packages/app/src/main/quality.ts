@@ -1,5 +1,5 @@
 import type { QualityOverrides } from '@axistream/capture'
-import { AUTO_MAX_HEIGHT, AUTO_FPS, type QualityView } from '../shared/state.js'
+import { AUTO_MAX_HEIGHT, AUTO_FPS, type QualityPatch, type QualityView } from '../shared/state.js'
 import type { StreamSettingsData } from './StreamSettings.js'
 
 export interface QualityApplyArgs {
@@ -26,4 +26,18 @@ export function qualityViewOf(s: StreamSettingsData): QualityView {
     preferSoftware: s.preferSoftware,
     preferSoftwareAuto: s.preferSoftwareAuto,
   }
+}
+
+/** A renderer patch -> the settings fields it writes. Key *presence* decides
+ *  what is touched: an absent key is left alone, a key present as null clears
+ *  that field back to auto. */
+export function qualityPatchOf(p: QualityPatch): Partial<StreamSettingsData> {
+  const patch: Partial<StreamSettingsData> = {}
+  if ('height' in p) patch.qualityHeight = p.height ?? null
+  if ('fps' in p) patch.qualityFps = p.fps ?? null
+  if ('bitrateKbps' in p) patch.qualityBitrateKbps = p.bitrateKbps ?? null
+  // A user touching the checkbox takes ownership of the choice, so the
+  // "AxiStream switched this for you" explanation stops applying.
+  if ('preferSoftware' in p) { patch.preferSoftware = p.preferSoftware === true; patch.preferSoftwareAuto = false }
+  return patch
 }
