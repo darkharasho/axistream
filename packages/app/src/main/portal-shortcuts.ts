@@ -10,14 +10,12 @@
 // low-level match rule + raw message listener BEFORE the call, which closes
 // the reply-before-subscribe race without needing the object to exist.
 import dbus, { Variant, type MessageBus, type ClientInterface } from 'dbus-next'
-import { MODIFIER_LABELS, type PttBinding } from '../shared/keys.js'
+import { MODIFIER_LABELS } from '../shared/keys.js'
 import type { BindSpec, BoundSet } from '../shared/hotkeys.js'
 
 const PORTAL_DEST = 'org.freedesktop.portal.Desktop'
 const PORTAL_PATH = '/org/freedesktop/portal/desktop'
 const GS_IFACE = 'org.freedesktop.portal.GlobalShortcuts'
-
-export interface BoundShortcut { onActivated(cb: () => void): void; onDeactivated(cb: () => void): void; close(): Promise<void> }
 
 let tokenCounter = 0
 const nextToken = () => `axistream_${process.pid}_${++tokenCounter}`
@@ -153,17 +151,6 @@ export function createPortalShortcuts(busFactory: () => Promise<MessageBus> = as
           } catch { /* best-effort */ }
           try { bus.disconnect() } catch { /* ignore */ }
         },
-      }
-    },
-
-    /** Transitional single-shortcut wrapper — Task 6 deletes this once
-     *  PttController consumes HotkeyService. */
-    async bind(id: string, description: string, binding: PttBinding): Promise<BoundShortcut> {
-      const set = await self.bindAll([{ id, description, binding }])
-      return {
-        onActivated: (cb) => set.onActivated(() => cb()),
-        onDeactivated: (cb) => set.onDeactivated(() => cb()),
-        close: () => set.close(),
       }
     },
   }

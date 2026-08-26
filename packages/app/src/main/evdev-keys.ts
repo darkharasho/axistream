@@ -1,5 +1,5 @@
 import { readdirSync, openSync, closeSync, readSync, constants } from 'node:fs'
-import { keyName, MODIFIER_CODES, type PttBinding, type PttCaptureResult } from '../shared/keys.js'
+import { keyName, MODIFIER_CODES, type PttCaptureResult } from '../shared/keys.js'
 import type { BindSpec, BoundSet } from '../shared/hotkeys.js'
 
 /** 64-bit input_event: 16 bytes timeval (skipped), u16 type, u16 code,
@@ -25,10 +25,6 @@ export function parseInputEvents(buf: Buffer): { events: InputEvent[]; rest: Buf
   }
   return { events, rest: buf.subarray(off) }
 }
-
-// Same shape as portal-shortcuts' BoundShortcut — structural on purpose so
-// PttController accepts either backend unchanged.
-export interface BoundShortcut { onActivated(cb: () => void): void; onDeactivated(cb: () => void): void; close(): Promise<void> }
 
 export interface EvdevDeps {
   listDevices(): string[]
@@ -163,17 +159,6 @@ export function createEvdevShortcuts(deps: EvdevDeps = realDeps) {
         onActivated: (cb) => { onAct = cb },
         onDeactivated: (cb) => { onDeact = cb },
         close: async () => { for (const s of streams) { try { s.destroy() } catch { /* ignore */ } } },
-      }
-    },
-
-    /** Transitional single-shortcut wrapper — Task 6 deletes this once
-     *  PttController consumes HotkeyService. */
-    async bind(id: string, description: string, binding: PttBinding): Promise<BoundShortcut> {
-      const set = await self.bindAll([{ id, description, binding }])
-      return {
-        onActivated: (cb) => set.onActivated(() => cb()),
-        onDeactivated: (cb) => set.onDeactivated(() => cb()),
-        close: () => set.close(),
       }
     },
   }

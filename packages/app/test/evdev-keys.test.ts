@@ -71,7 +71,7 @@ describe('createEvdevShortcuts', () => {
 
   it('fires activated/deactivated for F18 press/release; ignores repeats and other codes', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -85,7 +85,7 @@ describe('createEvdevShortcuts', () => {
 
   it('reassembles frames split across reads', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     const f = frame(1, KEY_F18, 1)
@@ -97,15 +97,15 @@ describe('createEvdevShortcuts', () => {
 
   it('a device stream error drops that device without throwing; close destroys all streams', async () => {
     const h = harness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])
     h.devs['/dev/input/event3'].emitError(new Error('unplugged'))
     await sc.close()
     expect(h.devs['/dev/input/event7'].stream.destroy).toHaveBeenCalled()
   })
 
-  it('bind rejects when nothing is readable', async () => {
+  it('bindAll rejects when nothing is readable', async () => {
     const h = harness(false)
-    await expect(h.backend.bind('ptt', 'Push to talk', { key: { code: KEY_F18, name: 'F18' }, modifier: null })).rejects.toThrow(/no readable input devices/i)
+    await expect(h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: KEY_F18, name: 'F18' }, modifier: null } }])).rejects.toThrow(/no readable input devices/i)
   })
 })
 
@@ -117,7 +117,7 @@ describe('createEvdevShortcuts key parameter', () => {
       canRead: () => true,
       openStream: (p) => devs[p as keyof typeof devs].stream as never,
     })
-    const sc = await backend.bind('ptt', 'Push to talk', { key: { code: 185, name: 'F15' }, modifier: null })
+    const sc = await backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 185, name: 'F15' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     const dev = devs['/dev/input/event3']
@@ -222,7 +222,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('activates only when the modifier is already held', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: 'ctrl' })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: 'ctrl' } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -238,7 +238,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('modifier release while active deactivates (no sticky transmit)', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: 'ctrl' })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: 'ctrl' } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))
@@ -252,7 +252,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('modifier on one device gates a key on another', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: 'ctrl' })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: 'ctrl' } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     h.devs['/dev/input/event3'].emitData(frame(1, CTRL_L, 1))   // keyboard
@@ -262,7 +262,7 @@ describe('createEvdevShortcuts modifier gating', () => {
 
   it('without a modifier the binding behaves as before', async () => {
     const h = modHarness()
-    const sc = await h.backend.bind('ptt', 'Push to talk', { key: { code: 188, name: 'F18' }, modifier: null })
+    const sc = await h.backend.bindAll([{ id: 'ptt', description: 'Push to talk', binding: { key: { code: 188, name: 'F18' }, modifier: null } }])
     const seq: string[] = []
     sc.onActivated(() => seq.push('down'))
     sc.onDeactivated(() => seq.push('up'))

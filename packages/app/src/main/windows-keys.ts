@@ -8,18 +8,10 @@
 // and wrapped in try/catch so tsc compiles clean and non-win32 hosts never
 // attempt to load it.
 import { createRequire } from 'node:module'
-import { keyName, evdevToVk, MODIFIER_VKS, type PttBinding, type PttModifier } from '../shared/keys.js'
+import { keyName, evdevToVk, MODIFIER_VKS, type PttModifier } from '../shared/keys.js'
 import type { BindSpec, BoundSet } from '../shared/hotkeys.js'
 
 const _require = createRequire(import.meta.url)
-
-// Same structural shape as evdev-keys' BoundShortcut — PttController accepts
-// either backend unchanged.
-export interface BoundShortcut {
-  onActivated(cb: () => void): void
-  onDeactivated(cb: () => void): void
-  close(): Promise<void>
-}
 
 export interface WindowsKeysDeps {
   /** Returns true when the given VK is currently held (high-bit set). */
@@ -132,18 +124,6 @@ export function createWindowsKeys(deps: WindowsKeysDeps = realDeps) {
         onActivated: (cb) => { onAct = cb },
         onDeactivated: (cb) => { onDeact = cb },
         close: async () => { clearInterval(timer) },
-      }
-    },
-
-    async bind(id: string, description: string, binding: PttBinding): Promise<BoundShortcut> {
-      if (evdevToVk(binding.key.code) === null) {
-        throw new Error(`key not supported on Windows: ${keyName(binding.key.code)}`)
-      }
-      const set = await self.bindAll([{ id, description, binding }])
-      return {
-        onActivated: (cb) => set.onActivated(() => cb()),
-        onDeactivated: (cb) => set.onDeactivated(() => cb()),
-        close: () => set.close(),
       }
     },
   }
