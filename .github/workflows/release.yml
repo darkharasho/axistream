@@ -146,7 +146,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish the release
-        run: gh release edit "$GITHUB_REF_NAME" --draft=false
+        # --latest is explicit: any auxiliary release published later (e.g. the
+        # obs-runtime asset host) would otherwise become GitHub's "latest", and
+        # electron-updater resolves the feed from /releases/latest — pointing
+        # every installed client at a tag that has no latest.yml.
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Announce on Discord
