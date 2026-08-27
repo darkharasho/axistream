@@ -10,13 +10,13 @@ Shipped: isolated managed OBS runtimes on Windows and Linux, capture provisionin
 
 ```bash
 npm install
-npm run prepare:obs-runtime -- --platform=linux   # or --platform=windows
+npm run prepare:obs-runtime -- --platform=linux   # or --platform=windows (add --rebuild to build OBS from source)
 npm run dev          # launch the app with the verified owned OBS runtime
 npm test             # all workspace test suites
 npm run dist         # package the current platform; fails if its runtime is absent
 ```
 
-Linux runtime preparation requires Flatpak and `flatpak-builder`; it builds and installs the dedicated `link.axi.AxiStream.OBS` application, never the standard OBS Flatpak. YouTube OAuth needs `AXI_YT_CLIENT_ID`/`AXI_YT_CLIENT_SECRET` in a repo-root `.env` (see `docs/superpowers/plans/2026-06-24-youtube-oauth-golive.md` for the one-time Google Cloud setup).
+Linux runtime preparation downloads the published, hash-pinned `link.axi.AxiStream.OBS` bundle (never the standard OBS Flatpak); `--rebuild` builds it from the pinned recipe instead and needs Flatpak plus `flatpak-builder`. YouTube OAuth needs `AXI_YT_CLIENT_ID`/`AXI_YT_CLIENT_SECRET` in a repo-root `.env` (see `docs/superpowers/plans/2026-06-24-youtube-oauth-golive.md` for the one-time Google Cloud setup).
 
 If an older AxiStream build changed a personal OBS profile, follow [the manual recovery guide](docs/obs-recovery.md). Runtime provenance and redistribution details are in [the OBS redistribution notes](docs/obs-redistribution.md).
 
