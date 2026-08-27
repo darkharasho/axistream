@@ -79,7 +79,42 @@ async function prepareWindows() {
   await downloadVerified(manifest.linux.sourceUrl, join(assetRoot, 'notices', 'obs-studio-32.1.2-source.tar.gz'), manifest.linux.sourceSha256)
 }
 
-async function prepareLinux() {
+// Default Linux path: fetch the exact bundle we published, verified against the
+// manifest pin. flatpak-builder is NOT byte-reproducible (every build yields a
+// different bundle hash and OSTree commit), so rebuilding from the pinned recipe
+// would ship different bytes each release AND cost ~35 minutes of CI. Rebuilding
+// is for bumping OBS or a plugin commit — see rebuildLinux below.
+async function downloadLinux() {
+  if (process.arch !== 'x64') throw new Error('The pinned Linux OBS runtime currently supports x86_64 only')
+  const cfg = manifest.linux
+  const outputDir = join(assetRoot, 'linux')
+  await downloadVerified(cfg.bundleUrl, join(outputDir, cfg.bundleFile), cfg.bundleSha256)
+  // Written from the manifest pins rather than a downloaded descriptor: the
+  // values the runtime enforces must come from the repo, not from the network.
+  const descriptor = {
+    engineId: cfg.engineId,
+    obsVersion: cfg.obsVersion,
+    appId: cfg.appId,
+    bundleSha256: cfg.bundleSha256,
+    expectedRef: `app/${cfg.appId}/x86_64/${cfg.branch}`,
+    expectedCommit: cfg.bundleCommit,
+    expectedOrigin: cfg.expectedOrigin,
+  }
+  writeFileSync(join(outputDir, 'runtime-manifest.json'), `${JSON.stringify(descriptor, null, 2)}\n`)
+  // GPL corresponding source for the bytes we actually ship — the archive
+  // published alongside this bundle, not a fresh checkout of the same commits.
+  await downloadVerified(
+    cfg.correspondingSourceUrl,
+    join(assetRoot, 'notices', cfg.correspondingSourceFile),
+    cfg.correspondingSourceSha256,
+  )
+  await downloadVerified(cfg.sourceUrl, join(assetRoot, 'notices', 'obs-studio-32.1.2-source.tar.gz'), cfg.sourceSha256)
+}
+
+// Rebuild the Linux runtime from the pinned recipe (--rebuild). Run this when
+// bumping OBS or a plugin commit, then upload the new bundle + corresponding
+// source to the obs-runtime asset release and update the manifest pins.
+async function rebuildLinux() {
   if (process.arch !== 'x64') throw new Error('The pinned Linux OBS runtime currently supports x86_64 only')
   const cfg = manifest.linux
   await run('flatpak', ['install', '--user', '--noninteractive', '--or-update', 'flathub', cfg.runtime, cfg.sdk])
@@ -153,7 +188,18 @@ async function prepareLinux() {
   }
   writeFileSync(join(outputDir, 'runtime-manifest.json'), `${JSON.stringify(descriptor, null, 2)}\n`)
   await downloadVerified(cfg.sourceUrl, join(assetRoot, 'notices', 'obs-studio-32.1.2-source.tar.gz'), cfg.sourceSha256)
+  console.log([
+    '[prepare-obs-runtime] rebuilt the Linux bundle. To ship it, upload',
+    `  ${bundle}`,
+    `  ${correspondingSource}`,
+    'to the obs-runtime asset release and set manifest.linux.bundleSha256 =',
+    `  ${descriptor.bundleSha256}`,
+    'and manifest.linux.bundleCommit =',
+    `  ${descriptor.expectedCommit}`,
+  ].join('\n'))
 }
+
+const prepareLinux = process.argv.includes('--rebuild') ? rebuildLinux : downloadLinux
 
 if (requested === 'windows') await prepareWindows()
 else if (requested === 'linux') await prepareLinux()

@@ -11,12 +11,22 @@ AxiStream distributes OBS Studio 32.1.2 as an application-owned runtime. It does
 
 ## Reproducing the payloads
 
-Install Node.js 22 and project dependencies. On Linux, install Flatpak and `flatpak-builder`, configure the Flathub remote, then run:
+Install Node.js 22 and project dependencies, then run:
 
 ```bash
 npm ci
 npm run prepare:obs-runtime -- --platform=linux
 ```
+
+That downloads the published Flatpak bundle and its corresponding-source archive, both verified against the hashes pinned in `resources/obs-runtime/manifest.json`. `flatpak-builder` is not needed: the bundle AxiStream ships is a specific set of bytes, not "whatever the recipe produces today" — flatpak-builder output is not byte-reproducible, so every rebuild yields a different bundle hash and OSTree commit.
+
+To rebuild the bundle from the pinned recipe — required when bumping OBS or a plugin commit — install Flatpak and `flatpak-builder`, configure the Flathub remote, and add `--rebuild`:
+
+```bash
+npm run prepare:obs-runtime -- --platform=linux --rebuild
+```
+
+The rebuild prints the new bundle hash and OSTree commit; upload the bundle and corresponding-source archive to the `obs-runtime-<version>` release and update `manifest.linux.bundleSha256` / `bundleCommit` to match.
 
 To fetch and verify the official Windows portable archive:
 
@@ -25,6 +35,6 @@ npm ci
 npm run prepare:obs-runtime -- --platform=windows
 ```
 
-The Linux build also creates `obs-studio-32.1.2-axistream-corresponding-source.tar.xz` from recursive, commit-verified checkouts of OBS and its bundled PipeWire Audio Capture and Composite Blur plugins. Release automation publishes that archive and the exact Flatpak recipe alongside AxiStream binaries. Generated runtime payloads are intentionally excluded from Git because of their size.
+The rebuild also creates `obs-studio-32.1.2-axistream-corresponding-source.tar.xz` from recursive, commit-verified checkouts of OBS and its bundled PipeWire Audio Capture and Composite Blur plugins; that archive is published next to the bundle it corresponds to, so releases ship the source for the exact bytes they contain. Release automation publishes that archive and the exact Flatpak recipe alongside AxiStream binaries. Generated runtime payloads are intentionally excluded from Git because of their size.
 
 OBS Studio is licensed under GPL-2.0-or-later. Upstream copyright and license files remain authoritative; the release's corresponding-source archive contains the source and license material used for the bundled OBS build.

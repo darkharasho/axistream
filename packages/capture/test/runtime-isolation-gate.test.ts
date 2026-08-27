@@ -23,6 +23,12 @@ describe('owned OBS runtime manifest', () => {
       engineId: 'axistream-obs-linux-32.1.2', obsVersion: '32.1.2', appId: 'link.axi.AxiStream.OBS',
       expectedOrigin: 'obs-origin',
       sourceSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      // The shipped Linux runtime is pinned as BYTES, not as a recipe: flatpak-builder
+      // is not byte-reproducible, so a rebuild-per-release would ship a different
+      // bundle (and OSTree commit) every time.
+      bundleSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      bundleCommit: expect.stringMatching(/^[a-f0-9]{64}$/),
+      correspondingSourceSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     }))
     expect(JSON.stringify(manifest)).not.toMatch(/\/latest\b|releases\/latest/i)
     const flatpak = readFileSync(join(root, 'packaging/flatpak/link.axi.AxiStream.OBS.json'), 'utf8')
@@ -55,6 +61,19 @@ describe('static personal-OBS isolation gate', () => {
     expect(main).toContain("process.argv.includes('--smoke-runtime')")
     expect(main).toContain('SMOKE OK owned runtime')
     expect(main).not.toContain('The dedicated AxiStream OBS Flatpak runtime is not packaged in this build')
+  })
+
+  it('prepares the Linux runtime by download, keeping the source rebuild behind --rebuild', () => {
+    const prepare = readFileSync(join(root, 'scripts/prepare-obs-runtime.mjs'), 'utf8')
+    expect(prepare).toContain("process.argv.includes('--rebuild') ? rebuildLinux : downloadLinux")
+    // The values the runtime enforces are written from the repo's pins, never from
+    // a descriptor fetched over the network alongside the bundle.
+    const download = prepare.slice(prepare.indexOf('async function downloadLinux'), prepare.indexOf('async function rebuildLinux'))
+    expect(download).toContain('expectedCommit: cfg.bundleCommit')
+    expect(download).not.toContain('flatpak-builder')
+    // Compiling OBS in the release job is what this replaces.
+    const release = readFileSync(join(root, '.github/workflows/release.yml'), 'utf8')
+    expect(release).not.toContain('flatpak-builder')
   })
 
   it('makes CI and release builds prepare owned assets without installing personal OBS', () => {
