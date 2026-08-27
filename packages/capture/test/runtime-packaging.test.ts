@@ -60,3 +60,25 @@ describe('redistribution inputs', () => {
     expect(flatpakManifest).toContain('fb4d98bf88fae5fc85cb11fc57f7c5e309282194')
   })
 })
+
+describe('packaged runtime assets', () => {
+  const root = resolve(import.meta.dirname, '../../..')
+
+  it('ships manifest.json beside the Windows payload — main reads the pinned hash from it at runtime', () => {
+    // Packaged main resolves the manifest at <resourcesPath>/obs-runtime/manifest.json
+    // and fails closed (all-zero hash → "failed integrity verification") when it is
+    // absent, so the file MUST be copied next to the platform payload.
+    const main = readFileSync(join(root, 'packages/app/src/main/index.ts'), 'utf8')
+    expect(main).toContain("join(runtimeAssetRoot, 'manifest.json')")
+
+    const builder = readFileSync(join(root, 'packages/app/electron-builder.yml'), 'utf8')
+    const win = builder.slice(builder.indexOf('\nwin:'), builder.indexOf('\nmac:'))
+    expect(win).toContain('../../resources/obs-runtime/manifest.json')
+    expect(win).toContain('to: obs-runtime/manifest.json')
+  })
+
+  it('promotes app releases as GitHub latest — electron-updater resolves the feed from /releases/latest', () => {
+    const release = readFileSync(join(root, '.github/workflows/release.yml'), 'utf8')
+    expect(release).toContain('--draft=false --latest')
+  })
+})

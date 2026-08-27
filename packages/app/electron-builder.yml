@@ -29,6 +29,11 @@ win:
   icon: build/icon.ico
   artifactName: ${productName}-Setup-${version}.${ext}
   extraResources:
+    # main reads the pinned archive hash from manifest.json at <resourcesPath>/
+    # obs-runtime/manifest.json and fails closed without it — ship it alongside
+    # the payload, never a second copy of the hash in code.
+    - from: ../../resources/obs-runtime/manifest.json
+      to: obs-runtime/manifest.json
     - from: ../../resources/obs-runtime/windows
       to: obs-runtime/windows
 mac:
