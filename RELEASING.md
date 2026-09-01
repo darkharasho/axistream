@@ -19,10 +19,20 @@ node scripts/release-notes.mjs vX.Y.Z
 
 ## Cutting a release
 
-1. Bump `packages/app/package.json`'s `version` and commit it. (The build jobs also
-   sync the version from the tag, but the committed value is what a dev build and the
-   About panel report.)
-2. Add the `RELEASE_NOTES.md` section and commit it.
+1. Bump `packages/app/package.json`'s `version`, then sync the lockfile:
+
+   ```sh
+   npm install --package-lock-only
+   ```
+
+   (The build jobs also sync the version from the tag, but the committed value is what
+   a dev build and the About panel report.) `package-lock.json` records the workspace
+   version too, and `npm ci` in the `test` job installs from it — left unsynced it
+   drifts silently, as it did from 1.0.0 through 1.0.3. Check the diff is only the
+   version line: dependency churn here means something else changed and belongs in its
+   own commit.
+2. Add the `RELEASE_NOTES.md` section, and commit it together with the two version
+   files as `chore: release X.Y.Z`.
 3. Tag and push:
 
    ```sh
