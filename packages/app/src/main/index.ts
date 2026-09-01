@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSyn
 import { homedir, release } from 'node:os'
 import { execFile } from 'node:child_process'
 
-import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readGw2Identity, windowsMumbleDeps, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
+import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readGw2Identity, windowsMumbleDeps, stopVirtualCam as stopVirtualCamAndWait, startVirtualCam as startVirtualCamConfirmed, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -592,12 +592,12 @@ if (primary) app.whenReady().then(async () => {
   // Tracked in virtualCamActive so applyResolutionLive knows whether it needs
   // to bracket SetVideoSettings.
   let virtualCamActive = false
-  // Diagnostic only: the virtual cam is the in-app preview's entire feed, and on
-  // Windows its DirectShow device keeps serving OBS's placeholder frame when the
-  // output is stopped — so a failed (re)start looks identical to a working one
-  // from the renderer's side and used to leave no trace at all. Log the call
-  // outcome and read GetVirtualCamStatus back so the log says whether the output
-  // actually came up. Still best-effort: never throws, never blocks the caller.
+  // Diagnostic only, and only for the StartStream probe below: the (re)start
+  // path now confirms itself via startVirtualCamConfirmed. The virtual cam is
+  // the in-app preview's entire feed and its device node keeps serving OBS's
+  // placeholder frame when the output is stopped, so a dead cam looks identical
+  // to a healthy one from the renderer's side — the log is the only witness.
+  // Best-effort: never throws, never blocks the caller.
   const verifyVirtualCam = async (why: string): Promise<void> => {
     await new Promise((r) => setTimeout(r, 600))
     try {
@@ -608,13 +608,20 @@ if (primary) app.whenReady().then(async () => {
       console.warn(`virtualcam: status check failed after ${why}: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
+  const camDeps = {
+    call: (request: string) => sidecar.client().call(request as never),
+    sleep: (ms: number) => new Promise<void>((r) => { setTimeout(r, ms) }),
+  }
+  // Fire-and-forget by design — nothing here may delay boot or go-live — but
+  // the retry inside startVirtualCamConfirmed is what makes it survive a start
+  // that lands while OBS is still releasing the previous run.
   const startVirtualCam = (why = 'start') => {
     virtualCamActive = true
     try {
-      void sidecar.client().call('StartVirtualCam')
-        .then(() => console.log(`virtualcam: StartVirtualCam ok (${why})`))
-        .catch((e) => console.warn(`virtualcam: StartVirtualCam failed (${why}): ${e instanceof Error ? e.message : String(e)}`))
-        .finally(() => { void verifyVirtualCam(why) })
+      void startVirtualCamConfirmed(camDeps).then((ok) => {
+        if (ok) console.log(`virtualcam: active after ${why}`)
+        else console.warn(`virtualcam: NOT active after ${why} (preview will show the OBS placeholder)`)
+      })
     } catch { console.warn(`virtualcam: sidecar not ready for StartVirtualCam (${why})`) }
     push(CH.evtCaptureChanged, null)
   }
@@ -656,8 +663,13 @@ if (primary) app.whenReady().then(async () => {
   const applyResolutionLive = async (why = 'applyResolutionLive'): Promise<CaptureMeta> => {
     if (!virtualCamActive) { console.log(`virtualcam: ${why} ran with the cam already stopped; no bracket`); return applyResolution() }
     console.log(`virtualcam: ${why} bracket - stopping cam for SetVideoSettings`)
-    try { await sidecar.client().call('StopVirtualCam'); console.log('virtualcam: StopVirtualCam ok') }
-    catch (e) { console.warn(`virtualcam: StopVirtualCam failed: ${e instanceof Error ? e.message : String(e)}`) }
+    // Wait for the output to actually release. StopVirtualCam is acknowledged
+    // long before OBS finishes tearing down, and obs_reset_video is refused
+    // while any output is still active — so without this the SetVideoSettings
+    // below silently failed and applyResolution's readback returned the old
+    // values, reporting a resolution change that never happened.
+    if (await stopVirtualCamAndWait(camDeps)) console.log('virtualcam: cam released; safe to reset video')
+    else console.warn('virtualcam: cam did not release in time; SetVideoSettings may be refused')
     virtualCamActive = false
     try {
       return await applyResolution()
