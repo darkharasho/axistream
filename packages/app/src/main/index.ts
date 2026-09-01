@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSyn
 import { homedir, release } from 'node:os'
 import { execFile } from 'node:child_process'
 
-import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readIdentity, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
+import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readGw2Identity, windowsMumbleDeps, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -74,10 +74,10 @@ const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
 const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage, recordDir: s.recordDir })
 let state: AppState = { ...INITIAL_STATE }
 
-// MumbleLink reader deps — /proc/<pid>/mem reads the live address space, so
-// it works for Proton's deleted-tmpfile-backed shared block (no native addon).
-// /proc is Linux-only; the win32 arms return empty/null so readIdentity
-// degrades to "GW2 not found" instead of leaning on downstream .catch()es.
+// Linux MumbleLink reader deps — /proc/<pid>/mem reads the live address space,
+// so it works for Proton's deleted-tmpfile-backed shared block (no native
+// addon). /proc is Linux-only; the non-Linux arms return empty/null so this
+// stays inert on the platforms readGw2Identity routes elsewhere.
 const mumbleDeps: MumbleDeps = {
   readProc: (p) => readFileSync(p, 'utf8'),
   listPids: process.platform === 'linux'
@@ -99,7 +99,7 @@ const fetchJson = async (url: string) => {
 }
 const realFetch: FetchLike = (url, init) => fetch(url, init).then((r) => ({ ok: r.ok, status: r.status }))
 const resolveGw2 = async (): Promise<{ character: string; class: string; map: string; race: string; team: string } | undefined> => {
-  const id = readIdentity(mumbleDeps)
+  const id = readGw2Identity({ platform: process.platform, linux: mumbleDeps, windows: windowsMumbleDeps })
   if (!id) return undefined
   const [spec, map, team] = await Promise.all([specName(id.spec, fetchJson), mapName(id.mapId, fetchJson), teamColorName(id.teamColorId, fetchJson)])
   return { character: id.character, class: spec || professionName(id.profession), map, race: raceName(id.race), team }

@@ -12,6 +12,13 @@ const IDENTITY_OFFSET = 592
 const IDENTITY_LEN = 512
 const TICK_OFFSET = 4
 
+/** Size of Mumble's `LinkedMem` struct: uiVersion(4) uiTick(4) avatar
+ *  pos/front/top(36) name(512) camera pos/front/top(36) identity(512)
+ *  context_len(4) context(256) description(4096). Identity therefore starts at
+ *  592, which is where IDENTITY_OFFSET above comes from — the Linux reader's
+ *  offset is structural, not tuned to Proton. */
+export const LINKED_MEM_SIZE = 5460
+
 export function findGw2Pid(d: MumbleDeps): number | null {
   for (const pid of d.listPids()) {
     try { if (d.readProc(`/proc/${pid}/comm`).trim() === GW2_COMM) return pid }
@@ -43,6 +50,15 @@ function parseIdentityBuf(buf: Buffer): MumbleIdentity | null {
       teamColorId: Number(o.team_color_id) || 0,
     }
   } catch { return null }
+}
+
+/** Decode the identity out of a whole `LinkedMem` block. This is the one
+ *  fallible step both platforms share — Linux reaches the block through
+ *  /proc/<pid>/mem, Windows through a named file mapping, but the UTF-16 JSON
+ *  in the middle is identical and this is where it can go wrong. */
+export function identityFromBlock(block: Buffer): MumbleIdentity | null {
+  if (block.length < IDENTITY_OFFSET + IDENTITY_LEN) return null
+  return parseIdentityBuf(block.subarray(IDENTITY_OFFSET, IDENTITY_OFFSET + IDENTITY_LEN))
 }
 
 /** Read GW2's MumbleLink identity from shared memory. Best-effort — returns
