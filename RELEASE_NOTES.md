@@ -1,5 +1,15 @@
 # Release Notes
 
+## Version v1.0.3 — August 31, 2026
+
+The disappearing preview is fixed.
+
+### The preview no longer dies when you go live
+The report we shipped logging for in 1.0.2 turned out not to be a Windows problem at all — it happens on Linux too, just less often. When you go live, AxiStream briefly stops OBS's virtual camera (which is what feeds the in-app preview) so it can apply your resolution and frame rate, then starts it again. OBS answers the stop request before it has actually finished shutting the camera down, and AxiStream wasn't waiting for that to finish — so the restart landed too early, was refused, and the preview stayed blank for the rest of the session while the stream itself carried on fine. AxiStream now waits for the camera to genuinely release, and retries the restart if it loses the race.
+
+### Your quality settings actually apply now
+Same root cause, second casualty. Applying a resolution or frame rate change while the preview is running was being refused by OBS for the same reason, and AxiStream read the settings back afterwards and reported the old values as if they were new — so the change looked like it worked and didn't. If you changed resolution, frame rate or bitrate in a recent session and the stream didn't match, this is why. Worth re-checking your Quality settings after updating.
+
 ## Version v1.0.2 — August 31, 2026
 
 Windows fixes, and a way to send us a bug report that we can actually act on.
