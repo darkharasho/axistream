@@ -52,6 +52,7 @@ export interface IpcHandlers {
   stopRecording(): Promise<RecordStopResult>
   chooseRecordDir(): Promise<ChooseDirResult>
   openRecording(path: string): Promise<OpenResult>
+  revealFile(path: string): Promise<OpenResult>
   dismissSummary(): Promise<void>
   setWebcam(p: Partial<WebcamConfig>): Promise<void>
   getWebcamDevices(): Promise<AudioDevice[]>
@@ -117,6 +118,7 @@ export function registerIpc(d: IpcDeps): void {
   ipcMain.handle(CH.stopRecording, () => handlers.stopRecording())
   ipcMain.handle(CH.chooseRecordDir, () => handlers.chooseRecordDir())
   ipcMain.handle(CH.openRecording, (_e: unknown, path: string) => handlers.openRecording(path))
+  ipcMain.handle(CH.revealFile, (_e: unknown, path: string) => handlers.revealFile(path))
   ipcMain.handle(CH.dismissSummary, () => handlers.dismissSummary())
   ipcMain.handle(CH.setWebcam, (_e: unknown, p: Partial<WebcamConfig>) => handlers.setWebcam(p))
   ipcMain.handle(CH.getWebcamDevices, () => handlers.getWebcamDevices())

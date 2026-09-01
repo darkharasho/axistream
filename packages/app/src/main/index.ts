@@ -592,9 +592,30 @@ if (primary) app.whenReady().then(async () => {
   // Tracked in virtualCamActive so applyResolutionLive knows whether it needs
   // to bracket SetVideoSettings.
   let virtualCamActive = false
-  const startVirtualCam = () => {
+  // Diagnostic only: the virtual cam is the in-app preview's entire feed, and on
+  // Windows its DirectShow device keeps serving OBS's placeholder frame when the
+  // output is stopped — so a failed (re)start looks identical to a working one
+  // from the renderer's side and used to leave no trace at all. Log the call
+  // outcome and read GetVirtualCamStatus back so the log says whether the output
+  // actually came up. Still best-effort: never throws, never blocks the caller.
+  const verifyVirtualCam = async (why: string): Promise<void> => {
+    await new Promise((r) => setTimeout(r, 600))
+    try {
+      const st = await sidecar.client().call('GetVirtualCamStatus') as { outputActive?: boolean }
+      if (st?.outputActive) console.log(`virtualcam: active after ${why}`)
+      else console.warn(`virtualcam: NOT active after ${why} (preview will show the OBS placeholder)`)
+    } catch (e) {
+      console.warn(`virtualcam: status check failed after ${why}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  const startVirtualCam = (why = 'start') => {
     virtualCamActive = true
-    try { void sidecar.client().call('StartVirtualCam').catch(() => {}) } catch { /* sidecar not ready */ }
+    try {
+      void sidecar.client().call('StartVirtualCam')
+        .then(() => console.log(`virtualcam: StartVirtualCam ok (${why})`))
+        .catch((e) => console.warn(`virtualcam: StartVirtualCam failed (${why}): ${e instanceof Error ? e.message : String(e)}`))
+        .finally(() => { void verifyVirtualCam(why) })
+    } catch { console.warn(`virtualcam: sidecar not ready for StartVirtualCam (${why})`) }
     push(CH.evtCaptureChanged, null)
   }
 
@@ -632,14 +653,16 @@ if (primary) app.whenReady().then(async () => {
   // live, so they go through this instead: stop the cam, apply, restart it.
   // Best-effort throughout — a stop/restart failure must never throw out of
   // goLive or setQuality. The preview blinks on a resolution change; accepted.
-  const applyResolutionLive = async (): Promise<CaptureMeta> => {
-    if (!virtualCamActive) return applyResolution()
-    try { await sidecar.client().call('StopVirtualCam') } catch { /* best-effort */ }
+  const applyResolutionLive = async (why = 'applyResolutionLive'): Promise<CaptureMeta> => {
+    if (!virtualCamActive) { console.log(`virtualcam: ${why} ran with the cam already stopped; no bracket`); return applyResolution() }
+    console.log(`virtualcam: ${why} bracket - stopping cam for SetVideoSettings`)
+    try { await sidecar.client().call('StopVirtualCam'); console.log('virtualcam: StopVirtualCam ok') }
+    catch (e) { console.warn(`virtualcam: StopVirtualCam failed: ${e instanceof Error ? e.message : String(e)}`) }
     virtualCamActive = false
     try {
       return await applyResolution()
     } finally {
-      startVirtualCam()
+      startVirtualCam(`${why} bracket restart`)
     }
   }
 
@@ -680,7 +703,7 @@ if (primary) app.whenReady().then(async () => {
         // than flag-guarded: it is idempotent, best-effort, and cannot
         // desync the way a pending-change flag can.
         if (state.capture) {
-          const capture_ = await applyResolutionLive()
+          const capture_ = await applyResolutionLive('goLive')
           // Bounded retries: applyEncoderSettings otherwise falls back to
           // callReady's 25 tries x 800ms, and a websocket-level failure looks
           // retryable, so four SetProfileParameter calls could wedge
@@ -697,6 +720,11 @@ if (primary) app.whenReady().then(async () => {
         pendingOAuthBump = true
         await stream.goLive(session.ingest, {
           onIngestActive: async () => {
+            // Diagnostic: detached (this callback is awaited before the LIVE
+            // transition) — records whether StartStream itself took the virtual
+            // cam down, which is what the Windows "preview dies at go-live"
+            // report can't otherwise distinguish from a failed bracket restart.
+            void verifyVirtualCam('StartStream')
             liveWatchStop = false
             setState({ phase: 'STARTING_ON_YOUTUBE', liveUnconfirmed: false })
             const confirmed = await pollForLive({
@@ -1161,6 +1189,25 @@ if (primary) app.whenReady().then(async () => {
       return { ok: true, dir }
     },
 
+    // Reveal (never open) — the diagnostics bundle is a zip we want the user to
+    // attach to a report, not something an archive manager should unpack for them.
+    revealFile: async (path: string) => {
+      try {
+        await fsPromises.access(path, fsConstants.R_OK)
+      } catch {
+        toast(win, { kind: 'error', message: 'File not found', detail: `${path} is no longer on disk.` })
+        return { ok: false, error: 'that file is no longer on disk' }
+      }
+      try {
+        shell.showItemInFolder(path)
+        return { ok: true }
+      } catch (e) {
+        const error = e instanceof Error ? e.message : String(e)
+        toast(win, { kind: 'error', message: 'Could not open the folder', detail: error })
+        return { ok: false, error }
+      }
+    },
+
     openRecording: async (path: string) => {
       // A recording the user moved or deleted takes the reveal path below,
       // where showItemInFolder silently no-ops — so without this check the
@@ -1211,7 +1258,7 @@ if (primary) app.whenReady().then(async () => {
       // isStreamingPhase is shared with the renderer's Quality panel so the
       // two can never disagree about what counts as live.
       if (!isStreamingPhase(state.phase) && state.capture) {
-        const capture_ = await applyResolutionLive()
+        const capture_ = await applyResolutionLive('setQuality')
         await applyEncoderPreset(capture_.outputHeight, capture_.fps)
         setState({ capture: capture_ })
       }
