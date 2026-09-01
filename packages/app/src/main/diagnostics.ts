@@ -94,6 +94,22 @@ export async function collectDiagnostics(d: DiagnosticsDeps): Promise<Diagnostic
         }
         return scrubJson(scenes)
       })
+      // Output state at collection time. The in-app preview is fed by OBS's
+      // virtual camera, so "was the virtual cam actually running?" is the first
+      // question any preview report needs answered — and it is invisible from
+      // the renderer, which sees a placeholder frame either way.
+      await attempt('obs/outputs.json', async () => {
+        const one = async (req: string): Promise<unknown> => {
+          try { return await client.call(req) }
+          catch (e) { return { error: e instanceof Error ? e.message : String(e) } }
+        }
+        return scrubJson({
+          virtualCam: await one('GetVirtualCamStatus'),
+          video: await one('GetVideoSettings'),
+          stream: await one('GetStreamStatus'),
+          record: await one('GetRecordStatus'),
+        })
+      })
       await attempt('obs/inputs.json', async () => {
         const list = await client.call('GetInputList') as { inputs: Array<{ inputName: string }> }
         const inputs = []

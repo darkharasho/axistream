@@ -61,6 +61,7 @@ const api: AxiApi = {
   stopRecording: () => ipcRenderer.invoke(CH.stopRecording) as Promise<RecordStopResult>,
   chooseRecordDir: () => ipcRenderer.invoke(CH.chooseRecordDir) as Promise<ChooseDirResult>,
   openRecording: (path: string) => ipcRenderer.invoke(CH.openRecording, path) as Promise<OpenResult>,
+  revealFile: (path: string) => ipcRenderer.invoke(CH.revealFile, path) as Promise<OpenResult>,
   dismissSummary: () => ipcRenderer.invoke(CH.dismissSummary) as Promise<void>,
   setWebcam: (p) => ipcRenderer.invoke(CH.setWebcam, p) as Promise<void>,
   setQuality: (p) => ipcRenderer.invoke(CH.setQuality, p) as Promise<void>,

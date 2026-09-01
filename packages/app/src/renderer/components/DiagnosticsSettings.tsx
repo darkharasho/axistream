@@ -3,12 +3,26 @@ import type { AxiApi } from '../../shared/state.js'
 
 export function DiagnosticsSettings({ axi }: { axi: AxiApi }) {
   const [busy, setBusy] = useState(false)
+  // Keep the last bundle's path so the user has something to act on after the
+  // toast fades — a path they can't find is a bundle they can't send.
+  const [path, setPath] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const run = async (): Promise<void> => {
     setBusy(true)
-    // The result is reported through the toast channel from main, so there is
-    // nothing to render here beyond the busy state.
-    try { await axi.exportDiagnostics() } finally { setBusy(false) }
+    setCopied(false)
+    // Failures are reported through the toast channel from main; here we only
+    // need the path of a bundle that actually got written.
+    try {
+      const r = await axi.exportDiagnostics()
+      setPath(r.ok && r.path ? r.path : null)
+    } finally { setBusy(false) }
+  }
+
+  const copy = async (): Promise<void> => {
+    if (!path) return
+    const ok = await axi.copyToClipboard(path)
+    setCopied(ok)
   }
 
   return (
@@ -21,6 +35,16 @@ export function DiagnosticsSettings({ axi }: { axi: AxiApi }) {
       <button className="btn ghost" disabled={busy} onClick={() => void run()}>
         {busy ? 'Collecting…' : 'Export diagnostics'}
       </button>
+      {path && (
+        <>
+          <p className="muted">Bundle saved — attach this file to your report.</p>
+          <p className="mono summary-path">{path}</p>
+          <div className="yt-account">
+            <button className="btn ghost sm" onClick={() => void axi.revealFile(path)}>Show in folder</button>
+            <button className="btn ghost sm" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy path'}</button>
+          </div>
+        </>
+      )}
     </>
   )
 }

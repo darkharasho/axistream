@@ -39,6 +39,26 @@ function formatTime(d: Date): string {
   return `${h}:${m} ${ampm}`
 }
 
+// Characters people use to fence template variables off from each other.
+const SEPARATORS = new Set(['-', '\u2013', '\u2014', '|', '\u00b7', '/'])
+const isSeparator = (tok: string) => [...tok].every((c) => SEPARATORS.has(c))
+
+/** Clean up the litter an unresolved variable leaves behind: with GW2 closed,
+ *  `{{date}} WvW Raid - {{character}} - {{class}}` renders as
+ *  `2026-08-31 WvW Raid -  - `. Operates on the finished string rather than
+ *  the template so it needs no per-variable bookkeeping — a separator with
+ *  content on both sides (`Willbender - WvW`) is left alone. */
+export function tidySeparators(s: string): string {
+  const out: string[] = []
+  for (const tok of s.split(/\s+/)) {
+    if (!tok) continue
+    if (isSeparator(tok) && (out.length === 0 || isSeparator(out[out.length - 1]))) continue
+    out.push(tok)
+  }
+  while (out.length && isSeparator(out[out.length - 1])) out.pop()
+  return out.join(' ')
+}
+
 export function renderTitle(template: string, ctx: TemplateContext): string {
   const vars: Record<string, () => string> = {
     date: () => formatDate(ctx.now, ctx.dateFormat),
@@ -52,8 +72,14 @@ export function renderTitle(template: string, ctx: TemplateContext): string {
     race: () => ctx.gw2?.race ?? '',
     team: () => ctx.gw2?.team ?? '',
   }
-  return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => {
+  // Only tidy when something actually came back empty — otherwise a title the
+  // user spaced deliberately gets rewritten for no reason.
+  let dropped = false
+  const rendered = template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => {
     const fn = vars[name]
-    return fn ? fn() : ''
+    const value = fn ? fn() : ''
+    if (!value) dropped = true
+    return value
   })
+  return dropped ? tidySeparators(rendered) : rendered
 }

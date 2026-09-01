@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderTitle, formatDate } from '../src/main/TitleTemplate.js'
+import { renderTitle, formatDate, tidySeparators } from '../src/main/TitleTemplate.js'
 
 const at = (iso: string) => new Date(iso)
 
@@ -26,7 +26,8 @@ describe('renderTitle', () => {
   })
 
   it('renders unknown variables as empty string', () => {
-    expect(renderTitle('a {{bogus}} b', ctx)).toBe('a  b')
+    // The hole closes up rather than leaving a double space — see tidySeparators.
+    expect(renderTitle('a {{bogus}} b', ctx)).toBe('a b')
   })
 
   it('respects configured date format', () => {
@@ -46,5 +47,35 @@ describe('gw2 variables', () => {
   })
   it('existing variables still work alongside', () => {
     expect(renderTitle('{{date}} {{class}}', ctx)).toBe('2026-07-06 Mesmer')
+  })
+})
+
+// GW2 closed at go-live used to publish "2026-08-31 WvW Raid -  -  -".
+describe('tidySeparators', () => {
+  it('drops trailing and doubled separators', () => {
+    expect(tidySeparators('2026-08-31 WvW Raid -  -  -')).toBe('2026-08-31 WvW Raid')
+    expect(tidySeparators('A - - B')).toBe('A - B')
+    expect(tidySeparators('| A')).toBe('A')
+  })
+
+  it('leaves separators that have content on both sides', () => {
+    expect(tidySeparators('Willbender - WvW')).toBe('Willbender - WvW')
+    expect(tidySeparators('2026-08-31 · Raid / Night')).toBe('2026-08-31 · Raid / Night')
+  })
+})
+
+describe('renderTitle with unresolved gw2 variables', () => {
+  const ctx = { now: new Date('2026-08-31T20:00:00'), counter: 1, dateFormat: 'YYYY-MM-DD' }
+
+  it('closes the gaps a closed GW2 leaves', () => {
+    expect(renderTitle('{{date}} WvW Raid - {{character}} - {{class}} - {{map}}', ctx))
+      .toBe('2026-08-31 WvW Raid')
+    expect(renderTitle('{{character}} - WvW - {{map}}', ctx)).toBe('WvW')
+  })
+
+  it('leaves a fully resolved title exactly as written', () => {
+    const gw2 = { character: 'Not Haro', class: 'Mesmer', map: 'Lions Arch', race: 'Sylvari', team: 'Red' }
+    expect(renderTitle('{{date}} WvW Raid -  {{character}}', { ...ctx, gw2 }))
+      .toBe('2026-08-31 WvW Raid -  Not Haro')
   })
 })

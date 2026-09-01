@@ -310,6 +310,7 @@ export const CH = {
   stopRecording: 'axi:stopRecording',
   chooseRecordDir: 'axi:chooseRecordDir',
   openRecording: 'axi:openRecording',
+  revealFile: 'axi:revealFile',
   dismissSummary: 'axi:dismissSummary',
   setWebcam: 'axi:setWebcam',
   getWebcamDevices: 'axi:getWebcamDevices',
@@ -370,6 +371,7 @@ export interface AxiApi {
   stopRecording(): Promise<RecordStopResult>
   chooseRecordDir(): Promise<ChooseDirResult>
   openRecording(path: string): Promise<OpenResult>
+  revealFile(path: string): Promise<OpenResult>
   dismissSummary(): Promise<void>
   setWebcam(p: Partial<WebcamConfig>): Promise<void>
   getWebcamDevices(): Promise<AudioDevice[]>
