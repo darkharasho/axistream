@@ -1,5 +1,16 @@
 # Release Notes
 
+## Version v1.0.4 — September 2, 2026
+
+An audio fix for anyone capturing specific apps.
+
+### Per-app audio no longer leaks your whole desktop
+If you picked specific applications to capture — Discord and Guild Wars 2, say — the stream could end up carrying those apps *plus* everything else coming out of your speakers: notifications, music, a video in another window. It started sounding right and went wrong later in the session, which is what made it hard to pin down.
+
+The trigger was anything that rebuilds the capture: changing your capture source, or AxiStream repairing it after the game window went away. OBS reloads its saved setup at that point, and that saved setup always has desktop audio switched on. AxiStream turned it back off when it started up, but not after a rebuild — so the desktop mix quietly came back. Your microphone selection was reset to the system default the same way.
+
+All of that is now reapplied every time the capture is rebuilt. If you have been streaming with app-specific audio, this is worth updating for.
+
 ## Version v1.0.3 — August 31, 2026
 
 The disappearing preview is fixed.
