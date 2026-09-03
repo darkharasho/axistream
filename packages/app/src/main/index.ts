@@ -327,6 +327,20 @@ if (primary) app.whenReady().then(async () => {
     }
   }
   const gameAudio = new GameAudioController({ client: () => sidecar.client() })
+  // The single re-application point for ALL audio after an OBS restart or a
+  // scene-collection rebuild. The persisted collection holds 'AxiStream
+  // Desktop Audio' unmuted (ensureAudioInputs creates it that way, OBS saves
+  // the collection during startup, and we kill OBS on exit so it never
+  // re-saves the mute we applied), so every fresh OBS comes up with the whole
+  // desktop mix hot. Reapplying only the game-audio input — which is what the
+  // rebuild handlers used to do — left a "hear Discord + GW2" user streaming
+  // Discord + GW2 *plus* the entire desktop, mic device reset to default.
+  const applyAudioSettings = async () => {
+    await ensureAudioInputs(sidecar.client())
+    const a = settings.load()
+    await audio.applySettings({ desktopEnabled: a.desktopEnabled, desktopDevice: a.desktopDevice, micEnabled: a.micEnabled, micDevice: a.micDevice })
+    if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(a)
+  }
   const recorder = new RecordController({ client: () => sidecar.client() })
   const summaryAcc = createSummaryAccumulator()
   // A recording that finished DURING the current stream. recording.lastPath is
@@ -692,7 +706,7 @@ if (primary) app.whenReady().then(async () => {
       // report an empty registry.
       hotkeys: { bindings: bindingsNow(), mode: state.hotkeys.mode, error: state.hotkeys.error },
     }),
-    provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()); meter.start() } },
+    provision: async (target?: CaptureTargetOption) => { const ok = await capture.provision(target); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, captureTargets: [], masks }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); await applyAudioSettings(); meter.start() } },
     getCaptureTargets: async () => capture.captureTargets(),
     cancelCaptureSelection: async () => capture.cancelSelection(),
     goLive: async (titleOverride?: string) => {
@@ -799,7 +813,7 @@ if (primary) app.whenReady().then(async () => {
       // it is set after.
       setState({ phase: 'ENDED', summary })
     },
-    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) } },
+    repairCapture: async () => { setState({ phase: 'SETTING_UP' }); const ok = await capture.repair(); if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); await applyAudioSettings() } },
     switchSource: async () => {
       // Re-pick the captured screen/window. Under headless cage the desktop
       // portal picker only surfaces via a full capture rebuild (same flow as
@@ -811,7 +825,7 @@ if (primary) app.whenReady().then(async () => {
       // PreviewVideo re-acquires the virtual cam when it drops.
       setState({ phase: 'AWAITING_APPROVAL' }) // show the spinner/overlay immediately
       const ok = await capture.repair()
-      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(settings.load()) }
+      if (ok) { const capture_ = await applyResolution(); await applyEncoderPreset(capture_.outputHeight, capture_.fps); const masks = settings.load().masks; setState({ phase: goReadyPhase(), capture: capture_, masks, summary: null }); startVirtualCam(); pushFitted(); await applyMasksRespectingVisibility(); await applyWebcam(); await applyAudioSettings() }
     },
     connectYouTube: async () => {
       await auth.connect()
@@ -1466,7 +1480,7 @@ if (primary) app.whenReady().then(async () => {
       try { kinds = ((await sidecar.client().call('GetInputKindList')) as { inputKinds?: string[] }).inputKinds ?? [] } catch { /* best-effort */ }
       console.info('[game-audio] input kinds', kinds)
       setState({ gameAudioPlugin: { status: deriveGameAudioStatus(flatpakState, kinds), error: null } })
-      if (state.gameAudioPlugin.status === 'ready') await gameAudio.ensure(a)
+      await applyAudioSettings()
       let filterKinds: string[] = []
       try { filterKinds = ((await sidecar.client().call('GetSourceFilterKindList')) as { sourceFilterKinds?: string[] }).sourceFilterKinds ?? [] } catch { /* best-effort */ }
       console.info('[blur] filter kinds', filterKinds)
