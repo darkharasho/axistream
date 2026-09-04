@@ -159,38 +159,55 @@ describe('QualitySettings', () => {
     expect(screen.getByLabelText(/bitrate \(kbps\)/i)).toHaveValue(5000)
   })
 
-  it('lists every OBS encoder row', () => {
+  it('lists every OBS encoder row', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    expect(screen.getByLabelText('Encoder')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('Encoder'))
+
     expect(screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ })).toBeInTheDocument()
   })
 
-  it('labels Auto with what auto would resolve to, not the applied preset', () => {
+  it('labels Auto with what auto would resolve to, not the applied preset', async () => {
     // The whole point of this feature is that the UI never claims an encoder
     // that is not the one that would actually run. state.encoder is the label
     // of the *currently applied* preset, so on an NVIDIA box explicitly set to
     // x264 it reads "x264" — but picking Auto there produces NVENC H.264.
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia', encoder: 'x264', quality: { ...DEFAULT_QUALITY, encoder: 'x264' } })} axi={axi as never} />)
 
-    const auto = screen.getByLabelText('Encoder').querySelector('option[value="auto"]')!
-    expect(auto.textContent).toBe('Auto (NVENC H.264)')
+    await userEvent.click(screen.getByLabelText('Encoder'))
+
+    expect(screen.getByRole('option', { name: 'Auto (NVENC H.264)' })).toBeInTheDocument()
   })
 
   it('sends the picked encoder', async () => {
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText('Encoder'), { target: { value: 'nvenc_h264' } })
+    await userEvent.click(screen.getByLabelText('Encoder'))
+    await userEvent.click(screen.getByRole('option', { name: 'Hardware (NVENC, H.264)' }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ encoder: 'nvenc_h264' })
   })
 
-  it('disables AV1 and HEVC with the ingest reason', () => {
+  it('disables AV1 and HEVC with the ingest reason', async () => {
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
 
-    const av1 = screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ }) as HTMLOptionElement
-    expect(av1.disabled).toBe(true)
+    await userEvent.click(screen.getByLabelText('Encoder'))
+
+    const av1 = screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ })
+    expect(av1).toHaveAttribute('aria-disabled', 'true')
     expect(av1.textContent).toMatch(/enhanced RTMP/)
+  })
+
+  it('ignores a click on a disabled row instead of selecting it', async () => {
+    render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
+
+    await userEvent.click(screen.getByLabelText('Encoder'))
+    await userEvent.click(screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ }))
+
+    expect(axi.setQuality).not.toHaveBeenCalled()
+    // ...and the list stays open, so the click reads as "not that one" rather
+    // than as a dismissal the user did not ask for.
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
   })
 
   it('keeps a stale selection visible and explained instead of silently showing another row', () => {
@@ -199,8 +216,7 @@ describe('QualitySettings', () => {
     // and, unlike phantomHeight, it must also say *why* it no longer works.
     render(<QualitySettings state={mk({ gpuVendor: 'amd-intel', quality: { ...DEFAULT_QUALITY, encoder: 'nvenc_av1' } })} axi={axi as never} />)
 
-    const sel = screen.getByLabelText('Encoder') as HTMLSelectElement
-    expect(sel.value).toBe('nvenc_av1')
+    expect(screen.getByLabelText('Encoder')).toHaveTextContent('Hardware (NVENC, AV1)')
     expect(screen.getByText('No NVIDIA GPU detected on this machine.')).toBeInTheDocument()
   })
 

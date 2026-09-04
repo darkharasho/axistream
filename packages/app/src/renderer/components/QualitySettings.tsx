@@ -6,6 +6,7 @@ import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_
 // test/renderer-browser-safety.test.ts guards this.
 import { ENCODER_ENTRIES, encoderAvailability, type DisabledReason } from '@axistream/capture/encoder-entries'
 import { resolveEncoder, chipLabel } from '@axistream/capture/encoder-presets'
+import { Select, type SelectOption } from './Select.js'
 
 /** Short enough to sit inside an <option>; the full sentence goes under the
  *  select when the current selection is the unavailable one. */
@@ -61,6 +62,16 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   // been applied at all. The option must never claim an encoder auto would not
   // pick.
   const autoLabel = chipLabel(resolveEncoder('auto', state.gpuVendor, state.platform))
+
+  const encoderOptions: SelectOption[] = [
+    { value: 'auto', label: `Auto (${autoLabel})` },
+    ...ENCODER_ENTRIES.map((entry) => {
+      const avail = encoderAvailability(entry, state.gpuVendor, state.platform)
+      return avail === 'ok'
+        ? { value: entry.id, label: entry.label }
+        : { value: entry.id, label: entry.label, note: REASON_SHORT[avail], disabled: true }
+    }),
+  ]
 
   const manualBitrate = q.bitrateKbps !== null
 
@@ -152,23 +163,14 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
           </label>
         ) : null}
 
-        <label>
-          <span>Encoder</span>
-          <select
-            value={q.encoder}
-            onChange={(e) => void axi.setQuality({ encoder: e.target.value as typeof q.encoder })}
-          >
-            <option value="auto">{`Auto (${autoLabel})`}</option>
-            {ENCODER_ENTRIES.map((entry) => {
-              const avail = encoderAvailability(entry, state.gpuVendor, state.platform)
-              return (
-                <option key={entry.id} value={entry.id} disabled={avail !== 'ok'}>
-                  {avail === 'ok' ? entry.label : `${entry.label} — ${REASON_SHORT[avail]}`}
-                </option>
-              )
-            })}
-          </select>
-        </label>
+        {/* Not a native <select>: this list's rows have to say why they are
+            unavailable, and Chromium 126 draws the native popup itself. */}
+        <Select
+          label="Encoder"
+          value={q.encoder}
+          onChange={(v) => void axi.setQuality({ encoder: v as typeof q.encoder })}
+          options={encoderOptions}
+        />
 
         {/* A fallback the app chose is state, not advice — it gets its own
             weight rather than sitting at hint level. */}
