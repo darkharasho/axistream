@@ -42,6 +42,8 @@ const base: AppState = {
   error: null,
   encoder: 'x264',
   videoBitrateKbps: null,
+  gpuVendor: 'none',
+  platform: 'linux',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },

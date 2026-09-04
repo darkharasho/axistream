@@ -1,6 +1,6 @@
 import type { PttBinding, PttCaptureResult } from './keys.js'
 import type { Binding, HotkeyBindings, HotkeyId } from './hotkeys.js'
-import type { EncoderId } from '@axistream/capture'
+import type { EncoderId, Vendor } from '@axistream/capture'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'PREPARING_CAPTURE' | 'CHOOSING_CAPTURE' | 'AWAITING_APPROVAL'
@@ -170,6 +170,8 @@ export interface AppState {
   error: string | null
   encoder: string
   videoBitrateKbps: number | null
+  gpuVendor: Vendor
+  platform: NodeJS.Platform
   youtube: { connected: boolean; channel: string | null }
   settings: StreamSettingsView
   audio: { desktopEnabled: boolean; desktopDevice: string | null; micEnabled: boolean; micDevice: string | null; gameAudioApps: string[] }
@@ -199,6 +201,7 @@ export interface AppState {
 export const INITIAL_STATE: AppState = {
   phase: 'SETTING_UP', capture: null, captureTargets: [], stats: null, liveUnconfirmed: false, error: null,
   encoder: 'x264', videoBitrateKbps: null,
+  gpuVendor: 'none', platform: 'linux',
   youtube: { connected: false, channel: null },
   settings: { titleTemplate: '', dateFormat: 'YYYY-MM-DD', privacy: 'public', discordWebhookUrl: '', discordMessage: '', recordDir: '' },
   audio: { desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] },

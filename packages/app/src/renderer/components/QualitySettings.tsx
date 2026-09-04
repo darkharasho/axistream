@@ -1,13 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AppState, AxiApi } from '../../shared/state.js'
 import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_MAX_HEIGHT, AUTO_FPS, isStreamingPhase } from '../../shared/state.js'
+import { ENCODER_ENTRIES, encoderAvailability, type DisabledReason } from '@axistream/capture'
+
+/** Short enough to sit inside an <option>; the full sentence goes under the
+ *  select when the current selection is the unavailable one. */
+const REASON_SHORT: Record<DisabledReason, string> = {
+  'enhanced-rtmp': 'needs enhanced RTMP',
+  'no-nvidia': 'no NVIDIA GPU detected',
+  'no-amd': 'no AMD GPU detected',
+  'amf-windows-only': 'Windows only',
+  'vaapi-advanced-mode': 'not yet supported',
+}
+
+const REASON_LONG: Record<DisabledReason, string> = {
+  'enhanced-rtmp': 'This codec needs enhanced RTMP, which the current YouTube ingest does not support yet. AxiStream will use your next best encoder.',
+  'no-nvidia': 'No NVIDIA GPU detected on this machine.',
+  'no-amd': 'No AMD GPU detected on this machine.',
+  'amf-windows-only': 'AMD hardware encoding is only available on Windows.',
+  'vaapi-advanced-mode': 'VAAPI needs OBS advanced output mode, which AxiStream does not use yet.',
+}
 
 export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }) {
   const q = state.quality
   const { capture } = state
   const live = isStreamingPhase(state.phase)
 
-  const isCustom = q.height !== null || q.fps !== null || q.bitrateKbps !== null || q.preferSoftware
+  const isCustom = q.height !== null || q.fps !== null || q.bitrateKbps !== null || q.encoder !== 'auto'
   const resolved = capture ? `${capture.outputHeight}p${capture.fps}` : '—'
   const bitrate = state.videoBitrateKbps ? `${state.videoBitrateKbps} kbps` : '—'
 
@@ -22,6 +41,14 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   // "Auto", contradicting the "Custom" summary above it. Surface it honestly
   // instead of hiding it.
   const phantomHeight = q.height !== null && !heights.includes(q.height) ? q.height : null
+
+  // A persisted selection can outlive the GPU it was set on, or stay blocked
+  // by the ingest. Keep it selected and explain it, rather than letting the
+  // <select> fall back to a value the user never picked — same reasoning as
+  // phantomHeight above.
+  const selectedEntry = ENCODER_ENTRIES.find((e) => e.id === q.encoder)
+  const selectedAvail = selectedEntry ? encoderAvailability(selectedEntry, state.gpuVendor, state.platform) : 'ok'
+  const selectedReason: DisabledReason | null = selectedAvail === 'ok' ? null : selectedAvail
 
   const manualBitrate = q.bitrateKbps !== null
 
@@ -113,20 +140,32 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
           </label>
         ) : null}
 
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={q.preferSoftware}
-            onChange={(e) => void axi.setQuality({ preferSoftware: e.target.checked })}
-          />
-          Software encoding
+        <label>
+          <span>Encoder</span>
+          <select
+            value={q.encoder}
+            onChange={(e) => void axi.setQuality({ encoder: e.target.value as typeof q.encoder })}
+          >
+            <option value="auto">{`Auto (${state.encoder})`}</option>
+            {ENCODER_ENTRIES.map((entry) => {
+              const avail = encoderAvailability(entry, state.gpuVendor, state.platform)
+              return (
+                <option key={entry.id} value={entry.id} disabled={avail !== 'ok'}>
+                  {avail === 'ok' ? entry.label : `${entry.label} — ${REASON_SHORT[avail]}`}
+                </option>
+              )
+            })}
+          </select>
         </label>
+
         {/* A fallback the app chose is state, not advice — it gets its own
             weight rather than sitting at hint level. */}
-        {q.preferSoftware && q.preferSoftwareAuto ? (
-          <p className="q-fallback">AxiStream switched to software encoding after a stream failed to start — untick to try your graphics card again.</p>
+        {q.encoder === 'x264' && q.encoderAuto ? (
+          <p className="q-fallback">AxiStream switched to software encoding after a stream failed to start — pick your graphics card again to retry it.</p>
+        ) : selectedReason ? (
+          <p className="q-fallback">{REASON_LONG[selectedReason]}</p>
         ) : (
-          <p className="muted">Use the CPU instead of your graphics card. Slower, but works everywhere.</p>
+          <p className="muted">Auto picks the fastest encoder your graphics card supports.</p>
         )}
       </div>
     </div>

@@ -533,6 +533,7 @@ if (primary) app.whenReady().then(async () => {
   const blurInstaller = new PluginInstaller({ exec: flatpakExec, ref: BLUR_PLUGIN_REF })
 
   const vendor = detectVendor({ platform: process.platform, existsSync, readdirSync })
+  setState({ gpuVendor: vendor, platform: process.platform })
   const detectKind = (): ResolvedEncoderId =>
     resolveEncoder(settings.load().encoder, vendor, process.platform)
   let encoderKind: ResolvedEncoderId = detectKind()
