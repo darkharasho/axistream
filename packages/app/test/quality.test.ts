@@ -21,19 +21,24 @@ describe('qualityOf', () => {
 
 describe('qualityViewOf', () => {
   it('maps settings fields to the renderer vocabulary', () => {
-    expect(qualityViewOf(s({ qualityHeight: 1080, qualityFps: null, qualityBitrateKbps: 9000, preferSoftware: true, preferSoftwareAuto: true })))
-      .toEqual({ height: 1080, fps: null, bitrateKbps: 9000, preferSoftware: true, preferSoftwareAuto: true })
+    expect(qualityViewOf(s({ qualityHeight: 1080, qualityFps: null, qualityBitrateKbps: 9000, encoder: 'x264', encoderAuto: true })))
+      .toEqual({ height: 1080, fps: null, bitrateKbps: 9000, encoder: 'x264', encoderAuto: true })
   })
 
   it('reports a stock install as fully auto', () => {
-    expect(qualityViewOf(s())).toEqual({ height: null, fps: null, bitrateKbps: null, preferSoftware: false, preferSoftwareAuto: false })
+    expect(qualityViewOf(s())).toEqual({ height: null, fps: null, bitrateKbps: null, encoder: 'auto', encoderAuto: false })
+  })
+
+  it('surfaces the encoder selection and whether the app chose it', () => {
+    const v = qualityViewOf({ ...DEFAULT_SETTINGS, encoder: 'x264', encoderAuto: true })
+    expect(v).toMatchObject({ encoder: 'x264', encoderAuto: true })
   })
 })
 
 describe('qualityPatchOf', () => {
   it('writes every field when the renderer sends all of them', () => {
-    expect(qualityPatchOf({ height: 1080, fps: 30, bitrateKbps: 6000, preferSoftware: true }))
-      .toEqual({ qualityHeight: 1080, qualityFps: 30, qualityBitrateKbps: 6000, preferSoftware: true, preferSoftwareAuto: false })
+    expect(qualityPatchOf({ height: 1080, fps: 30, bitrateKbps: 6000, encoder: 'nvenc_h264' }))
+      .toEqual({ qualityHeight: 1080, qualityFps: 30, qualityBitrateKbps: 6000, encoder: 'nvenc_h264', encoderAuto: false })
   })
 
   it('touches nothing for an empty patch — absent keys are left alone', () => {
@@ -52,12 +57,13 @@ describe('qualityPatchOf', () => {
     expect(qualityPatchOf({ bitrateKbps: null })).toEqual({ qualityBitrateKbps: null })
   })
 
-  it('clears preferSoftwareAuto whichever way the user sets the checkbox', () => {
-    expect(qualityPatchOf({ preferSoftware: true })).toEqual({ preferSoftware: true, preferSoftwareAuto: false })
-    expect(qualityPatchOf({ preferSoftware: false })).toEqual({ preferSoftware: false, preferSoftwareAuto: false })
+  it('writes the encoder and clears the app-chose-it explanation', () => {
+    // A user touching the picker takes ownership of the choice, so the
+    // "AxiStream switched this for you" note stops applying.
+    expect(qualityPatchOf({ encoder: 'nvenc_h264' })).toEqual({ encoder: 'nvenc_h264', encoderAuto: false })
   })
 
-  it('leaves preferSoftwareAuto alone when the checkbox is not part of the patch', () => {
-    expect(qualityPatchOf({ height: 1440 })).not.toHaveProperty('preferSoftwareAuto')
+  it('leaves the encoder alone when the key is absent', () => {
+    expect(qualityPatchOf({ height: 1080 })).toEqual({ qualityHeight: 1080 })
   })
 })

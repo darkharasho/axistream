@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, openSync, readSyn
 import { homedir, release } from 'node:os'
 import { execFile } from 'node:child_process'
 
-import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectEncoder, choosePreset, applyEncoderSettings, type EncoderKind, type EncoderPreset, readGw2Identity, windowsMumbleDeps, stopVirtualCam as stopVirtualCamAndWait, startVirtualCam as startVirtualCamConfirmed, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
+import { OwnedObsSidecar, Provisioner, WindowsOwnedObsRuntime, LinuxOwnedObsRuntime, CaptureConfig, applyCaptureResolution, ensureCleanProfile, ensureAudioInputs, detectVendor, resolveEncoder, presetFor, applyEncoderSettings, type ResolvedEncoderId, type EncoderPreset, readGw2Identity, windowsMumbleDeps, stopVirtualCam as stopVirtualCamAndWait, startVirtualCam as startVirtualCamConfirmed, professionName, raceName, mapName, specName, teamColorName, type MumbleDeps, type OwnedObsRuntime, type LinuxObsRuntimeManifest, type WindowsObsRuntimeManifest } from '@axistream/capture'
 import { CaptureService } from './CaptureService.js'
 import { StreamController } from './StreamController.js'
 import { AudioController } from './AudioController.js'
@@ -532,23 +532,25 @@ if (primary) app.whenReady().then(async () => {
   const installer = new PluginInstaller({ exec: flatpakExec, ref: GAME_AUDIO_PLUGIN_REF })
   const blurInstaller = new PluginInstaller({ exec: flatpakExec, ref: BLUR_PLUGIN_REF })
 
-  const detectKind = (): EncoderKind => settings.load().preferSoftware
-    ? 'x264'
-    : detectEncoder({ platform: process.platform, existsSync, readdirSync })
-  let encoderKind: EncoderKind = detectKind()
+  const vendor = detectVendor({ platform: process.platform, existsSync, readdirSync })
+  setState({ gpuVendor: vendor, platform: process.platform })
+  const detectKind = (): ResolvedEncoderId =>
+    resolveEncoder(settings.load().encoder, vendor, process.platform)
+  let encoderKind: ResolvedEncoderId = detectKind()
   let currentPreset: EncoderPreset | null = null
   const applyEncoderPreset = async (outputHeight: number, fps: number, opts?: { tries?: number }): Promise<boolean> => {
-    currentPreset = choosePreset(encoderKind, outputHeight, fps, qualityOf(settings.load()).overrides)
+    currentPreset = presetFor(encoderKind, outputHeight, fps, qualityOf(settings.load()).overrides)
     setState({ encoder: currentPreset.label, videoBitrateKbps: currentPreset.videoBitrateKbps })
     return applyEncoderSettings({ call: (r, p) => sidecar.client().call(r as never, p as never), tries: opts?.tries }, currentPreset)
   }
 
   let pendingOAuthBump = false
   let liveWatchStop = false
-  // Persist preferSoftware only if the x264 retry actually reaches LIVE —
-  // a live retry proves the pipe was fine and the hardware encoder was the
-  // problem. A retry that also fails (network outage) must not permanently
-  // flip the install to software; next boot re-detects hardware.
+  // Persist { encoder: 'x264', encoderAuto: true } only if the x264 retry
+  // actually reaches LIVE — a live retry proves the pipe was fine and the
+  // hardware encoder was the problem. A retry that also fails (network
+  // outage) must not permanently flip the install to software; next boot
+  // re-detects hardware.
   let pendingSoftwareFlip = false
   const stream = new StreamController({
     client: () => sidecar.client(),
@@ -561,7 +563,7 @@ if (primary) app.whenReady().then(async () => {
       }
       if (p === 'LIVE' && pendingSoftwareFlip) {
         pendingSoftwareFlip = false
-        const next = settings.patch({ preferSoftware: true, preferSoftwareAuto: true })
+        const next = settings.patch({ encoder: 'x264', encoderAuto: true })
         setState({ quality: qualityViewOf(next) })
       } else if ((p === 'ERROR' || p === 'READY') && pendingSoftwareFlip) {
         pendingSoftwareFlip = false
@@ -1275,7 +1277,7 @@ if (primary) app.whenReady().then(async () => {
       // and off-list rejection happen, so this is the value that will be used.
       const next = settings.load()
       setState({ quality: qualityViewOf(next) })
-      if ('preferSoftware' in p) encoderKind = detectKind()
+      if ('encoder' in p) encoderKind = detectKind()
       // Applying now keeps the preview and the stat chips truthful. Safe
       // because only the output scale moves — base stays the monitor's native
       // size, so masks and the webcam do not shift. Deferred once OBS is

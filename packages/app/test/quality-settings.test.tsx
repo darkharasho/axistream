@@ -159,25 +159,61 @@ describe('QualitySettings', () => {
     expect(screen.getByLabelText(/bitrate \(kbps\)/i)).toHaveValue(5000)
   })
 
-  it('toggles software encoding', async () => {
+  it('lists every OBS encoder row', () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    await userEvent.click(screen.getByRole('checkbox', { name: /software encoding/i }))
-
-    expect(axi.setQuality).toHaveBeenCalledWith({ preferSoftware: true })
+    expect(screen.getByLabelText('Encoder')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ })).toBeInTheDocument()
   })
 
-  it('explains a software fallback the app chose, not the user', async () => {
-    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, preferSoftware: true, preferSoftwareAuto: true } })} axi={axi as never} />)
+  it('labels Auto with what auto would resolve to, not the applied preset', () => {
+    // The whole point of this feature is that the UI never claims an encoder
+    // that is not the one that would actually run. state.encoder is the label
+    // of the *currently applied* preset, so on an NVIDIA box explicitly set to
+    // x264 it reads "x264" — but picking Auto there produces NVENC H.264.
+    render(<QualitySettings state={mk({ gpuVendor: 'nvidia', encoder: 'x264', quality: { ...DEFAULT_QUALITY, encoder: 'x264' } })} axi={axi as never} />)
 
-    expect(screen.getByText(/switched to software encoding after a stream failed/i)).toBeInTheDocument()
+    const auto = screen.getByLabelText('Encoder').querySelector('option[value="auto"]')!
+    expect(auto.textContent).toBe('Auto (NVENC H.264)')
   })
 
-  it('gives the generic explanation when the user ticked it themselves', async () => {
-    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, preferSoftware: true, preferSoftwareAuto: false } })} axi={axi as never} />)
+  it('sends the picked encoder', async () => {
+    render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
 
-    expect(screen.queryByText(/switched to software encoding after a stream failed/i)).toBeNull()
-    expect(screen.getByText(/use the cpu instead of your graphics card/i)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Encoder'), { target: { value: 'nvenc_h264' } })
+
+    expect(axi.setQuality).toHaveBeenCalledWith({ encoder: 'nvenc_h264' })
+  })
+
+  it('disables AV1 and HEVC with the ingest reason', () => {
+    render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
+
+    const av1 = screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ }) as HTMLOptionElement
+    expect(av1.disabled).toBe(true)
+    expect(av1.textContent).toMatch(/enhanced RTMP/)
+  })
+
+  it('keeps a stale selection visible and explained instead of silently showing another row', () => {
+    // Same principle as phantomHeight: a persisted choice that no longer
+    // applies is surfaced, not hidden behind a value the user never picked —
+    // and, unlike phantomHeight, it must also say *why* it no longer works.
+    render(<QualitySettings state={mk({ gpuVendor: 'amd-intel', quality: { ...DEFAULT_QUALITY, encoder: 'nvenc_av1' } })} axi={axi as never} />)
+
+    const sel = screen.getByLabelText('Encoder') as HTMLSelectElement
+    expect(sel.value).toBe('nvenc_av1')
+    expect(screen.getByText('No NVIDIA GPU detected on this machine.')).toBeInTheDocument()
+  })
+
+  it('explains an encoder the app chose after a failed go-live', () => {
+    render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, encoder: 'x264', encoderAuto: true } })} axi={axi as never} />)
+
+    expect(screen.getByText(/switched to software encoding/)).toBeInTheDocument()
+  })
+
+  it('no longer offers the software-encoding checkbox', () => {
+    render(<QualitySettings state={mk()} axi={axi as never} />)
+
+    expect(screen.queryByLabelText('Software encoding')).toBeNull()
   })
 
   it('stays editable while live, but says the change is deferred', () => {
