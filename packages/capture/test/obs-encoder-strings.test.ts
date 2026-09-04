@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { choosePreset, OBS_SIMPLE_ENCODERS, type EncoderKind } from '../src/encoder-presets.js'
-
-const KINDS: EncoderKind[] = ['nvenc', 'vaapi', 'x264']
+import { OBS_SIMPLE_ENCODERS } from '../src/encoder-presets.js'
+import { ENCODER_ENTRIES } from '../src/encoder-entries.js'
 
 describe('OBS simple-output encoder strings', () => {
   // The bug this guards: OBS's get_simple_output_encoder()
@@ -11,8 +10,8 @@ describe('OBS simple-output encoder strings', () => {
   // caught it because every test asserted the string we write, never that
   // OBS honors it.
   it('every streamEncoder AxiStream can emit is one OBS recognizes', () => {
-    for (const kind of KINDS) {
-      expect(OBS_SIMPLE_ENCODERS).toContain(choosePreset(kind, 1080, 60).streamEncoder)
+    for (const e of ENCODER_ENTRIES) {
+      if (e.streamEncoder !== null) expect(OBS_SIMPLE_ENCODERS).toContain(e.streamEncoder)
     }
   })
 

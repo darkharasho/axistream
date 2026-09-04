@@ -8,7 +8,7 @@ export interface QualityApplyArgs {
   overrides: QualityOverrides
 }
 
-/** Settings -> the arguments applyCaptureResolution and choosePreset need. */
+/** Settings -> the arguments applyCaptureResolution and presetFor need. */
 export function qualityOf(s: StreamSettingsData): QualityApplyArgs {
   return {
     maxHeight: s.qualityHeight ?? AUTO_MAX_HEIGHT,

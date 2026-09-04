@@ -39,7 +39,7 @@ export interface StreamSettingsData {
   recordDir: string
   webcam: WebcamConfig
   /** null = Auto. Auto tracks the monitor (capped at 1440) and 60fps, and
-   *  derives bitrate from those two — see choosePreset in @axistream/capture. */
+   *  derives bitrate from those two — see presetFor in @axistream/capture. */
   qualityHeight: number | null
   qualityFps: number | null
   qualityBitrateKbps: number | null
