@@ -546,10 +546,11 @@ if (primary) app.whenReady().then(async () => {
 
   let pendingOAuthBump = false
   let liveWatchStop = false
-  // Persist preferSoftware only if the x264 retry actually reaches LIVE —
-  // a live retry proves the pipe was fine and the hardware encoder was the
-  // problem. A retry that also fails (network outage) must not permanently
-  // flip the install to software; next boot re-detects hardware.
+  // Persist { encoder: 'x264', encoderAuto: true } only if the x264 retry
+  // actually reaches LIVE — a live retry proves the pipe was fine and the
+  // hardware encoder was the problem. A retry that also fails (network
+  // outage) must not permanently flip the install to software; next boot
+  // re-detects hardware.
   let pendingSoftwareFlip = false
   const stream = new StreamController({
     client: () => sidecar.client(),

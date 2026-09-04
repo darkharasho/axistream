@@ -182,13 +182,15 @@ describe('QualitySettings', () => {
     expect(av1.textContent).toMatch(/enhanced RTMP/)
   })
 
-  it('keeps a stale selection visible instead of silently showing another row', () => {
+  it('keeps a stale selection visible and explained instead of silently showing another row', () => {
     // Same principle as phantomHeight: a persisted choice that no longer
-    // applies is surfaced, not hidden behind a value the user never picked.
+    // applies is surfaced, not hidden behind a value the user never picked —
+    // and, unlike phantomHeight, it must also say *why* it no longer works.
     render(<QualitySettings state={mk({ gpuVendor: 'amd-intel', quality: { ...DEFAULT_QUALITY, encoder: 'nvenc_av1' } })} axi={axi as never} />)
 
     const sel = screen.getByLabelText('Encoder') as HTMLSelectElement
     expect(sel.value).toBe('nvenc_av1')
+    expect(screen.getByText('No NVIDIA GPU detected on this machine.')).toBeInTheDocument()
   })
 
   it('explains an encoder the app chose after a failed go-live', () => {
