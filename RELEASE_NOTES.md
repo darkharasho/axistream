@@ -1,5 +1,22 @@
 # Release Notes
 
+## Version v1.0.6 — September 3, 2026
+
+You can pick your encoder now, and the app stops claiming an encoder it isn't using.
+
+### Choose which encoder AxiStream streams with
+Quality settings had a single "Use software encoding" checkbox: your graphics card, or x264. That is not the choice most people want to make. It is now a proper picker listing every encoder AxiStream can drive — NVIDIA NVENC in H.264, HEVC and AV1, AMD in H.264 and HEVC, Intel/AMD VAAPI on Linux, and x264 software encoding — with **Auto** still the default and still naming what it will actually pick on your machine.
+
+Encoders your setup can't use are still listed, greyed out, and say why: "no NVIDIA GPU detected", "Windows only", "needs enhanced RTMP" for the codecs YouTube's current ingest won't take. That last one matters if you came here for AV1 — the encoder exists, your card may well support it, but the ingest AxiStream streams to does not carry it yet. Showing it disabled with the reason is more honest than pretending the option isn't there.
+
+If you had software encoding ticked, you stay on x264 — the setting carries over.
+
+### AxiStream no longer says "VAAPI" when it is really using x264
+On AMD and Intel graphics, the encoder chip could read VAAPI while the stream was actually being encoded in software by your CPU. The hardware path was never reachable — it needs an OBS output mode AxiStream doesn't use — so the label was describing an intention, not what ran. If you have been streaming on an AMD or Intel GPU and wondering why your CPU was working harder than the chip suggested, this is the answer. The chip now reports what is really encoding your stream, and VAAPI is listed as unavailable with that reason.
+
+### Every dropdown looks like the rest of the app
+The dropdown lists — camera, resolution, frame rate, audio devices, push-to-talk key, privacy — were drawn by the system rather than by AxiStream, which on Linux meant a bright white list opening over a dark panel. They are AxiStream's own now: same dark palette, same fonts, and they behave properly with the keyboard. Long lists (audio devices, especially) support type-to-jump — start typing a device name and it goes there.
+
 ## Version v1.0.5 — September 3, 2026
 
 A Windows packaging fix, for anyone who hit a crash or a failed update.

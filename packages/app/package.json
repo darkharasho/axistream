@@ -1,7 +1,7 @@
 {
   "name": "@axistream/app",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "MIT",
   "description": "Get live on YouTube in three clicks",
   "author": "AxiStream <project96@gmail.com>",
