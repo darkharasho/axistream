@@ -230,7 +230,7 @@ export class StreamSettings {
         qualityHeight: oneOf(raw.qualityHeight, QUALITY_HEIGHTS),
         qualityFps: oneOf(raw.qualityFps, QUALITY_FPS),
         qualityBitrateKbps: bitrateOf(raw.qualityBitrateKbps),
-        encoderAuto: typeof raw.encoderAuto === 'boolean' ? raw.encoderAuto : raw.preferSoftwareAuto === true,
+        encoderAuto: typeof raw.encoderAuto === 'boolean' ? raw.encoderAuto : r2.preferSoftwareAuto === true,
         hotkeys: validHotkeys(raw.hotkeys),
       }
     } catch {
