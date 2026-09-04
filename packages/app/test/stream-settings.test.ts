@@ -87,18 +87,18 @@ describe('StreamSettings', () => {
     })
   })
 
-  describe('preferSoftware', () => {
-    it('defaults to false and round-trips', () => {
+  describe('encoder', () => {
+    it('defaults to auto and round-trips', () => {
       const s = new StreamSettings(file)
-      expect(s.load().preferSoftware).toBe(false)
-      s.patch({ preferSoftware: true })
-      expect(s.load().preferSoftware).toBe(true)
+      expect(s.load().encoder).toBe('auto')
+      s.patch({ encoder: 'x264' })
+      expect(s.load().encoder).toBe('x264')
     })
 
-    it('non-boolean value falls back to false', () => {
-      writeFileSync(file, JSON.stringify({ preferSoftware: 'yes' }))
+    it('non-string value falls back to auto', () => {
+      writeFileSync(file, JSON.stringify({ encoder: 42 }))
       const s = new StreamSettings(file)
-      expect(s.load().preferSoftware).toBe(false)
+      expect(s.load().encoder).toBe('auto')
     })
   })
 
@@ -311,17 +311,17 @@ describe('StreamSettings quality fields', () => {
     expect(d.qualityHeight).toBeNull()
     expect(d.qualityFps).toBeNull()
     expect(d.qualityBitrateKbps).toBeNull()
-    expect(d.preferSoftwareAuto).toBe(false)
+    expect(d.encoderAuto).toBe(false)
   })
 
   it('round-trips valid quality values', () => {
-    new StreamSettings(file).patch({ qualityHeight: 720, qualityFps: 30, qualityBitrateKbps: 4500, preferSoftwareAuto: true })
+    new StreamSettings(file).patch({ qualityHeight: 720, qualityFps: 30, qualityBitrateKbps: 4500, encoderAuto: true })
 
     const d = new StreamSettings(file).load()
     expect(d.qualityHeight).toBe(720)
     expect(d.qualityFps).toBe(30)
     expect(d.qualityBitrateKbps).toBe(4500)
-    expect(d.preferSoftwareAuto).toBe(true)
+    expect(d.encoderAuto).toBe(true)
   })
 
   it('reverts an off-list height or fps to auto rather than encoding something impossible', () => {
@@ -358,8 +358,45 @@ describe('StreamSettings quality fields', () => {
     expect(d.qualityHeight).toBeNull()
     expect(d.qualityFps).toBeNull()
     expect(d.qualityBitrateKbps).toBeNull()
-    expect(d.preferSoftware).toBe(true)
-    expect(d.preferSoftwareAuto).toBe(false)
+    expect(d.encoder).toBe('x264')
+    expect(d.encoderAuto).toBe(false)
+  })
+})
+
+describe('encoder settings migration', () => {
+  const loadSettingsFrom = (raw: Record<string, unknown>) => {
+    const f = tmpFile()
+    writeFileSync(f, JSON.stringify(raw))
+    return new StreamSettings(f).load()
+  }
+
+  it('defaults to auto when nothing is stored', () => {
+    const s = loadSettingsFrom({})
+    expect(s.encoder).toBe('auto')
+    expect(s.encoderAuto).toBe(false)
+  })
+
+  // The old boolean meant exactly "force x264".
+  it('migrates preferSoftware: true to an explicit x264 selection', () => {
+    const s = loadSettingsFrom({ preferSoftware: true, preferSoftwareAuto: true })
+    expect(s.encoder).toBe('x264')
+    expect(s.encoderAuto).toBe(true)
+  })
+
+  it('migrates preferSoftware: false to auto', () => {
+    const s = loadSettingsFrom({ preferSoftware: false, preferSoftwareAuto: false })
+    expect(s.encoder).toBe('auto')
+    expect(s.encoderAuto).toBe(false)
+  })
+
+  it('prefers a stored encoder id over the legacy boolean', () => {
+    const s = loadSettingsFrom({ encoder: 'nvenc_h264', preferSoftware: true })
+    expect(s.encoder).toBe('nvenc_h264')
+  })
+
+  it('rejects an unknown encoder id rather than trusting the file', () => {
+    expect(loadSettingsFrom({ encoder: 'nvenc_vp9' }).encoder).toBe('auto')
+    expect(loadSettingsFrom({ encoder: 42 }).encoder).toBe('auto')
   })
 })
 

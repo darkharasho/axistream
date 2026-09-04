@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { MAX_MASKS, type MaskRect, type WebcamCorner, type WebcamMode, type WebcamConfig, WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT, DEFAULT_WEBCAM, QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS } from '../shared/state.js'
 import { DEFAULT_HOTKEYS, HOTKEY_IDS, type PersistedBinding, type PersistedHotkeys } from '../shared/hotkeys.js'
+import { ENCODER_ENTRIES, type EncoderId } from '@axistream/capture'
 
 export type Privacy = 'public' | 'unlisted' | 'private'
 export type MaskStyle = 'box' | 'blur'
@@ -17,7 +18,9 @@ export interface StreamSettingsData {
   micDevice: string | null
   desktopDevice: string | null
   masks: MaskRect[]
-  preferSoftware: boolean
+  /** The user's encoder choice. 'auto' = detect. Migrated from the old
+   *  preferSoftware boolean, which meant exactly 'x264'. */
+  encoder: EncoderId
   gameAudioApps: string[]
   maskStyle: MaskStyle
   discordWebhookUrl: string
@@ -40,9 +43,9 @@ export interface StreamSettingsData {
   qualityHeight: number | null
   qualityFps: number | null
   qualityBitrateKbps: number | null
-  /** True when the failed-go-live retry set preferSoftware, not the user.
+  /** True when the failed-go-live retry chose the encoder, not the user.
    *  Affects the settings panel's help text only, never behavior. */
-  preferSoftwareAuto: boolean
+  encoderAuto: boolean
   hotkeys: PersistedHotkeys
 }
 
@@ -57,7 +60,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   micDevice: null,
   desktopDevice: null,
   masks: [],
-  preferSoftware: false,
+  encoder: 'auto',
   gameAudioApps: [],
   maskStyle: 'box',
   discordWebhookUrl: '',
@@ -74,7 +77,7 @@ export const DEFAULT_SETTINGS: StreamSettingsData = {
   qualityHeight: null,
   qualityFps: null,
   qualityBitrateKbps: null,
-  preferSoftwareAuto: false,
+  encoderAuto: false,
   hotkeys: DEFAULT_HOTKEYS,
 }
 
@@ -96,6 +99,18 @@ const bitrateOf = (raw: unknown): number | null =>
   typeof raw === 'number' && Number.isFinite(raw)
     ? Math.round(clamp(raw, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS))
     : null
+
+const ENCODER_IDS: readonly EncoderId[] = ['auto', ...ENCODER_ENTRIES.map((e) => e.id)]
+
+/** A settings file can carry an id from a newer build, a hand edit, or the
+ *  pre-picker boolean. Anything unrecognized falls back to auto rather than
+ *  reaching OBS. */
+function readEncoderId(raw: Record<string, unknown>): EncoderId {
+  const stored = raw.encoder
+  if (typeof stored === 'string' && (ENCODER_IDS as readonly string[]).includes(stored)) return stored as EncoderId
+  if (raw.preferSoftware === true) return 'x264'
+  return DEFAULT_SETTINGS.encoder
+}
 
 const MODIFIERS = ['ctrl', 'alt', 'shift', 'super']
 
@@ -198,7 +213,7 @@ export class StreamSettings {
         micDevice: typeof raw.micDevice === 'string' ? raw.micDevice : null,
         desktopDevice: typeof raw.desktopDevice === 'string' ? raw.desktopDevice : null,
         masks: sanitizeMasks(raw.masks),
-        preferSoftware: typeof raw.preferSoftware === 'boolean' ? raw.preferSoftware : DEFAULT_SETTINGS.preferSoftware,
+        encoder: readEncoderId(r2),
         gameAudioApps,
         maskStyle: MASK_STYLES.includes(raw.maskStyle as MaskStyle) ? (raw.maskStyle as MaskStyle) : DEFAULT_SETTINGS.maskStyle,
         discordWebhookUrl: typeof raw.discordWebhookUrl === 'string' ? raw.discordWebhookUrl : DEFAULT_SETTINGS.discordWebhookUrl,
@@ -215,7 +230,7 @@ export class StreamSettings {
         qualityHeight: oneOf(raw.qualityHeight, QUALITY_HEIGHTS),
         qualityFps: oneOf(raw.qualityFps, QUALITY_FPS),
         qualityBitrateKbps: bitrateOf(raw.qualityBitrateKbps),
-        preferSoftwareAuto: typeof raw.preferSoftwareAuto === 'boolean' ? raw.preferSoftwareAuto : DEFAULT_SETTINGS.preferSoftwareAuto,
+        encoderAuto: typeof raw.encoderAuto === 'boolean' ? raw.encoderAuto : raw.preferSoftwareAuto === true,
         hotkeys: validHotkeys(raw.hotkeys),
       }
     } catch {
