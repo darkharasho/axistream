@@ -1,5 +1,6 @@
 import type { PttBinding, PttCaptureResult } from './keys.js'
 import type { Binding, HotkeyBindings, HotkeyId } from './hotkeys.js'
+import type { EncoderId } from '@axistream/capture'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'PREPARING_CAPTURE' | 'CHOOSING_CAPTURE' | 'AWAITING_APPROVAL'
@@ -75,8 +76,8 @@ export interface QualityView {
   height: number | null
   fps: number | null
   bitrateKbps: number | null
-  preferSoftware: boolean
-  preferSoftwareAuto: boolean
+  encoder: EncoderId
+  encoderAuto: boolean
 }
 
 /** A partial edit from the renderer. Keys map to the `quality*` settings
@@ -85,11 +86,11 @@ export interface QualityPatch {
   height?: number | null
   fps?: number | null
   bitrateKbps?: number | null
-  preferSoftware?: boolean
+  encoder?: EncoderId
 }
 
 export const DEFAULT_QUALITY: QualityView = {
-  height: null, fps: null, bitrateKbps: null, preferSoftware: false, preferSoftwareAuto: false,
+  height: null, fps: null, bitrateKbps: null, encoder: 'auto', encoderAuto: false,
 }
 
 export interface GameAudioPluginView { status: GameAudioPluginStatus; error: string | null }

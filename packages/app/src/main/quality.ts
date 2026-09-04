@@ -23,8 +23,8 @@ export function qualityViewOf(s: StreamSettingsData): QualityView {
     height: s.qualityHeight,
     fps: s.qualityFps,
     bitrateKbps: s.qualityBitrateKbps,
-    preferSoftware: s.preferSoftware,
-    preferSoftwareAuto: s.preferSoftwareAuto,
+    encoder: s.encoder,
+    encoderAuto: s.encoderAuto,
   }
 }
 
@@ -36,8 +36,8 @@ export function qualityPatchOf(p: QualityPatch): Partial<StreamSettingsData> {
   if ('height' in p) patch.qualityHeight = p.height ?? null
   if ('fps' in p) patch.qualityFps = p.fps ?? null
   if ('bitrateKbps' in p) patch.qualityBitrateKbps = p.bitrateKbps ?? null
-  // A user touching the checkbox takes ownership of the choice, so the
+  // A user touching the picker takes ownership of the choice, so the
   // "AxiStream switched this for you" explanation stops applying.
-  if ('preferSoftware' in p) { patch.preferSoftware = p.preferSoftware === true; patch.preferSoftwareAuto = false }
+  if ('encoder' in p && p.encoder) { patch.encoder = p.encoder; patch.encoderAuto = false }
   return patch
 }
