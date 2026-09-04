@@ -16,6 +16,12 @@ const mk = (over: Partial<AppState> = {}): AppState => ({
   ...over,
 })
 
+/** Options only exist while the listbox is open (components/Select.tsx). */
+const openList = async (label: RegExp | string) => {
+  await userEvent.click(screen.getByLabelText(label))
+  return screen.getAllByRole('option').map((o) => o.textContent)
+}
+
 describe('QualitySettings', () => {
   beforeEach(() => vi.clearAllMocks())
 
@@ -48,7 +54,7 @@ describe('QualitySettings', () => {
   it('omits resolutions the monitor cannot produce', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    const opts = Array.from(screen.getByLabelText(/resolution/i).querySelectorAll('option')).map((o) => o.textContent)
+    const opts = await openList(/resolution/i)
     expect(opts).toContain('720p')
     expect(opts).toContain('1080p')
     expect(opts.some((o) => o?.includes('1440'))).toBe(false)
@@ -57,7 +63,7 @@ describe('QualitySettings', () => {
   it('labels Auto with the value it resolves to from the monitor, not the active override', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 720 }, capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1280, outputHeight: 720, fps: 60 } })} axi={axi as never} />)
 
-    const opts = Array.from(screen.getByLabelText(/resolution/i).querySelectorAll('option')).map((o) => o.textContent)
+    const opts = await openList(/resolution/i)
     expect(opts).toContain('Auto (1080p)')
   })
 
@@ -66,16 +72,18 @@ describe('QualitySettings', () => {
     // monitor; this one only goes up to 1080p.
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 1440 } })} axi={axi as never} />)
 
-    const select = screen.getByLabelText(/resolution/i) as HTMLSelectElement
-    expect(select.value).toBe('1440')
-    expect(select.selectedOptions[0].textContent).toMatch(/1440/)
-    expect(select.selectedOptions[0].textContent?.toLowerCase()).not.toContain('auto')
+    const trigger = screen.getByLabelText(/resolution/i)
+    expect(trigger.textContent).toMatch(/1440/)
+    expect(trigger.textContent?.toLowerCase()).not.toContain('auto')
+    await userEvent.click(trigger)
+    expect(screen.getByRole('option', { name: /1440p/ })).toHaveTextContent('above this monitor')
   })
 
   it('sends the picked resolution', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: '720' } })
+    await userEvent.click(screen.getByLabelText(/resolution/i))
+    await userEvent.click(screen.getByRole('option', { name: '720p' }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ height: 720 })
   })
@@ -83,7 +91,8 @@ describe('QualitySettings', () => {
   it('sends null when resolution goes back to Auto', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 720 } })} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: 'auto' } })
+    await userEvent.click(screen.getByLabelText(/resolution/i))
+    await userEvent.click(screen.getByRole('option', { name: /^Auto/ }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ height: null })
   })
@@ -91,7 +100,8 @@ describe('QualitySettings', () => {
   it('sends the picked frame rate', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText(/frame rate/i), { target: { value: '30' } })
+    await userEvent.click(screen.getByLabelText(/frame rate/i))
+    await userEvent.click(screen.getByRole('option', { name: '30' }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ fps: 30 })
   })
@@ -159,38 +169,55 @@ describe('QualitySettings', () => {
     expect(screen.getByLabelText(/bitrate \(kbps\)/i)).toHaveValue(5000)
   })
 
-  it('lists every OBS encoder row', () => {
+  it('lists every OBS encoder row', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    expect(screen.getByLabelText('Encoder')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('Encoder'))
+
     expect(screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ })).toBeInTheDocument()
   })
 
-  it('labels Auto with what auto would resolve to, not the applied preset', () => {
+  it('labels Auto with what auto would resolve to, not the applied preset', async () => {
     // The whole point of this feature is that the UI never claims an encoder
     // that is not the one that would actually run. state.encoder is the label
     // of the *currently applied* preset, so on an NVIDIA box explicitly set to
     // x264 it reads "x264" — but picking Auto there produces NVENC H.264.
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia', encoder: 'x264', quality: { ...DEFAULT_QUALITY, encoder: 'x264' } })} axi={axi as never} />)
 
-    const auto = screen.getByLabelText('Encoder').querySelector('option[value="auto"]')!
-    expect(auto.textContent).toBe('Auto (NVENC H.264)')
+    await userEvent.click(screen.getByLabelText('Encoder'))
+
+    expect(screen.getByRole('option', { name: 'Auto (NVENC H.264)' })).toBeInTheDocument()
   })
 
   it('sends the picked encoder', async () => {
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText('Encoder'), { target: { value: 'nvenc_h264' } })
+    await userEvent.click(screen.getByLabelText('Encoder'))
+    await userEvent.click(screen.getByRole('option', { name: 'Hardware (NVENC, H.264)' }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ encoder: 'nvenc_h264' })
   })
 
-  it('disables AV1 and HEVC with the ingest reason', () => {
+  it('disables AV1 and HEVC with the ingest reason', async () => {
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
 
-    const av1 = screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ }) as HTMLOptionElement
-    expect(av1.disabled).toBe(true)
+    await userEvent.click(screen.getByLabelText('Encoder'))
+
+    const av1 = screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ })
+    expect(av1).toHaveAttribute('aria-disabled', 'true')
     expect(av1.textContent).toMatch(/enhanced RTMP/)
+  })
+
+  it('ignores a click on a disabled row instead of selecting it', async () => {
+    render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
+
+    await userEvent.click(screen.getByLabelText('Encoder'))
+    await userEvent.click(screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ }))
+
+    expect(axi.setQuality).not.toHaveBeenCalled()
+    // ...and the list stays open, so the click reads as "not that one" rather
+    // than as a dismissal the user did not ask for.
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
   })
 
   it('keeps a stale selection visible and explained instead of silently showing another row', () => {
@@ -199,8 +226,7 @@ describe('QualitySettings', () => {
     // and, unlike phantomHeight, it must also say *why* it no longer works.
     render(<QualitySettings state={mk({ gpuVendor: 'amd-intel', quality: { ...DEFAULT_QUALITY, encoder: 'nvenc_av1' } })} axi={axi as never} />)
 
-    const sel = screen.getByLabelText('Encoder') as HTMLSelectElement
-    expect(sel.value).toBe('nvenc_av1')
+    expect(screen.getByLabelText('Encoder')).toHaveTextContent('Hardware (NVENC, AV1)')
     expect(screen.getByText('No NVIDIA GPU detected on this machine.')).toBeInTheDocument()
   })
 

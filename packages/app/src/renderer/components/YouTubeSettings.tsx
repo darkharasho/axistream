@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AxiApi, StreamSettingsView } from '../../shared/state.js'
+import { Select } from './Select.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 const VARS = '{{date}} · {{time}} · {{day}} · {{week}} · {{n}} · {{character}} · {{class}} · {{map}} · {{race}} · {{team}} (GW2, while in a map)'
@@ -54,13 +55,16 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
             <input value={s.dateFormat} onChange={(e) => update({ dateFormat: e.target.value })} />
           </label>
 
-          <label>Privacy
-            <select value={s.privacy} onChange={(e) => update({ privacy: e.target.value as StreamSettingsView['privacy'] })}>
-              <option value="public">Public</option>
-              <option value="unlisted">Unlisted</option>
-              <option value="private">Private</option>
-            </select>
-          </label>
+          <Select
+            label="Privacy"
+            value={s.privacy}
+            onChange={(v) => update({ privacy: v as StreamSettingsView['privacy'] })}
+            options={[
+              { value: 'public', label: 'Public' },
+              { value: 'unlisted', label: 'Unlisted' },
+              { value: 'private', label: 'Private' },
+            ]}
+          />
 
           <div className="yt-discord">
             <h4 className="yt-discord-head">Discord announcement</h4>

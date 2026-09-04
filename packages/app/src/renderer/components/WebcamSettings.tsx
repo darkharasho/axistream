@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AudioDevice, AxiApi, WebcamCorner, WebcamProps, WebcamView } from '../../shared/state.js'
 import { WEBCAM_MIN_SIZE_PCT, WEBCAM_MAX_SIZE_PCT } from '../../shared/state.js'
+import { Select } from './Select.js'
 
 const CORNERS: { value: WebcamCorner; label: string }[] = [
   { value: 'tl', label: 'Top left' },
@@ -51,20 +52,19 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
         Show my camera on stream
       </label>
 
-      <label>
-        <span>Camera</span>
-        <select
-          value={webcam.deviceId ?? ''}
-          onChange={(e) => {
-            const id = e.target.value || null
-            const name = devices.find((d) => d.id === id)?.name ?? null
-            void axi.setWebcam({ deviceId: id, deviceLabel: name, mode: null })
-          }}
-        >
-          <option value="">Select a camera…</option>
-          {devices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
-      </label>
+      <Select
+        label="Camera"
+        value={webcam.deviceId ?? ''}
+        onChange={(v) => {
+          const id = v || null
+          const name = devices.find((d) => d.id === id)?.name ?? null
+          void axi.setWebcam({ deviceId: id, deviceLabel: name, mode: null })
+        }}
+        options={[
+          { value: '', label: 'Select a camera…' },
+          ...devices.map((d) => ({ value: d.id, label: d.name })),
+        ]}
+      />
 
       {webcam.enabled && webcam.deviceId && !webcam.available && (
         <p className="muted">Camera unavailable — the stream continues without it.</p>
@@ -115,24 +115,12 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
 
       {manual && (
         <div className="webcam-modes">
-          <label>
-            <span>Format</span>
-            <select value={webcam.mode?.pixelformat ?? ''} onChange={(e) => setMode({ pixelformat: e.target.value })}>
-              {props.pixelformats.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Resolution</span>
-            <select value={webcam.mode?.resolution ?? ''} onChange={(e) => setMode({ resolution: e.target.value })}>
-              {props.resolutions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Frame rate</span>
-            <select value={webcam.mode?.framerate ?? ''} onChange={(e) => setMode({ framerate: e.target.value })}>
-              {props.framerates.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
+          <Select label="Format" value={webcam.mode?.pixelformat ?? ''}
+            onChange={(v) => setMode({ pixelformat: v })} options={props.pixelformats} />
+          <Select label="Resolution" value={webcam.mode?.resolution ?? ''}
+            onChange={(v) => setMode({ resolution: v })} options={props.resolutions} />
+          <Select label="Frame rate" value={webcam.mode?.framerate ?? ''}
+            onChange={(v) => setMode({ framerate: v })} options={props.framerates} />
         </div>
       )}
     </div>

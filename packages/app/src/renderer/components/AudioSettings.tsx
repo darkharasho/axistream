@@ -6,6 +6,7 @@ import { GameAudioSettings } from './GameAudioSettings.js'
 import { AudioPulse } from './AudioPulse.js'
 import { PTT_KEY_CHOICES, keyName } from '../../shared/keys.js'
 import { KeyPicker } from './KeyPicker.js'
+import { Select } from './Select.js'
 
 const axi = () => (globalThis as unknown as { axi: AxiApi }).axi
 
@@ -128,13 +129,18 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
         {audio.desktopEnabled && (() => {
           const stale = outputDevices ? staleOption(audio.desktopDevice, outputDevices) : null
           return (
-            <label className="hear-devrow">Output device
-              <select value={audio.desktopDevice ?? ''} onChange={(e) => axi().setDesktopDevice(e.target.value)}>
-                {stale && <option value={stale.id}>{stale.name}</option>}
-                {outputDevices?.length === 0 && !stale && <option value="">No output devices found</option>}
-                {(outputDevices ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </label>
+            <Select
+              label="Output device"
+              className="hear-devrow"
+              placeholder="System default"
+              value={audio.desktopDevice ?? ''}
+              onChange={(v) => axi().setDesktopDevice(v)}
+              options={[
+                ...(stale ? [{ value: stale.id, label: stale.name }] : []),
+                ...(outputDevices?.length === 0 && !stale ? [{ value: '', label: 'No output devices found', disabled: true }] : []),
+                ...(outputDevices ?? []).map((d) => ({ value: d.id, label: d.name })),
+              ]}
+            />
           )
         })()}
 
@@ -180,13 +186,17 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
       {audio.micEnabled && (() => {
         const stale = micDevices ? staleOption(audio.micDevice, micDevices) : null
         return (
-          <label>Microphone device
-            <select value={audio.micDevice ?? ''} onChange={(e) => axi().setMicDevice(e.target.value)}>
-              {stale && <option value={stale.id}>{stale.name}</option>}
-              {micDevices?.length === 0 && !stale && <option value="">No input devices found</option>}
-              {(micDevices ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </label>
+          <Select
+            label="Microphone device"
+            placeholder="System default"
+            value={audio.micDevice ?? ''}
+            onChange={(v) => axi().setMicDevice(v)}
+            options={[
+              ...(stale ? [{ value: stale.id, label: stale.name }] : []),
+              ...(micDevices?.length === 0 && !stale ? [{ value: '', label: 'No input devices found', disabled: true }] : []),
+              ...(micDevices ?? []).map((d) => ({ value: d.id, label: d.name })),
+            ]}
+          />
         )
       })()}
 
@@ -225,13 +235,15 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               <button className="btn ghost xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
               <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
               {unlockErr && <p className="field-err">{unlockErr}</p>}
-              <label className="muted">Push-to-talk key
-                <select value={ptt.keyName}
-                  onChange={(e) => { const k = PTT_KEY_CHOICES.find((c) => c.name === e.target.value); if (k) axi().setPttBinding({ key: k, modifier: null }) }}>
-                  {!PTT_KEY_CHOICES.some((k) => k.name === ptt.keyName) && <option value={ptt.keyName}>{ptt.keyName}</option>}
-                  {PTT_KEY_CHOICES.map((k) => <option key={k.code} value={k.name}>{k.name}</option>)}
-                </select>
-              </label>
+              <Select
+                label="Push-to-talk key"
+                value={ptt.keyName}
+                onChange={(v) => { const k = PTT_KEY_CHOICES.find((c) => c.name === v); if (k) axi().setPttBinding({ key: k, modifier: null }) }}
+                options={[
+                  ...(PTT_KEY_CHOICES.some((k) => k.name === ptt.keyName) ? [] : [{ value: ptt.keyName, label: ptt.keyName }]),
+                  ...PTT_KEY_CHOICES.map((k) => ({ value: k.name, label: k.name })),
+                ]}
+              />
               <p className="muted">Binding again may show a KDE confirmation.</p>
             </>
           )}
