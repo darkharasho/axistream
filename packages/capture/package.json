@@ -1,7 +1,10 @@
 {
   "name": "@axistream/capture",
+  "//exports": "The '.' barrel re-exports Node-only modules (fs, child_process, koffi); importing it from renderer code drags that whole graph into the browser bundle and rollup fails. './encoder-entries' and './encoder-presets' are leaf modules with no Node imports (encoder-presets imports only encoder-entries), so they are browser-safe by construction and are the only modules the renderer may import. Do not collapse them back into the barrel.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./encoder-entries": "./src/encoder-entries.ts",
+    "./encoder-presets": "./src/encoder-presets.ts"
   },
   "private": true,
   "version": "0.0.0",

@@ -1,6 +1,6 @@
 import type { PttBinding, PttCaptureResult } from './keys.js'
 import type { Binding, HotkeyBindings, HotkeyId } from './hotkeys.js'
-import type { EncoderId, Vendor } from '@axistream/capture'
+import type { EncoderId, Vendor } from '@axistream/capture/encoder-entries'
 
 export type StreamPhase =
   | 'SETTING_UP' | 'PREPARING_CAPTURE' | 'CHOOSING_CAPTURE' | 'AWAITING_APPROVAL'

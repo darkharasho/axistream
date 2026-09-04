@@ -42,6 +42,13 @@ const CHIP_LABELS: Record<ResolvedEncoderId, string> = {
   vaapi_h264: 'VAAPI H.264',
 }
 
+/** The short "what is actually encoding" name for a resolved encoder. Exported
+ *  so the renderer can label the Auto row with what auto would really resolve
+ *  to, instead of echoing whatever preset happens to be applied right now. */
+export function chipLabel(id: ResolvedEncoderId): string {
+  return CHIP_LABELS[id]
+}
+
 /** The user's selection -> what will actually be written to OBS. 'auto', and
  *  any selection that is no longer available (the GPU changed, or the row was
  *  always ingest-gated), resolves to the best available encoder rather than
@@ -54,6 +61,13 @@ export function resolveEncoder(id: EncoderId, vendor: Vendor, platform: NodeJS.P
   // amf-windows-only). When Windows vendor detection lands (an explicit
   // follow-up), this branch needs extending to promote amd_h264 there too,
   // or 'auto' will silently keep picking x264 on AMD Windows boxes.
+  //
+  // That same follow-up MUST first split Vendor's 'amd-intel' bucket into
+  // separate 'amd' and 'intel' values. encoderAvailability gates the AMF rows
+  // (amd_h264/amd_hevc) on vendor === 'amd-intel', and AMF is AMD-only — so an
+  // Intel GPU reporting 'amd-intel' on Windows would light up "Hardware (AMD,
+  // H.264)" for hardware that cannot drive it. Harmless today only because
+  // nothing reports 'amd-intel' on win32 yet.
   if (vendor === 'nvidia' && encoderAvailability(encoderEntry('nvenc_h264'), vendor, platform) === 'ok') return 'nvenc_h264'
   return 'x264'
 }

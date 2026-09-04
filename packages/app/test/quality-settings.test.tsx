@@ -166,6 +166,17 @@ describe('QualitySettings', () => {
     expect(screen.getByRole('option', { name: /Hardware \(NVENC, AV1\)/ })).toBeInTheDocument()
   })
 
+  it('labels Auto with what auto would resolve to, not the applied preset', () => {
+    // The whole point of this feature is that the UI never claims an encoder
+    // that is not the one that would actually run. state.encoder is the label
+    // of the *currently applied* preset, so on an NVIDIA box explicitly set to
+    // x264 it reads "x264" — but picking Auto there produces NVENC H.264.
+    render(<QualitySettings state={mk({ gpuVendor: 'nvidia', encoder: 'x264', quality: { ...DEFAULT_QUALITY, encoder: 'x264' } })} axi={axi as never} />)
+
+    const auto = screen.getByLabelText('Encoder').querySelector('option[value="auto"]')!
+    expect(auto.textContent).toBe('Auto (NVENC H.264)')
+  })
+
   it('sends the picked encoder', async () => {
     render(<QualitySettings state={mk({ gpuVendor: 'nvidia' })} axi={axi as never} />)
 

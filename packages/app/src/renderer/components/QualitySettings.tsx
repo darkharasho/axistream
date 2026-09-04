@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AppState, AxiApi } from '../../shared/state.js'
 import { QUALITY_HEIGHTS, QUALITY_FPS, MIN_BITRATE_KBPS, MAX_BITRATE_KBPS, AUTO_MAX_HEIGHT, AUTO_FPS, isStreamingPhase } from '../../shared/state.js'
-import { ENCODER_ENTRIES, encoderAvailability, type DisabledReason } from '@axistream/capture'
+// Subpaths, not the '@axistream/capture' barrel: the barrel re-exports Node-only
+// modules and rollup would pull that graph into the renderer bundle and fail.
+// test/renderer-browser-safety.test.ts guards this.
+import { ENCODER_ENTRIES, encoderAvailability, type DisabledReason } from '@axistream/capture/encoder-entries'
+import { resolveEncoder, chipLabel } from '@axistream/capture/encoder-presets'
 
 /** Short enough to sit inside an <option>; the full sentence goes under the
  *  select when the current selection is the unavailable one. */
@@ -49,6 +53,14 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   const selectedEntry = ENCODER_ENTRIES.find((e) => e.id === q.encoder)
   const selectedAvail = selectedEntry ? encoderAvailability(selectedEntry, state.gpuVendor, state.platform) : 'ok'
   const selectedReason: DisabledReason | null = selectedAvail === 'ok' ? null : selectedAvail
+
+  // What 'auto' would actually resolve to on this machine — NOT state.encoder,
+  // which is the label of the currently applied preset. Those differ whenever
+  // the user has explicitly picked a non-auto encoder (an NVIDIA box set to
+  // x264 would otherwise read "Auto (x264)") or before the first preset has
+  // been applied at all. The option must never claim an encoder auto would not
+  // pick.
+  const autoLabel = chipLabel(resolveEncoder('auto', state.gpuVendor, state.platform))
 
   const manualBitrate = q.bitrateKbps !== null
 
@@ -146,7 +158,7 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
             value={q.encoder}
             onChange={(e) => void axi.setQuality({ encoder: e.target.value as typeof q.encoder })}
           >
-            <option value="auto">{`Auto (${state.encoder})`}</option>
+            <option value="auto">{`Auto (${autoLabel})`}</option>
             {ENCODER_ENTRIES.map((entry) => {
               const avail = encoderAvailability(entry, state.gpuVendor, state.platform)
               return (
