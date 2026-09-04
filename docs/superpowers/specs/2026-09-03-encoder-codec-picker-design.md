@@ -75,9 +75,15 @@ This spec therefore fixes the **claim**, not the **encoder**.
 Lands first, on its own branch. Independent of the picker; it is a live bug affecting
 current users.
 
-**Change.** The DRI-render-node branch of `detectEncoder` resolves to `x264` rather
-than `vaapi`, carrying a comment that records why (Simple output mode has no VAAPI
-mapping) and points at the follow-up spec. `EncoderKind` loses the `vaapi` variant.
+**Change.** The `vaapi` entry in the `ENCODERS` table maps to `streamEncoder: 'x264'`
+with the label `x264`, carrying a comment that records why (Simple output mode has no
+VAAPI mapping) and points at the follow-up spec.
+
+`detectEncoder` is left alone deliberately: returning `vaapi` for a DRI render node is
+still *true* — AMD/Intel hardware really is present — and it is the only vendor signal
+in the codebase. Part 2 promotes exactly that probe into `detectVendor()` to decide
+which rows the picker enables. Fixing the lie at the table keeps the diff to the one
+place that was lying.
 
 **Behavior.** Nothing changes for any user — AMD/Intel machines were already running
 x264. Only the label becomes true: the chip reads "x264" instead of "VAAPI".
@@ -133,6 +139,11 @@ so the entire matrix is unit-testable with no OBS running. Reasons:
 | `no-vendor-gpu` | "No NVIDIA GPU detected" / "No AMD GPU detected" |
 | `amf-windows-only` | "AMD hardware encoding is Windows-only" |
 | `vaapi-advanced-mode` | "Needs OBS advanced output mode — not yet supported" |
+
+**On Windows the picker will show only `Software (x264)` enabled.** That is not a
+regression: `detectEncoder` already returns `x264` for every non-Linux platform, so
+Windows users are on software encoding today — the picker just stops hiding it. Windows
+vendor detection (and with it NVENC on Windows) is a follow-up.
 
 ### Settings and migration
 
