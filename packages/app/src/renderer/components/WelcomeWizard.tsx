@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Loader2, X } from 'lucide-react'
 import type { AppState, AudioDevice, AxiApi, CaptureTargetOption } from '../../shared/state.js'
 import { useModalKeys } from '../use-modal-keys.js'
+import { Select } from './Select.js'
 
 const STEPS = ['Capture', 'YouTube', 'Microphone', 'Ready'] as const
 
@@ -99,16 +100,15 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
         {step === 2 ? (
           <div className="wizard-body">
             <p className="muted">Hear yourself before a stranger does.</p>
-            <label>
-              <span>Microphone</span>
-              <select value={state.audio.micDevice ?? ''} onChange={(e) => {
-                void axi.setMicEnabled(true)
-                void axi.setMicDevice(e.target.value)
-              }}>
-                <option value="">Choose a microphone…</option>
-                {devices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </label>
+            <Select
+              label="Microphone"
+              value={state.audio.micDevice ?? ''}
+              onChange={(v) => { void axi.setMicEnabled(true); void axi.setMicDevice(v) }}
+              options={[
+                { value: '', label: 'Choose a microphone…' },
+                ...devices.map((d) => ({ value: d.id, label: d.name })),
+              ]}
+            />
             <button className="btn ghost sm" disabled={test.st === 'recording'} onClick={() => void runMicTest()}>
               {test.st === 'recording' ? <><Loader2 size={13} className="spin" /> Recording — speak now…</> : 'Test my mic'}
             </button>

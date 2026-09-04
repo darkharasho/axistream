@@ -16,7 +16,10 @@ const api = (over: Record<string, unknown> = {}) => ({
 describe('WebcamSettings', () => {
   it('lists cameras from the main process', async () => {
     render(<WebcamSettings webcam={view()} axi={api()} />)
-    await waitFor(() => expect(screen.getByRole('option', { name: 'C920' })).toBeTruthy())
+    // Options only exist while the listbox is open (components/Select.tsx).
+    await waitFor(() => expect(screen.getByLabelText('Camera')).toBeTruthy())
+    await userEvent.click(screen.getByLabelText('Camera'))
+    expect(screen.getByRole('option', { name: 'C920' })).toBeTruthy()
   })
 
   it('enables the camera through setWebcam', async () => {

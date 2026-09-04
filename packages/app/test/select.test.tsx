@@ -109,6 +109,51 @@ describe('Select', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  // Device lists run to twenty-odd PulseAudio sinks; without typeahead the
+  // only way to reach one is scrolling past the rest.
+  it('typeahead jumps to the first row starting with what was typed', async () => {
+    mount()
+
+    await userEvent.click(screen.getByLabelText('Thing'))
+    await userEvent.keyboard('ch{Enter}')
+
+    expect(onChange).toHaveBeenCalledWith('c')
+  })
+
+  it('typeahead skips disabled rows', async () => {
+    mount()
+
+    await userEvent.click(screen.getByLabelText('Thing'))
+    // X-ray is the only 'x' row and it cannot be chosen, so nothing moves.
+    await userEvent.keyboard('x')
+
+    expect(screen.getByRole('listbox').getAttribute('aria-activedescendant'))
+      .toBe(screen.getByRole('option', { name: 'Alpha' }).id)
+  })
+
+  // An unset value is a real state for the device pickers ("whatever OBS
+  // defaults to"), not a missing row — a blank trigger would read as broken.
+  it('shows the placeholder when nothing is chosen', () => {
+    render(<Select label="Thing" value="" options={OPTIONS} onChange={onChange} placeholder="System default" />)
+
+    expect(screen.getByLabelText('Thing')).toHaveTextContent('System default')
+  })
+
+  // The welcome wizard is a modal with its own document-level Escape handler.
+  // An open listbox owns the keyboard, or closing the popup closes the wizard.
+  it('does not let Escape reach a listener behind it', async () => {
+    const onDocEscape = vi.fn()
+    document.addEventListener('keydown', onDocEscape)
+    try {
+      mount()
+      await userEvent.click(screen.getByLabelText('Thing'))
+      await userEvent.keyboard('{Escape}')
+      expect(onDocEscape).not.toHaveBeenCalled()
+    } finally {
+      document.removeEventListener('keydown', onDocEscape)
+    }
+  })
+
   // The panel it lives in scrolls; a popup left floating over unrelated
   // content after a scroll is worse than one that dismisses itself.
   it('closes when an ancestor scrolls', async () => {

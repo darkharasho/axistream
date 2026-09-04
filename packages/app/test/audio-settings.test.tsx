@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { AudioSettings } from '../src/renderer/components/AudioSettings.js'
 import type { AudioTestResult } from '../src/shared/state.js'
 import type { PttCaptureResult } from '../src/shared/keys.js'
@@ -41,8 +42,10 @@ describe('AudioSettings', () => {
   it('toggles mic and shows a populated device picker', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(axi.getAudioDevices).toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Yeti' })).toBeInTheDocument())
-    fireEvent.change(screen.getByLabelText(/microphone device/i), { target: { value: 'yeti' } })
+    // Options only exist while the listbox is open (components/Select.tsx).
+    await waitFor(() => expect(screen.getByLabelText(/microphone device/i)).toBeInTheDocument())
+    await userEvent.click(screen.getByLabelText(/microphone device/i))
+    await userEvent.click(await screen.findByRole('option', { name: 'Yeti' }))
     expect(axi.setMicDevice).toHaveBeenCalledWith('yeti')
   })
 
@@ -55,8 +58,9 @@ describe('AudioSettings', () => {
   it('populates the output dropdown when desktop audio is on and selection calls setDesktopDevice', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(axi.getDesktopDevices).toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
-    fireEvent.change(screen.getByLabelText(/output device/i), { target: { value: 'hdmi' } })
+    await waitFor(() => expect(screen.getByLabelText(/output device/i)).toBeInTheDocument())
+    await userEvent.click(screen.getByLabelText(/output device/i))
+    await userEvent.click(await screen.findByRole('option', { name: 'HDMI' }))
     expect(axi.setDesktopDevice).toHaveBeenCalledWith('hdmi')
     await screen.findByLabelText('Guild Wars 2')
   })
@@ -70,16 +74,14 @@ describe('AudioSettings', () => {
   it('renders an unavailable placeholder when the saved output device is not enumerated', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'unplugged-dac', micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
-    const select = screen.getByLabelText(/output device/i) as HTMLSelectElement
-    expect(select.value).toBe('unplugged-dac')
+    expect(screen.getByLabelText(/output device/i)).toHaveTextContent('Saved device (unavailable)')
     await screen.findByLabelText('Guild Wars 2')
   })
 
   it('renders an unavailable placeholder when the saved mic device is not enumerated', async () => {
     render(<AudioSettings audio={{ desktopEnabled: false, desktopDevice: null, micEnabled: true, micDevice: 'unplugged-mic', gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(await screen.findByText('Saved device (unavailable)')).toBeInTheDocument()
-    const select = screen.getByLabelText(/microphone device/i) as HTMLSelectElement
-    expect(select.value).toBe('unplugged-mic')
+    expect(screen.getByLabelText(/microphone device/i)).toHaveTextContent('Saved device (unavailable)')
     await screen.findByLabelText('Guild Wars 2')
   })
 
@@ -91,7 +93,7 @@ describe('AudioSettings', () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: 'hdmi', micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={pttOff} />)
     expect(screen.queryByText('Saved device (unavailable)')).toBeNull()
     resolveDevices([{ id: 'hdmi', name: 'HDMI' }])
-    await waitFor(() => expect(screen.getByRole('option', { name: 'HDMI' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByLabelText(/output device/i)).toHaveTextContent('HDMI'))
     expect(screen.queryByText('Saved device (unavailable)')).toBeNull()
     await screen.findByLabelText('Guild Wars 2')
   })
@@ -159,6 +161,8 @@ describe('AudioSettings', () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: false, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={{ status: 'missing', error: null }} phase="READY" ptt={pttOff} />)
     expect(axi.getGameAudioApps).not.toHaveBeenCalled()
     expect(screen.getByText('Install plugin')).toBeInTheDocument()
+    // Flush the device enumeration the output picker kicked off.
+    await userEvent.click(screen.getByLabelText(/output device/i))
     await screen.findByRole('option', { name: 'Default' })
   })
 
@@ -297,7 +301,8 @@ describe('AudioSettings', () => {
 
   it('exclusive rebind is a dropdown calling setPttBinding', async () => {
     render(<AudioSettings audio={{ desktopEnabled: true, desktopDevice: null, micEnabled: true, micDevice: null, gameAudioApps: [] }} gameAudioPlugin={pluginReady} phase="READY" ptt={{ available: true, enabled: true, active: false, error: null, mode: 'exclusive', keyName: 'F18', keyCode: 188, modifier: null }} />)
-    fireEvent.change(screen.getByLabelText(/push-to-talk key/i), { target: { value: 'F13' } })
+    await userEvent.click(screen.getByLabelText(/push-to-talk key/i))
+    await userEvent.click(screen.getByRole('option', { name: 'F13' }))
     expect(axi.setPttBinding).toHaveBeenCalledWith({ key: { code: 183, name: 'F13' }, modifier: null })
   })
 })

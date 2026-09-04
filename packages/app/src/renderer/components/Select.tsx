@@ -9,8 +9,9 @@ import { createPortal } from 'react-dom'
  *  base-select` is Chromium 135+. So the popup is ours: a button trigger plus
  *  a listbox.
  *
- *  Native <select> stays the right answer for short, plain lists (resolution,
- *  frame rate). Reach for this one when rows need to explain themselves. */
+ *  Every dropdown in the app goes through here, so they all look and behave
+ *  alike: keyboard, typeahead, and a `note` badge for rows that have to
+ *  explain themselves. */
 
 export interface SelectOption {
   value: string
@@ -50,11 +51,31 @@ const nextEnabled = (options: readonly SelectOption[], from: number, step: numbe
   return -1
 }
 
-export function Select({ label, value, options, onChange }: {
+/** How long typed characters keep accumulating into one search term. Matches
+ *  the native select's own typeahead window closely enough not to surprise. */
+const TYPEAHEAD_MS = 600
+
+/** Search wraps past the current row so repeated presses of the same letter
+ *  cycle through the matches, the way a native select does. */
+function matchFrom(options: readonly SelectOption[], query: string, start: number): number {
+  for (let n = 1; n <= options.length; n++) {
+    const i = (start + n) % options.length
+    const o = options[i]
+    if (!o.disabled && o.label.toLowerCase().startsWith(query)) return i
+  }
+  return -1
+}
+
+export function Select({ label, value, options, onChange, className, placeholder }: {
   label: string
   value: string
   options: readonly SelectOption[]
   onChange: (value: string) => void
+  /** Extra class on the wrapper, for panels that lay their rows out. */
+  className?: string
+  /** Shown when nothing is chosen yet — for pickers where an empty value is a
+   *  real state ("whatever OBS defaults to"), not a missing row. */
+  placeholder?: string
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -62,11 +83,14 @@ export function Select({ label, value, options, onChange }: {
   const [pos, setPos] = useState<Position | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const typed = useRef({ query: '', at: 0 })
 
   const selected = options.findIndex((o) => o.value === value)
   // A value with no matching option would leave the trigger blank; show the
-  // raw value instead, which is at least honest about what is stored.
-  const shown = selected >= 0 ? options[selected].label : value
+  // raw value instead, which is at least honest about what is stored. Nothing
+  // stored at all is a state of its own, so it gets the placeholder.
+  const empty = selected < 0 && !value
+  const shown = selected >= 0 ? options[selected].label : empty ? placeholder ?? '' : value
 
   const openList = (startAt: number) => {
     const el = triggerRef.current
@@ -94,6 +118,15 @@ export function Select({ label, value, options, onChange }: {
     if (open) listRef.current?.focus()
   }, [open])
 
+  // Device lists overflow MAX_POPUP_HEIGHT, so the active row has to be
+  // dragged into view — otherwise arrow keys and typeahead move a selection
+  // the user cannot see. (Optional call: jsdom has no scrollIntoView.)
+  useEffect(() => {
+    if (!open || active < 0) return
+    const row = listRef.current?.children[active] as HTMLElement | undefined
+    row?.scrollIntoView?.({ block: 'nearest' })
+  }, [open, active])
+
   useEffect(() => {
     if (!open) return
     const onPointerDown = (e: PointerEvent) => {
@@ -115,6 +148,10 @@ export function Select({ label, value, options, onChange }: {
   }, [open])
 
   const onListKeyDown = (e: React.KeyboardEvent) => {
+    // An open listbox owns the keyboard. Without this, Escape reaches the
+    // document listener behind it (useModalKeys) and closes the whole wizard
+    // instead of just the popup.
+    e.stopPropagation()
     if (e.key === 'Escape' || e.key === 'Tab') { close(); e.preventDefault(); return }
     if (e.key === 'Enter' || e.key === ' ') { pick(active); e.preventDefault(); return }
     const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0
@@ -128,16 +165,30 @@ export function Select({ label, value, options, onChange }: {
       const i = e.key === 'Home' ? nextEnabled(options, 0, 1) : nextEnabled(options, options.length - 1, -1)
       if (i >= 0) setActive(i)
       e.preventDefault()
+      return
+    }
+    // Typeahead. A native select has it and these lists are long enough to
+    // need it — scrolling to "Yeti" past twenty PulseAudio sinks is the whole
+    // reason. Space is excluded: it selects (and never starts a search).
+    if (e.key.length === 1 && e.key !== ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const now = Date.now()
+      // A repeated single letter cycles matches rather than searching "aa".
+      const query = now - typed.current.at < TYPEAHEAD_MS ? typed.current.query + e.key : e.key
+      typed.current = { query, at: now }
+      const from = query.length > 1 && active >= 0 ? active - 1 : active
+      const i = matchFrom(options, query.toLowerCase(), from)
+      if (i >= 0) setActive(i)
+      e.preventDefault()
     }
   }
 
   return (
-    <div className="field">
+    <div className={className ? `field ${className}` : 'field'}>
       <span id={`${id}-label`}>{label}</span>
       <button
         ref={triggerRef}
         type="button"
-        className="sel-trigger"
+        className={empty ? 'sel-trigger empty' : 'sel-trigger'}
         role="combobox"
         aria-labelledby={`${id}-label`}
         aria-controls={`${id}-list`}

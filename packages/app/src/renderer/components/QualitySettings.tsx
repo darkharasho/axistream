@@ -41,15 +41,14 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   const heights = QUALITY_HEIGHTS.filter((h) => !capture || h <= capture.height)
   // A persisted height can outlive the monitor it was set on (e.g. settings.json
   // still carries 1440 after moving to a 1080p display). Behaviorally harmless —
-  // applyCaptureResolution never upscales — but the <select> would otherwise land
-  // on a value with no matching <option> and silently fall back to displaying
-  // "Auto", contradicting the "Custom" summary above it. Surface it honestly
-  // instead of hiding it.
+  // applyCaptureResolution never upscales — but with no matching row the picker
+  // would show a bare "1440" with no hint why the stream is not getting it.
+  // Give it a row of its own, badged.
   const phantomHeight = q.height !== null && !heights.includes(q.height) ? q.height : null
 
   // A persisted selection can outlive the GPU it was set on, or stay blocked
-  // by the ingest. Keep it selected and explain it, rather than letting the
-  // <select> fall back to a value the user never picked — same reasoning as
+  // by the ingest. Keep it selected and explain it, rather than quietly
+  // swapping in a value the user never picked — same reasoning as
   // phantomHeight above.
   const selectedEntry = ENCODER_ENTRIES.find((e) => e.id === q.encoder)
   const selectedAvail = selectedEntry ? encoderAvailability(selectedEntry, state.gpuVendor, state.platform) : 'ok'
@@ -112,28 +111,26 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
 
       <div className="quality-body">
         {live ? <p className="q-note">Applies to your next stream.</p> : null}
-        <label>
-          <span>Resolution</span>
-          <select
-            value={q.height === null ? 'auto' : String(q.height)}
-            onChange={(e) => void axi.setQuality({ height: e.target.value === 'auto' ? null : Number(e.target.value) })}
-          >
-            <option value="auto">{`Auto (${autoHeight}p)`}</option>
-            {heights.map((h) => <option key={h} value={h}>{`${h}p`}</option>)}
-            {phantomHeight !== null ? <option value={phantomHeight}>{`${phantomHeight}p (above this monitor)`}</option> : null}
-          </select>
-        </label>
+        <Select
+          label="Resolution"
+          value={q.height === null ? 'auto' : String(q.height)}
+          onChange={(v) => void axi.setQuality({ height: v === 'auto' ? null : Number(v) })}
+          options={[
+            { value: 'auto', label: `Auto (${autoHeight}p)` },
+            ...heights.map((h) => ({ value: String(h), label: `${h}p` })),
+            ...(phantomHeight !== null ? [{ value: String(phantomHeight), label: `${phantomHeight}p`, note: 'above this monitor' }] : []),
+          ]}
+        />
 
-        <label>
-          <span>Frame rate</span>
-          <select
-            value={q.fps === null ? 'auto' : String(q.fps)}
-            onChange={(e) => void axi.setQuality({ fps: e.target.value === 'auto' ? null : Number(e.target.value) })}
-          >
-            <option value="auto">{`Auto (${AUTO_FPS})`}</option>
-            {QUALITY_FPS.map((f) => <option key={f} value={f}>{String(f)}</option>)}
-          </select>
-        </label>
+        <Select
+          label="Frame rate"
+          value={q.fps === null ? 'auto' : String(q.fps)}
+          onChange={(v) => void axi.setQuality({ fps: v === 'auto' ? null : Number(v) })}
+          options={[
+            { value: 'auto', label: `Auto (${AUTO_FPS})` },
+            ...QUALITY_FPS.map((f) => ({ value: String(f), label: String(f) })),
+          ]}
+        />
 
         <label className="check">
           <input
@@ -163,8 +160,6 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
           </label>
         ) : null}
 
-        {/* Not a native <select>: this list's rows have to say why they are
-            unavailable, and Chromium 126 draws the native popup itself. */}
         <Select
           label="Encoder"
           value={q.encoder}

@@ -16,6 +16,12 @@ const mk = (over: Partial<AppState> = {}): AppState => ({
   ...over,
 })
 
+/** Options only exist while the listbox is open (components/Select.tsx). */
+const openList = async (label: RegExp | string) => {
+  await userEvent.click(screen.getByLabelText(label))
+  return screen.getAllByRole('option').map((o) => o.textContent)
+}
+
 describe('QualitySettings', () => {
   beforeEach(() => vi.clearAllMocks())
 
@@ -48,7 +54,7 @@ describe('QualitySettings', () => {
   it('omits resolutions the monitor cannot produce', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    const opts = Array.from(screen.getByLabelText(/resolution/i).querySelectorAll('option')).map((o) => o.textContent)
+    const opts = await openList(/resolution/i)
     expect(opts).toContain('720p')
     expect(opts).toContain('1080p')
     expect(opts.some((o) => o?.includes('1440'))).toBe(false)
@@ -57,7 +63,7 @@ describe('QualitySettings', () => {
   it('labels Auto with the value it resolves to from the monitor, not the active override', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 720 }, capture: { sourceLabel: 'Guild Wars 2', width: 1920, height: 1080, outputWidth: 1280, outputHeight: 720, fps: 60 } })} axi={axi as never} />)
 
-    const opts = Array.from(screen.getByLabelText(/resolution/i).querySelectorAll('option')).map((o) => o.textContent)
+    const opts = await openList(/resolution/i)
     expect(opts).toContain('Auto (1080p)')
   })
 
@@ -66,16 +72,18 @@ describe('QualitySettings', () => {
     // monitor; this one only goes up to 1080p.
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 1440 } })} axi={axi as never} />)
 
-    const select = screen.getByLabelText(/resolution/i) as HTMLSelectElement
-    expect(select.value).toBe('1440')
-    expect(select.selectedOptions[0].textContent).toMatch(/1440/)
-    expect(select.selectedOptions[0].textContent?.toLowerCase()).not.toContain('auto')
+    const trigger = screen.getByLabelText(/resolution/i)
+    expect(trigger.textContent).toMatch(/1440/)
+    expect(trigger.textContent?.toLowerCase()).not.toContain('auto')
+    await userEvent.click(trigger)
+    expect(screen.getByRole('option', { name: /1440p/ })).toHaveTextContent('above this monitor')
   })
 
   it('sends the picked resolution', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: '720' } })
+    await userEvent.click(screen.getByLabelText(/resolution/i))
+    await userEvent.click(screen.getByRole('option', { name: '720p' }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ height: 720 })
   })
@@ -83,7 +91,8 @@ describe('QualitySettings', () => {
   it('sends null when resolution goes back to Auto', async () => {
     render(<QualitySettings state={mk({ quality: { ...DEFAULT_QUALITY, height: 720 } })} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: 'auto' } })
+    await userEvent.click(screen.getByLabelText(/resolution/i))
+    await userEvent.click(screen.getByRole('option', { name: /^Auto/ }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ height: null })
   })
@@ -91,7 +100,8 @@ describe('QualitySettings', () => {
   it('sends the picked frame rate', async () => {
     render(<QualitySettings state={mk()} axi={axi as never} />)
 
-    fireEvent.change(screen.getByLabelText(/frame rate/i), { target: { value: '30' } })
+    await userEvent.click(screen.getByLabelText(/frame rate/i))
+    await userEvent.click(screen.getByRole('option', { name: '30' }))
 
     expect(axi.setQuality).toHaveBeenCalledWith({ fps: 30 })
   })
