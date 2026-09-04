@@ -1,3 +1,5 @@
+import { encoderAvailability, encoderEntry, type EncoderId, type ResolvedEncoderId, type Vendor } from './encoder-entries.js'
+
 export type EncoderKind = 'nvenc' | 'vaapi' | 'x264'
 
 export interface EncoderPreset {
@@ -49,6 +51,43 @@ export function choosePreset(
   const e = ENCODERS[kind]
   return {
     ...e,
+    videoBitrateKbps: overrides?.videoBitrateKbps ?? videoBitrate(outputHeight, fps),
+    audioBitrateKbps: 160,
+  }
+}
+
+/** Short labels for the stat chip — the picker's own labels are too long for
+ *  a chip, and the chip's job is "what is actually encoding right now". */
+const CHIP_LABELS: Record<ResolvedEncoderId, string> = {
+  x264: 'x264',
+  nvenc_h264: 'NVENC H.264',
+  nvenc_hevc: 'NVENC HEVC',
+  nvenc_av1: 'NVENC AV1',
+  amd_h264: 'AMD H.264',
+  amd_hevc: 'AMD HEVC',
+  vaapi_h264: 'VAAPI H.264',
+}
+
+/** The user's selection -> what will actually be written to OBS. 'auto', and
+ *  any selection that is no longer available (the GPU changed, or the row was
+ *  always ingest-gated), resolves to the best available encoder rather than
+ *  failing go-live. */
+export function resolveEncoder(id: EncoderId, vendor: Vendor, platform: NodeJS.Platform): ResolvedEncoderId {
+  if (id !== 'auto' && encoderAvailability(encoderEntry(id), vendor, platform) === 'ok') return id
+  if (vendor === 'nvidia' && encoderAvailability(encoderEntry('nvenc_h264'), vendor, platform) === 'ok') return 'nvenc_h264'
+  return 'x264'
+}
+
+export function presetFor(
+  id: ResolvedEncoderId, outputHeight: number, fps: number, overrides?: QualityOverrides,
+): EncoderPreset {
+  const entry = encoderEntry(id)
+  return {
+    // resolveEncoder only ever returns ids with a real OBS string, so the
+    // null case (VAAPI) is unreachable here — fall back rather than throw,
+    // because nothing encoder-side may block go-live.
+    streamEncoder: entry.streamEncoder ?? 'x264',
+    label: CHIP_LABELS[id],
     videoBitrateKbps: overrides?.videoBitrateKbps ?? videoBitrate(outputHeight, fps),
     audioBitrateKbps: 160,
   }
