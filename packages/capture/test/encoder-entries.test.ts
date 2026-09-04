@@ -53,6 +53,17 @@ describe('encoderAvailability', () => {
     expect(encoderAvailability(of('amd_hevc'), 'amd-intel', win)).toBe('enhanced-rtmp')
   })
 
+  // On Linux the AMD rows are impossible regardless of GPU, so the platform
+  // reason is the truthful one: 'no-amd' would falsely imply that an AMD
+  // card would enable them. The platform gate therefore intentionally
+  // precedes the vendor-mismatch check — do not reorder these branches.
+  it('the platform gate wins over vendor mismatch on Linux, whatever the GPU', () => {
+    expect(encoderAvailability(of('amd_h264'), 'nvidia', linux)).toBe('amf-windows-only')
+    expect(encoderAvailability(of('amd_h264'), 'none', linux)).toBe('amf-windows-only')
+    expect(encoderAvailability(of('amd_hevc'), 'nvidia', linux)).toBe('amf-windows-only')
+    expect(encoderAvailability(of('amd_hevc'), 'none', linux)).toBe('amf-windows-only')
+  })
+
   it('VAAPI is never selectable until advanced output mode lands', () => {
     expect(encoderAvailability(of('vaapi_h264'), 'amd-intel', linux)).toBe('vaapi-advanced-mode')
     expect(encoderAvailability(of('vaapi_h264'), 'nvidia', linux)).toBe('vaapi-advanced-mode')
