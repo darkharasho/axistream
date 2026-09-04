@@ -18,6 +18,14 @@ files:
   - out/**
   - build/icon.png
 asar: true
+# koffi is the only native module. electron-builder's smart-unpack only
+# auto-unpacks packages containing .dll/.exe/.dylib/.so — a bare *.node is not
+# matched — so koffi.node stayed INSIDE app.asar. Electron then has to copy it
+# to %TEMP%\<guid>.tmp.node on every dlopen, which is what a Windows user's
+# crash report showed as the faulting module. Unpack it so the FFI binary is
+# loaded from the install directory instead.
+asarUnpack:
+  - '**/node_modules/koffi/**'
 beforePack: ../../scripts/electron-builder-before-pack.cjs
 npmRebuild: false            # koffi (the one native dep) ships prebuilds — nothing to rebuild
 electronLanguages: [en-US]

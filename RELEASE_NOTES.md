@@ -1,5 +1,21 @@
 # Release Notes
 
+## Version v1.0.5 — September 3, 2026
+
+A Windows packaging fix, for anyone who hit a crash or a failed update.
+
+### The Windows build no longer runs part of itself out of your Temp folder
+AxiStream uses a small native component on Windows to read your push-to-talk key and to keep the OBS it starts tied to the app's own lifetime. Because of a packaging oversight, that component was bundled in a form Windows can't load directly, so every launch copied it into your Temp folder and ran it from there.
+
+That is a fragile place to run code from: antivirus tools inspect, quarantine and delete files there, and Temp gets cleaned out on a schedule. One Windows crash report we received named exactly that temp copy as the faulting component. The component now ships in AxiStream's own program folder and is loaded from there.
+
+We can't yet prove this was the cause of that crash — the report doesn't go deep enough to say — but it removes a genuine failure mode, and it is the right way to ship the component regardless.
+
+### If an update failed with "Failed to uninstall old application files"
+That message means the installer found AxiStream's files still locked by something and stopped rather than leave a half-replaced install behind. It follows a crash: Windows keeps the crashed program's files held while it collects its error report.
+
+To get unstuck, restart your PC and run the update again. If it still refuses, uninstall AxiStream from Settings → Apps first, then install this version fresh — your settings, YouTube sign-in and masks are kept.
+
 ## Version v1.0.4 — September 2, 2026
 
 An audio fix for anyone capturing specific apps.
