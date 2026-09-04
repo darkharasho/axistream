@@ -74,6 +74,12 @@ const CHIP_LABELS: Record<ResolvedEncoderId, string> = {
  *  failing go-live. */
 export function resolveEncoder(id: EncoderId, vendor: Vendor, platform: NodeJS.Platform): ResolvedEncoderId {
   if (id !== 'auto' && encoderAvailability(encoderEntry(id), vendor, platform) === 'ok') return id
+  // Auto-selection deliberately only promotes NVENC today: detectVendor()
+  // never reports 'amd-intel' on a platform where the AMD rows are usable
+  // (it only sees 'amd-intel' on Linux, where amd_h264/amd_hevc are always
+  // amf-windows-only). When Windows vendor detection lands (an explicit
+  // follow-up), this branch needs extending to promote amd_h264 there too,
+  // or 'auto' will silently keep picking x264 on AMD Windows boxes.
   if (vendor === 'nvidia' && encoderAvailability(encoderEntry('nvenc_h264'), vendor, platform) === 'ok') return 'nvenc_h264'
   return 'x264'
 }
@@ -82,12 +88,17 @@ export function presetFor(
   id: ResolvedEncoderId, outputHeight: number, fps: number, overrides?: QualityOverrides,
 ): EncoderPreset {
   const entry = encoderEntry(id)
+  // resolveEncoder only ever returns ids with a real OBS string, so the null
+  // case (VAAPI) is unreachable here — fall back rather than throw, because
+  // nothing encoder-side may block go-live. The label follows the same
+  // substitution so the chip can never claim an encoder that is not
+  // actually running (a caller could still reach this by calling presetFor
+  // directly with 'vaapi_h264', bypassing resolveEncoder).
+  const streamEncoder = entry.streamEncoder ?? 'x264'
+  const label = entry.streamEncoder === null ? CHIP_LABELS.x264 : CHIP_LABELS[id]
   return {
-    // resolveEncoder only ever returns ids with a real OBS string, so the
-    // null case (VAAPI) is unreachable here — fall back rather than throw,
-    // because nothing encoder-side may block go-live.
-    streamEncoder: entry.streamEncoder ?? 'x264',
-    label: CHIP_LABELS[id],
+    streamEncoder,
+    label,
     videoBitrateKbps: overrides?.videoBitrateKbps ?? videoBitrate(outputHeight, fps),
     audioBitrateKbps: 160,
   }

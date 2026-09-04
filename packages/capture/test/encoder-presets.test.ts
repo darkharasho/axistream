@@ -84,4 +84,12 @@ describe('presetFor', () => {
     expect(presetFor('x264', 1440, 60).videoBitrateKbps).toBe(24000)
     expect(presetFor('nvenc_h264', 1080, 30, { videoBitrateKbps: 3000 }).videoBitrateKbps).toBe(3000)
   })
+
+  // resolveEncoder never returns 'vaapi_h264', but presetFor is exported and
+  // can be called directly, bypassing it. The chip must never claim an
+  // encoder that is not actually running — when the streamEncoder falls back
+  // to x264, the label must too.
+  it('never labels the x264 fallback as VAAPI', () => {
+    expect(presetFor('vaapi_h264', 1080, 60)).toMatchObject({ streamEncoder: 'x264', label: 'x264' })
+  })
 })
