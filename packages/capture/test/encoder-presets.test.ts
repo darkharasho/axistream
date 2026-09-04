@@ -4,7 +4,9 @@ import { choosePreset } from '../src/encoder-presets.js'
 describe('choosePreset', () => {
   it('maps encoder kinds to simple-mode ini values and labels', () => {
     expect(choosePreset('nvenc', 1080, 60)).toMatchObject({ streamEncoder: 'nvenc', label: 'NVENC' })
-    expect(choosePreset('vaapi', 1080, 60)).toMatchObject({ streamEncoder: 'ffmpeg_vaapi', label: 'VAAPI' })
+    // Not 'ffmpeg_vaapi': OBS's Simple output mode has no VAAPI mapping, so
+    // that string silently became obs_x264. See obs-encoder-strings.test.ts.
+    expect(choosePreset('vaapi', 1080, 60)).toMatchObject({ streamEncoder: 'x264', label: 'x264' })
     expect(choosePreset('x264', 1080, 60)).toMatchObject({ streamEncoder: 'x264', label: 'x264' })
   })
 
@@ -42,6 +44,6 @@ describe('choosePreset', () => {
 
   it('leaves encoder identity and audio bitrate untouched by an override', () => {
     const p = choosePreset('vaapi', 1440, 60, { videoBitrateKbps: 3000 })
-    expect(p).toMatchObject({ streamEncoder: 'ffmpeg_vaapi', label: 'VAAPI', audioBitrateKbps: 160 })
+    expect(p).toMatchObject({ streamEncoder: 'x264', label: 'x264', audioBitrateKbps: 160 })
   })
 })
