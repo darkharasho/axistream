@@ -208,6 +208,20 @@ p.axi-ink-dim { margin: 0 0 12px; }
    dropdown opened from inside a modal (the wizard's microphone picker, the
    add-modifier menu) would open behind the modal's own backdrop. */
 .axi-picker__pop--fixed, .axi-menu__pop { z-index: 55; }
+/* .axi-picker__pop carries min-width: 100% so a statically-positioned popup is
+   never narrower than the trigger it hangs under. --fixed changes nothing but
+   `position`, and for a fixed element the containing block is the VIEWPORT — so
+   that 100% resolves to the whole window and, being a min-width, beats the
+   inline `width` Select.tsx measures off the trigger. Every dropdown in the app
+   is this popup, so the floor has to be released here; the measured width is
+   what min-width: 100% was approximating in the first place. */
+.axi-picker__pop--fixed { min-width: 0; }
+/* Select.tsx focuses the listbox programmatically on open (focus stays on the
+   popup and aria-activedescendant reports the active row), so a keyboard-opened
+   dropdown would otherwise take the language's global accent :focus-visible
+   ring around the entire popup, on top of its own border. Scoped to this
+   element rather than weakening the global rule. */
+.axi-picker__pop:focus-visible { outline: 0; }
 
 /* Welcome banner — floats over the hero's top edge rather than joining the
    flex column, so it never reflows the preview underneath it. Below the
