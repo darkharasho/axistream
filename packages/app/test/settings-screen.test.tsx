@@ -66,6 +66,16 @@ describe('SettingsScreen', () => {
     expect(chips).toHaveTextContent('NVENC')
   })
 
+  // The panel this branch adds. Its own behaviour is
+  // appearance-settings.test.tsx's job; this only proves SettingsScreen still
+  // carries the section — the same split the Quality panel uses above.
+  it('mounts the appearance panel', async () => {
+    render(<SettingsScreen state={base} axi={axi as any} onRunSetup={() => {}} />)
+    await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())
+    expect(screen.getByRole('heading', { name: /appearance/i })).toBeTruthy()
+    expect(document.querySelectorAll('.accent-swatch').length).toBeGreaterThan(0)
+  })
+
   it('offers Re-set up capture', async () => {
     render(<SettingsScreen state={base} axi={axi as any} onRunSetup={() => {}} />)
     await waitFor(() => expect(axi.appVersion).toHaveBeenCalled())

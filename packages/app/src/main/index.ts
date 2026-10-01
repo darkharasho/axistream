@@ -70,7 +70,7 @@ let smokeWatcher: ReturnType<typeof createSmokeWatcher> | null = null
 const CAPTURE_SOURCE = 'AxiStream Capture'
 const WINDOW_FRACTION = 0.6
 const WINDOW_MIN = { width: 820, height: 560 }
-const SIDEBAR_W = 200 // mirrors the CSS .sidebar width
+const SIDEBAR_W = 200 // mirrors --axi-rail-w on .axi-rail in styles.css
 const viewOf = (s: StreamSettingsData): StreamSettingsView => ({ titleTemplate: s.titleTemplate, dateFormat: s.dateFormat, privacy: s.privacy, discordWebhookUrl: s.discordWebhookUrl, discordMessage: s.discordMessage, recordDir: s.recordDir })
 let state: AppState = { ...INITIAL_STATE }
 

@@ -164,4 +164,32 @@ describe('Select', () => {
 
     expect(screen.queryByRole('listbox')).toBeNull()
   })
+
+  // systemLabels suppresses the language's uppercase chrome for options that
+  // are names the system reports (a microphone, a webcam) rather than fixed
+  // labels this app wrote ("Public", "Auto (1080p)") — uppercasing real data
+  // is distortion, not styling. Both the collapsed trigger and the option
+  // rows need the --plain modifier, or the popup would disagree with the
+  // closed box the moment it opened.
+  it('renders the --plain modifier on trigger and options when systemLabels is set', async () => {
+    render(<Select label="Thing" value="a" options={OPTIONS} onChange={onChange} systemLabels />)
+
+    expect(screen.getByLabelText('Thing')).toHaveClass('axi-picker__btn--plain')
+
+    await userEvent.click(screen.getByLabelText('Thing'))
+
+    expect(screen.getByRole('option', { name: 'Alpha' })).toHaveClass('axi-picker__opt--plain')
+    expect(screen.getByRole('option', { name: 'Bravo' })).toHaveClass('axi-picker__opt--plain')
+  })
+
+  it('does not render the --plain modifier without systemLabels', async () => {
+    mount('a')
+
+    expect(screen.getByLabelText('Thing')).not.toHaveClass('axi-picker__btn--plain')
+
+    await userEvent.click(screen.getByLabelText('Thing'))
+
+    expect(screen.getByRole('option', { name: 'Alpha' })).not.toHaveClass('axi-picker__opt--plain')
+    expect(screen.getByRole('option', { name: 'Bravo' })).not.toHaveClass('axi-picker__opt--plain')
+  })
 })

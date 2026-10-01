@@ -28,17 +28,17 @@ export function UpdatesSettings() {
   return (
     <section className="yt-settings">
       <h3>Updates</h3>
-      <p className="muted">AxiStream {version}</p>
-      <div className="updates-row">
-        <button className="btn ghost sm" disabled={busy} onClick={() => axi().checkForUpdates()}>Check for updates</button>
-        {status?.state === 'ready' && <button className="btn primary sm" onClick={() => axi().installUpdate()}>Restart &amp; update</button>}
-        {status && <span className={status.state === 'error' ? 'field-err' : 'muted'}>{line()}</span>}
+      <p className="axi-ink-dim">AxiStream {version}</p>
+      <div className="axi-row">
+        <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={busy} onClick={() => axi().checkForUpdates()}>Check for updates</button>
+        {status?.state === 'ready' && <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => axi().installUpdate()}>Restart &amp; update</button>}
+        {status && <span className={status.state === 'error' ? 'field-err' : 'axi-ink-dim'}>{line()}</span>}
       </div>
       {notes && (
-        <div className="whatsnew">
+        <div className="axi-prose whatsnew">
           <h4>What&apos;s new in {notes.version}</h4>
           <pre className="whatsnew-body">{notes.notes}</pre>
-          <button className="btn ghost xs" onClick={() => { axi().setLastSeenVersion(notes.version); setNotes(null) }}>Got it</button>
+          <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={() => { axi().setLastSeenVersion(notes.version); setNotes(null) }}>Got it</button>
         </div>
       )}
     </section>

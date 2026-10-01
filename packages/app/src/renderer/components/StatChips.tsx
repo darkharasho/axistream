@@ -6,21 +6,21 @@ export function StatChips({ stats, capture, encoder }: { stats: LiveStats | null
   // Idle (not streaming): just the encoder. Live: full health row.
   if (!stats) {
     return (
-      <div className="chips">
-        <span className="chip">{encoder} · {res}</span>
+      <div className="axi-row">
+        <span className="axi-chip axi-chip--meta">{encoder} · {res}</span>
       </div>
     )
   }
-  const droppedClass = stats.droppedPct > 5 ? 'bad' : stats.droppedPct >= 1 ? 'warn' : 'good'
+  const droppedClass = stats.droppedPct > 5 ? 'axi-chip--danger' : stats.droppedPct >= 1 ? 'axi-chip--warn' : 'axi-chip--ok'
   const dropped = stats.droppedPct >= 1
     ? `${stats.droppedFrames} dropped · ${stats.droppedPct}%`
     : `${stats.droppedFrames} dropped`
   return (
-    <div className="chips">
-      <span className="chip">{`▲ ${stats.bitrateKbps} kbps`}</span>
-      <span className={`chip ${droppedClass}`}>{dropped}</span>
-      <span className="chip">{`${stats.encoder} · ${res}`}</span>
-      <span className="chip">{`CPU ${stats.cpuPct}%`}</span>
+    <div className="axi-row">
+      <span className="axi-chip axi-chip--meta">{`▲ ${stats.bitrateKbps} kbps`}</span>
+      <span className={`axi-chip ${droppedClass}`}>{dropped}</span>
+      <span className="axi-chip axi-chip--meta">{`${stats.encoder} · ${res}`}</span>
+      <span className="axi-chip axi-chip--meta">{`CPU ${stats.cpuPct}%`}</span>
     </div>
   )
 }

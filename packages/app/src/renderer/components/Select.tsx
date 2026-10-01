@@ -66,7 +66,7 @@ function matchFrom(options: readonly SelectOption[], query: string, start: numbe
   return -1
 }
 
-export function Select({ label, value, options, onChange, className, placeholder }: {
+export function Select({ label, value, options, onChange, className, placeholder, systemLabels }: {
   label: string
   value: string
   options: readonly SelectOption[]
@@ -76,6 +76,11 @@ export function Select({ label, value, options, onChange, className, placeholder
   /** Shown when nothing is chosen yet — for pickers where an empty value is a
    *  real state ("whatever OBS defaults to"), not a missing row. */
   placeholder?: string
+  /** Set when the options are names the system reports — devices, formats,
+   *  resolutions — rather than labels this app wrote. .axi-picker's uppercase
+   *  chrome is fine for "Public"/"Unlisted"/fixed enums; it is data
+   *  distortion on "Blue Yeti" or "HD Pro Webcam C920", so those skip it. */
+  systemLabels?: boolean
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -185,65 +190,66 @@ export function Select({ label, value, options, onChange, className, placeholder
   return (
     <div className={className ? `field ${className}` : 'field'}>
       <span id={`${id}-label`}>{label}</span>
-      <button
-        ref={triggerRef}
-        type="button"
-        className={empty ? 'sel-trigger empty' : 'sel-trigger'}
-        role="combobox"
-        aria-labelledby={`${id}-label`}
-        aria-controls={`${id}-list`}
-        aria-expanded={open}
-        onClick={() => (open ? close() : openList(selected))}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            openList(selected >= 0 ? selected : nextEnabled(options, 0, 1))
-            e.preventDefault()
-          }
-        }}
-      >
-        {shown}
-      </button>
-
-      {open && pos ? createPortal(
-        <div
-          ref={listRef}
-          id={`${id}-list`}
-          className="sel-list"
-          role="listbox"
-          tabIndex={-1}
+      <div className="axi-picker">
+        <button
+          ref={triggerRef}
+          type="button"
+          className={`axi-picker__btn${empty ? ' sel-empty' : ''}${systemLabels ? ' axi-picker__btn--plain' : ''}`}
+          aria-haspopup="listbox"
           aria-labelledby={`${id}-label`}
-          aria-activedescendant={active >= 0 ? `${id}-opt-${active}` : undefined}
-          onKeyDown={onListKeyDown}
-          style={{
-            position: 'fixed',
-            left: pos.left,
-            width: pos.width,
-            top: pos.top,
-            bottom: pos.bottom,
-            maxHeight: MAX_POPUP_HEIGHT,
+          aria-controls={`${id}-list`}
+          aria-expanded={open}
+          onClick={() => (open ? close() : openList(selected))}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              openList(selected >= 0 ? selected : nextEnabled(options, 0, 1))
+              e.preventDefault()
+            }
           }}
         >
-          {options.map((o, i) => (
-            <div
-              key={o.value}
-              id={`${id}-opt-${i}`}
-              role="option"
-              aria-selected={o.value === value}
-              aria-disabled={o.disabled || undefined}
-              className={`opt${o.value === value ? ' on' : ''}${i === active && !o.disabled ? ' active' : ''}`}
-              // Options are not focusable: focus stays on the listbox and
-              // aria-activedescendant reports the active row, so a click never
-              // has to steal it back.
-              onClick={() => pick(i)}
-              onMouseMove={() => { if (!o.disabled && i !== active) setActive(i) }}
-            >
-              <span className="opt-label">{o.label}</span>
-              {o.note ? <span className="why">{o.note}</span> : null}
-            </div>
-          ))}
-        </div>,
-        document.body,
-      ) : null}
+          {shown}
+        </button>
+
+        {open && pos ? createPortal(
+          <div
+            ref={listRef}
+            id={`${id}-list`}
+            className="axi-picker__pop axi-picker__pop--fixed"
+            role="listbox"
+            tabIndex={-1}
+            aria-labelledby={`${id}-label`}
+            aria-activedescendant={active >= 0 ? `${id}-opt-${active}` : undefined}
+            onKeyDown={onListKeyDown}
+            style={{
+              left: pos.left,
+              width: pos.width,
+              top: pos.top,
+              bottom: pos.bottom,
+              maxHeight: MAX_POPUP_HEIGHT,
+            }}
+          >
+            {options.map((o, i) => (
+              <div
+                key={o.value}
+                id={`${id}-opt-${i}`}
+                role="option"
+                aria-selected={o.value === value}
+                aria-disabled={o.disabled || undefined}
+                className={`axi-picker__opt${systemLabels ? ' axi-picker__opt--plain' : ''}${i === active && !o.disabled ? ' active' : ''}`}
+                // Options are not focusable: focus stays on the listbox and
+                // aria-activedescendant reports the active row, so a click never
+                // has to steal it back.
+                onClick={() => pick(i)}
+                onMouseMove={() => { if (!o.disabled && i !== active) setActive(i) }}
+              >
+                <span className="opt-label">{o.label}</span>
+                {o.note ? <span className="why">{o.note}</span> : null}
+              </div>
+            ))}
+          </div>,
+          document.body,
+        ) : null}
+      </div>
     </div>
   )
 }

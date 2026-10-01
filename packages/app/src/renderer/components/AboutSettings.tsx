@@ -19,17 +19,17 @@ export function AboutSettings({ onRunSetup }: { onRunSetup: () => void }) {
   useEffect(() => { void axi().appVersion().then(setVersion) }, [])
 
   return (
-    <section className="setting">
+    <section className="axi-panel">
       <h3>About</h3>
-      <p className="muted">AxiStream {version}</p>
-      <button className="btn ghost sm" onClick={onRunSetup}>Run setup again</button>
-      <p className="muted about-obs">
+      <p className="axi-ink-dim">AxiStream {version}</p>
+      <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={onRunSetup}>Run setup again</button>
+      <p className="axi-ink-dim about-obs">
         AxiStream bundles OBS Studio 32.1.2, licensed GPL-2.0-or-later. The corresponding
         source is attached to every release.
       </p>
-      <div className="about-links">
+      <div className="axi-row about-links">
         {LINKS.map((l) => (
-          <button key={l.url} className="btn ghost xs" onClick={() => void axi().openExternalUrl(l.url)}>{l.label}</button>
+          <button key={l.url} className="axi-link" onClick={() => void axi().openExternalUrl(l.url)}>{l.label}</button>
         ))}
       </div>
     </section>

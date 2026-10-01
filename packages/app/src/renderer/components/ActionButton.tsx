@@ -25,7 +25,7 @@ export function ActionButton({ state, axi }: { state: AppState; axi: AxiApi }) {
   }, [open])
 
   const starting = phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE'
-  const tone = live ? 'danger' : 'primary'
+  const tone = live ? 'axi-ink-danger' : 'axi-btn--primary'
   const primary = live
     ? { disabled: false, onClick: () => axi.stopStream(), label: <><Square size={16} /> End Stream</> }
     : phase === 'NEEDS_YOUTUBE'
@@ -40,11 +40,11 @@ export function ActionButton({ state, axi }: { state: AppState; axi: AxiApi }) {
 
   return (
     <div className="action-split" ref={wrap}>
-      <button className={`btn ${tone} action`} disabled={primary.disabled} onClick={primary.onClick}>
+      <button className={`axi-btn ${tone} action`} disabled={primary.disabled} onClick={primary.onClick}>
         {primary.label}
       </button>
       <button
-        className={`btn ${tone} action caret`}
+        className={`axi-btn ${tone} action caret`}
         aria-label="More stream actions"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -52,11 +52,11 @@ export function ActionButton({ state, axi }: { state: AppState; axi: AxiApi }) {
       >
         {/* Recording is otherwise invisible once it moves into the menu, so the
             caret carries the indicator. */}
-        {state.recording.active ? <span className="rec-dot" title="Recording" /> : null}
+        {state.recording.active ? <span className="axi-diamond axi-diamond--danger" title="Recording" /> : null}
         <ChevronUp size={16} />
       </button>
       {open ? (
-        <div className="dropup" role="menu" aria-label="More stream actions">
+        <div className="axi-menu__pop" role="menu" aria-label="More stream actions">
           <RecordMenuItems recording={state.recording} disabled={state.audioTestActive}
             axi={axi} onAct={() => setOpen(false)} />
         </div>

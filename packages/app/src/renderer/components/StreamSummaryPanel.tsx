@@ -29,72 +29,78 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
 
   return (
     <div className="hero summary-panel" role="region" aria-label="Stream summary">
-      <h2>Stream ended</h2>
+      <div className="axi-panel">
+        <h2>Stream ended</h2>
 
-      <div className="summary-stats">
-        <div className="summary-stat">
-          <span className="summary-label">Duration</span>
-          <span className="summary-value mono">{formatElapsed(summary.durationMs)}</span>
+        <div className="axi-grid">
+          <div className="axi-stat">
+            <span className="axi-stat__n mono">{formatElapsed(summary.durationMs)}</span>
+            <span className="axi-stat__k">Duration</span>
+          </div>
+          <div className="axi-stat">
+            <span className="axi-stat__n mono">{summary.avgBitrateKbps} kbps</span>
+            <span className="axi-stat__k">Average bitrate</span>
+          </div>
+          {/* Each figure is judged by its own verdict: pairing the session total
+              with the peak's verdict read "0.03% — viewers likely saw stuttering".
+              The verdict is a sentence, not a quantity, so it sits in its own
+              caption line rather than in .axi-stat__n — the language sets __n in
+              --axi-t-h1 (900 30px/1.1), which turns a judgement into a wall of
+              display type inside a 140px column. */}
+          <div className="axi-stat">
+            <span className="axi-stat__n mono">{summary.droppedPct.toFixed(2)}%</span>
+            <span className="axi-stat__k">Dropped frames · {summary.droppedFrames}</span>
+            <span className="summary-verdict">{droppedVerdict(summary.droppedPct)}</span>
+          </div>
+          <div className="axi-stat">
+            <span className="axi-stat__n mono">{summary.peakDroppedPct.toFixed(2)}%</span>
+            <span className="axi-stat__k">Worst moment</span>
+            <span className="summary-verdict">{droppedVerdict(summary.peakDroppedPct)}</span>
+          </div>
+          {/* An encoder name is reported by the system, so .axi-stat__n's own
+              casing (it sets none) is what keeps it verbatim. */}
+          <div className="axi-stat">
+            <span className="axi-stat__n mono">{summary.encoder || 'unknown'}</span>
+            <span className="axi-stat__k">Encoder</span>
+          </div>
         </div>
-        <div className="summary-stat">
-          <span className="summary-label">Average bitrate</span>
-          <span className="summary-value mono">{summary.avgBitrateKbps} kbps</span>
-        </div>
-        {/* Each figure is judged by its own verdict: pairing the session total
-            with the peak's verdict read "0.03% — viewers likely saw stuttering". */}
-        <div className="summary-stat">
-          <span className="summary-label">Dropped frames</span>
-          <span className="summary-value mono">
-            {summary.droppedFrames} · {summary.droppedPct.toFixed(2)}% — {droppedVerdict(summary.droppedPct)}
-          </span>
-        </div>
-        <div className="summary-stat">
-          <span className="summary-label">Worst moment</span>
-          <span className="summary-value mono">
-            {summary.peakDroppedPct.toFixed(2)}% — {droppedVerdict(summary.peakDroppedPct)}
-          </span>
-        </div>
-        <div className="summary-stat">
-          <span className="summary-label">Encoder</span>
-          <span className="summary-value mono">{summary.encoder || 'unknown'}</span>
-        </div>
+
+        {/* endedWithError suppresses the watch link and nothing else: a stream that
+            reached YouTube and then failed has a URL, but pointing the user at a
+            broken broadcast is worse than offering nothing. */}
+        {watchUrl && !summary.endedWithError ? (
+          <div className="summary-actions">
+            <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={copyLink} title="Copy the YouTube watch link">
+              {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
+            </button>
+            {/* Through main: a renderer href to an external site opens a chrome-less
+                in-app window, not the user's browser. */}
+            <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void axi.openExternalUrl(watchUrl)}
+              title="Open the broadcast in your browser">
+              <ExternalLink size={14} /> Open on YouTube
+            </button>
+          </div>
+        ) : null}
+
+        {summary.recordingStillActive ? (
+          <div className="summary-actions">
+            <span className="axi-ink-dim">Still recording — the stream ended but the recording did not.</span>
+            <button className="axi-btn axi-ink-danger axi-btn--sm" onClick={() => void axi.stopRecording()}>
+              <Square size={13} /> Stop recording
+            </button>
+          </div>
+        ) : recordingPath ? (
+          <div className="summary-actions">
+            <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void axi.openRecording(recordingPath)}>
+              <FolderOpen size={14} /> Open recording
+            </button>
+            {/* Selectable so a failed open still leaves something to copy. */}
+            <span className="mono summary-path">{recordingPath}</span>
+          </div>
+        ) : null}
+
+        <button className="axi-btn axi-btn--primary action" onClick={() => void axi.dismissSummary()}>Done</button>
       </div>
-
-      {/* endedWithError suppresses the watch link and nothing else: a stream that
-          reached YouTube and then failed has a URL, but pointing the user at a
-          broken broadcast is worse than offering nothing. */}
-      {watchUrl && !summary.endedWithError ? (
-        <div className="summary-actions">
-          <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
-            {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
-          </button>
-          {/* Through main: a renderer href to an external site opens a chrome-less
-              in-app window, not the user's browser. */}
-          <button className="btn ghost sm" onClick={() => void axi.openExternalUrl(watchUrl)}
-            title="Open the broadcast in your browser">
-            <ExternalLink size={14} /> Open on YouTube
-          </button>
-        </div>
-      ) : null}
-
-      {summary.recordingStillActive ? (
-        <div className="summary-actions">
-          <span className="muted">Still recording — the stream ended but the recording did not.</span>
-          <button className="btn danger sm" onClick={() => void axi.stopRecording()}>
-            <Square size={13} /> Stop recording
-          </button>
-        </div>
-      ) : recordingPath ? (
-        <div className="summary-actions">
-          <button className="btn ghost sm" onClick={() => void axi.openRecording(recordingPath)}>
-            <FolderOpen size={14} /> Open recording
-          </button>
-          {/* Selectable so a failed open still leaves something to copy. */}
-          <span className="mono summary-path">{recordingPath}</span>
-        </div>
-      ) : null}
-
-      <button className="btn primary action" onClick={() => void axi.dismissSummary()}>Done</button>
     </div>
   )
 }

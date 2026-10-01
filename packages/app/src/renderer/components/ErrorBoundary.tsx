@@ -63,13 +63,20 @@ export class ErrorBoundary extends Component<Props, State> {
     const live = phase === 'LIVE' || phase === 'RECONNECTING'
     return (
       <div className="hero crash" role="alert">
-        <h2>Something broke in {this.props.label}.</h2>
-        {live ? <p className="crash-live">Your stream is still running.</p> : null}
-        <p className="crash-msg">{error.message}</p>
-        <div className="crash-actions">
-          <button className="btn primary" onClick={this.reset}>Reload</button>
-          <button className="btn ghost" onClick={() => void this.copy()}>Copy error details</button>
-          <button className="btn ghost" onClick={() => void this.exportDiagnostics()}>Export diagnostics</button>
+        <div className="axi-panel">
+          <div className="axi-notice axi-notice--danger">
+            <div className="axi-notice__icon" aria-hidden>!</div>
+            <div>
+              <h2>Something broke in {this.props.label}.</h2>
+              {live ? <p className="crash-live">Your stream is still running.</p> : null}
+              <p className="crash-msg">{error.message}</p>
+            </div>
+          </div>
+          <div className="crash-actions">
+            <button className="axi-btn axi-btn--primary" onClick={this.reset}>Reload</button>
+            <button className="axi-btn axi-btn--ghost" onClick={() => void this.copy()}>Copy error details</button>
+            <button className="axi-btn axi-btn--ghost" onClick={() => void this.exportDiagnostics()}>Export diagnostics</button>
+          </div>
         </div>
       </div>
     )

@@ -88,25 +88,25 @@ export function MaskEditor({ masks: initial, onCommit, onDone, maskStyle, blurPl
   return (
     <div ref={boxRef} className="mask-editor" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
       <div className="mask-toolbar">
-        <button className="btn ghost xs" onClick={add} disabled={masks.length >= MAX_MASKS}><Plus size={12} /> Add mask</button>
+        <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={add} disabled={masks.length >= MAX_MASKS}><Plus size={12} /> Add mask</button>
         <div className="mask-style" role="group" aria-label="Mask style">
           <button className={`mask-style-btn${maskStyle === 'box' ? ' on' : ''}`} onClick={() => { setBlurPrompt(false); onSetStyle('box') }}>Solid</button>
           <button className={`mask-style-btn${maskStyle === 'blur' ? ' on' : ''}`}
             onClick={() => { if (blurPlugin.status === 'ready') { setBlurPrompt(false); onSetStyle('blur') } else setBlurPrompt(true) }}>Blur</button>
         </div>
-        <button className="btn ghost xs" onClick={() => onSetVisible(!masksVisible)}
+        <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={() => onSetVisible(!masksVisible)}
           title={masksVisible ? 'Temporarily reveal these areas on stream (masks are kept)' : 'Masks are hidden from the stream — click to re-enable'}>
           {masksVisible ? <><Eye size={12} /> On stream</> : <><EyeOff size={12} /> Hidden</>}
         </button>
         <span className="mask-hint">Drag to move · corner to resize · masks hide these areas on stream</span>
-        <button className="btn primary xs" onClick={onDone}>Done</button>
+        <button className="axi-btn axi-btn--primary axi-btn--xs" onClick={onDone}>Done</button>
       </div>
       {blurPrompt && blurPlugin.status !== 'ready' && (
         <div className="mask-blur-prompt">
-          {blurPlugin.status === 'missing' && <button className="btn ghost xs" onClick={onInstallBlur}>Install blur plugin</button>}
+          {blurPlugin.status === 'missing' && <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={onInstallBlur}>Install blur plugin</button>}
           {blurPlugin.status === 'installing' && <span>Installing…</span>}
-          {blurPlugin.status === 'installed' && <button className="btn ghost xs" onClick={onRelaunch}>Restart AxiStream</button>}
-          {blurPlugin.status === 'error' && <button className="btn ghost xs" onClick={onInstallBlur}>Retry install</button>}
+          {blurPlugin.status === 'installed' && <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={onRelaunch}>Restart AxiStream</button>}
+          {blurPlugin.status === 'error' && <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={onInstallBlur}>Retry install</button>}
           {blurPlugin.status === 'unsupported' && <span>Blur needs the OBS flatpak.</span>}
         </div>
       )}

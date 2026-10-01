@@ -17,19 +17,19 @@ describe('StatChips', () => {
 
   it('dropped chip is good below 1%', () => {
     render(<StatChips stats={stats({ droppedFrames: 3, droppedPct: 0.2 })} capture={capture} encoder="NVENC" />)
-    expect(screen.getByText('3 dropped').className).toContain('good')
+    expect(screen.getByText('3 dropped').className).toContain('axi-chip--ok')
   })
 
   it('dropped chip warns at 1–5% and shows the percentage', () => {
     render(<StatChips stats={stats({ droppedFrames: 342, droppedPct: 2.3 })} capture={capture} encoder="NVENC" />)
     const chip = screen.getByText('342 dropped · 2.3%')
-    expect(chip.className).toContain('warn')
-    expect(chip.className).not.toContain('good')
+    expect(chip.className).toContain('axi-chip--warn')
+    expect(chip.className).not.toContain('axi-chip--ok')
   })
 
   it('dropped chip is bad above 5%', () => {
     render(<StatChips stats={stats({ droppedFrames: 900, droppedPct: 7.5 })} capture={capture} encoder="NVENC" />)
-    expect(screen.getByText('900 dropped · 7.5%').className).toContain('bad')
+    expect(screen.getByText('900 dropped · 7.5%').className).toContain('axi-chip--danger')
   })
 })
 
@@ -37,7 +37,7 @@ describe('StatChips boundaries', () => {
   it('exactly 5% is warn, not bad', () => {
     render(<StatChips stats={stats({ droppedFrames: 500, droppedPct: 5 })} capture={capture} encoder="NVENC" />)
     const chip = screen.getByText('500 dropped · 5%')
-    expect(chip.className).toContain('warn')
-    expect(chip.className).not.toContain('bad')
+    expect(chip.className).toContain('axi-chip--warn')
+    expect(chip.className).not.toContain('axi-chip--danger')
   })
 })

@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 html, body { overflow: hidden; }
-body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+body { margin: 0; background: transparent; color: var(--axi-text); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 /* App chrome is not a document — no drag-selecting labels/buttons/pills.
    Re-enabled only where selecting has value: form fields and error text. */
 body { -webkit-user-select: none; user-select: none; }
@@ -11,14 +11,12 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* Corner rounding (KWin/compositor rounds the window; #root matches the radius
    so content doesn't poke into the rounded corner). Window is opaque
    (transparent:false + dark backgroundColor) — same technique as axibridge. */
-/* Keyboard focus baseline. :focus-visible only — pointer users don't see it. */
-:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; border-radius: 6px; }
-#root { height: 100%; overflow: hidden; border-radius: 10px; }
+#root { height: 100%; overflow: hidden; border-radius: var(--axi-radius); }
 
 /* App is a row: sidebar | active screen. Window controls float top-right. */
 /* clip-path clips composited descendants (the preview <video>) to the rounded
    corners — overflow:hidden + border-radius alone does not. */
-.app { position: relative; height: 100%; display: flex; background: #0b0d12; border-radius: 10px; overflow: hidden; border: 1px solid #1d2530; clip-path: inset(0 round 10px); }
+.app { position: relative; height: 100%; display: flex; background-color: var(--axi-ground); background-image: var(--axi-ground-image); border-radius: var(--axi-radius); overflow: hidden; border: var(--axi-border-panel) solid var(--axi-ink-line); clip-path: inset(0 round var(--axi-radius)); }
 
 /* Full-width top strip is draggable (a titlebar replacement). Sits below the
    window controls (z-index 10, no-drag) so they stay clickable. */
@@ -26,48 +24,47 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* Window controls — raised to the very top-right corner, over the preview. */
 .wctl { position: absolute; top: 9px; right: 11px; display: flex; gap: 5px; z-index: 10; -webkit-app-region: no-drag; }
-.wbtn { width: 28px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: #b9c4cf; background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.08); font-size: 12px; cursor: pointer; }
-.wbtn:hover { color: #fff; background: rgba(255,255,255,.1); }
-.wbtn.close:hover { color: #fff; background: rgba(226,58,82,.7); border-color: transparent; }
+.wbtn { width: 28px; height: 24px; border-radius: var(--axi-radius-sm); display: grid; place-items: center; color: var(--axi-text-dim); background: rgba(0,0,0,.32); border: var(--axi-border-control) solid rgba(255,255,255,.08); font-size: 12px; cursor: pointer; }
+.wbtn:hover { color: var(--axi-text); background: rgba(255,255,255,.1); }
+.wbtn.close:hover { color: var(--axi-ink-on-fill); background: var(--axi-danger); border-color: transparent; }
 
-/* Sidebar — brand at top, then nav, then engine pill. The whole bar is a
-   window-drag handle (frameless window); interactive children must opt out
-   or Electron eats their clicks. */
-.sidebar { width: 200px; background: #0a0c11; border-right: 1px solid #161c25; display: flex; flex-direction: column; padding: 0 10px 12px; -webkit-app-region: drag; }
-.sidebar button { -webkit-app-region: no-drag; }
+/* The rail is a window-drag handle (frameless window); interactive children
+   must opt out or Electron eats their clicks. This is behaviour, not paint, so
+   it stays local rather than being pushed upstream. */
+.axi-rail { -webkit-app-region: drag; }
+.axi-rail button { -webkit-app-region: no-drag; }
+/* The language's rail defaults to 208px; this app's sidebar has always been 200. */
+.axi-rail { --axi-rail-w: 200px; }
 .brand { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px; }
 /* Wordmark matches the Axi house titlebar: Cinzel, two-tone (Axi white + accent). */
-.brand .wordmark { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 0.06em; font-weight: 500; color: #ffffff; }
-.brand .wordmark .accent { color: #22d3ee; }
-.dot.accent { width: 9px; height: 9px; border-radius: 50%; background: #22d3ee; box-shadow: 0 0 10px #22d3ee; }
-.menu-label { color: #5b6470; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
-.navitem { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 9px; color: #8b949e; font-size: 14px; background: none; border: 0; text-align: left; cursor: pointer; margin-top: 3px; }
-.navitem.on { background: rgba(34,211,238,.1); color: #bfeef7; border: 1px solid rgba(34,211,238,.22); }
-.navitem.dim { color: #586069; }
-.soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid #2a323b; padding: 3px 5px; border-radius: 5px; }
+.brand .wordmark { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 0.06em; font-weight: 500; color: var(--axi-text); }
+.brand .wordmark .accent { color: var(--axi-accent); }
+.menu-label { color: var(--axi-text-faint); font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
 /* Update banner */
-.updatepill { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 9px 11px; border-radius: 9px; background: rgba(34,211,238,.08); border: 1px solid rgba(34,211,238,.3); color: #7ee3f2; font: 600 11px/1 ui-monospace, monospace; cursor: pointer; }
-.updatepill:hover { background: rgba(34,211,238,.15); }
-.updatepill.passive { cursor: default; color: #8b98a5; background: #0d1117; border-color: #161c25; }
+.updatepill { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 9px 11px; border-radius: 9px; background: color-mix(in srgb, var(--axi-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); color: var(--axi-accent); font: 600 11px/1 ui-monospace, monospace; cursor: pointer; }
+.updatepill:hover { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); }
+.updatepill.passive { cursor: default; color: var(--axi-text-faint); background: var(--axi-ground-deep); border-color: var(--axi-ink-line); }
 
 /* Sidebar quick toggles */
 .quick { margin-top: auto; padding-bottom: 10px; }
 .quickrow { display: flex; gap: 6px; }
-.qt { flex: 1; display: grid; place-items: center; padding: 8px 0; border-radius: 8px; background: #0d1117; border: 1px solid #161c25; color: #55606c; cursor: pointer; }
-.qt.on { color: #22d3ee; border-color: rgba(34,211,238,.35); }
-.qt.tx { color: #f0556b; border-color: rgba(240,85,107,.45); box-shadow: 0 0 8px rgba(240,85,107,.35); }
+.qt { flex: 1; display: grid; place-items: center; padding: 8px 0; border-radius: 8px; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); color: var(--axi-text-faint); cursor: pointer; }
+.qt.on { color: var(--axi-accent); border-color: color-mix(in srgb, var(--axi-accent) 35%, transparent); }
+.qt.tx { color: var(--axi-danger); border-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); box-shadow: 0 0 8px color-mix(in srgb, var(--axi-danger) 35%, transparent); }
 .qt:disabled { opacity: .4; cursor: default; }
-.qt:not(:disabled):hover { background: #131a23; }
-.enginepill { margin-top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: #0d1117; border: 1px solid #161c25; color: #8b949e; font: 600 11px/1 ui-monospace, monospace; }
-.enginepill .dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 7px #3fb950; }
-.enginepill.onair { background: rgba(240,85,107,.08); border-color: rgba(240,85,107,.25); color: #f0a3ae; }
-.enginepill.onair .dot { background: #f0556b; box-shadow: 0 0 7px #f0556b; }
+.qt:not(:disabled):hover { background: var(--axi-surface); }
+.enginepill { margin-top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); color: var(--axi-text-dim); font: 600 11px/1 ui-monospace, monospace; }
+.enginepill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--axi-ok); box-shadow: 0 0 7px var(--axi-ok); }
+.enginepill.onair { background: color-mix(in srgb, var(--axi-danger) 8%, transparent); border-color: color-mix(in srgb, var(--axi-danger) 25%, transparent); color: var(--axi-danger); }
+.enginepill.onair .dot { background: var(--axi-danger); box-shadow: 0 0 7px var(--axi-danger); }
 
-/* Hero — the full-height, preview-forward Stream screen. */
+/* Hero — the full-height, preview-forward Stream screen. The placeholder
+   gradient is decoration (no capture yet), not legibility, so it follows the
+   surface: --axi-ground-deep + --axi-ground-image are glass's radial wash. */
 /* The hero rounds its OWN right corners (= the window's right corners). A
    background-image (the live preview) is a composited layer that the parent's
    border-radius can't clip, so the hero must self-clip. */
-.hero { flex: 1; position: relative; overflow: hidden; background: linear-gradient(135deg,#13243a 0%,#1c1c40 45%,#311a35 80%,#3a1f2a 100%); background-size: cover; background-position: center; display: flex; flex-direction: column; border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+.hero { flex: 1; position: relative; overflow: hidden; background-color: var(--axi-ground-deep); background-image: var(--axi-ground-image); background-size: cover; background-position: center; display: flex; flex-direction: column; border-top-right-radius: var(--axi-radius); border-bottom-right-radius: var(--axi-radius); }
 /* Radial depth only on the setup screen (placeholder gradient). The live Stream
    view shows the real preview video instead, so no tint. */
 .hero.setup::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); pointer-events: none; z-index: 1; }
@@ -79,9 +76,9 @@ input, textarea { -webkit-user-select: text; user-select: text; }
    so contain's bars read as a glow of the game instead of black. It touches
    the window corners, so it carries the self border-radius (see the
    hardware-overlay note above). */
-.preview-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: blur(28px) brightness(.55); border-radius: 0 10px 10px 0; opacity: 1; transition: opacity .35s ease; }
+.preview-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: blur(28px) brightness(.55); border-radius: 0 var(--axi-radius) var(--axi-radius) 0; opacity: 1; transition: opacity .35s ease; }
 .preview-backdrop.loading { opacity: 0; }
-.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; opacity: 1; transition: opacity .35s ease; }
+.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; background: transparent; border-radius: 0 var(--axi-radius) var(--axi-radius) 0; opacity: 1; transition: opacity .35s ease; }
 /* Not actively showing frames (startup / source switch / OBS restart): fade out
    so the hero's colored gradient backsplash shows through instead of black. */
 .preview-video.loading { opacity: 0; }
@@ -93,125 +90,145 @@ input, textarea { -webkit-user-select: text; user-select: text; }
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }
 .hero.setup > * { position: relative; z-index: 3; }
-.hero.setup p { max-width: 360px; color: #c4cedb; line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.hero.setup p { max-width: 360px; color: var(--axi-text-dim); line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .hero.setup h2 { text-shadow: 0 1px 4px rgba(0,0,0,.5); }
-.hero.setup .btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
-.setup-icon { width: 58px; height: 58px; border-radius: 16px; background: rgba(34,211,238,.1); border: 1px solid rgba(34,211,238,.3); display: grid; place-items: center; color: #22d3ee; font-size: 26px; }
-.setup-icon.error { color: #fb7185; background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.35); }
-.setup-error { color: #fecdd3 !important; }
+.hero.setup .axi-btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
+.setup-icon { width: 58px; height: 58px; border-radius: 16px; background: color-mix(in srgb, var(--axi-accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); display: grid; place-items: center; color: var(--axi-accent); font-size: 26px; }
+.setup-icon.error { color: var(--axi-danger); background: color-mix(in srgb, var(--axi-danger) 10%, transparent); border-color: color-mix(in srgb, var(--axi-danger) 35%, transparent); }
+.setup-error { color: var(--axi-danger) !important; }
 .capture-target-list { display: flex; flex-direction: column; gap: 8px; width: min(420px, 80%); margin: 8px 0; }
-.capture-target-list .btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: #e6edf3; background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); }
-.capture-target-list .btn.target:hover:not(:disabled) { border-color: rgba(34,211,238,.55); background: rgba(34,211,238,.09); }
+/* text-transform: none — the label is a monitor or window name the OS
+   reports (e.g. "DP-2 (2560x1440)"), not a label this app wrote. */
+.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: var(--axi-text); background: color-mix(in srgb, var(--axi-ground-deep) 55%, transparent); border: 1px solid rgba(255,255,255,.13); text-transform: none; }
+.capture-target-list .axi-btn.target:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axi-accent) 55%, transparent); background: color-mix(in srgb, var(--axi-accent) 9%, transparent); }
 
 .hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
-.hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
-.badge { color: #9fd8ff; font: 700 10px/1 ui-monospace, monospace; border: 1px solid rgba(34,211,238,.5); padding: 6px 9px; border-radius: 20px; background: rgba(0,0,0,.3); }
-.badge.live { color: #fff; background: #e23a52; border: 0; box-shadow: 0 0 16px rgba(226,58,82,.55); }
-.badge.starting { color: #22d3ee; border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.08); }
-.pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
-.pill.warn { color: #fbbf24; border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
+.hero-title { color: var(--axi-text); font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
+.pill { display: inline-flex; align-items: center; gap: 6px; color: var(--axi-text); background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
+.pill.warn { color: var(--axi-warn); border-color: color-mix(in srgb, var(--axi-warn) 35%, transparent); background: color-mix(in srgb, var(--axi-warn) 7%, transparent); }
+/* The resting PREVIEW badge is a status readout, not a control — .axi-pill's
+   cursor and hover lift are a false affordance here (there is no onClick). */
+.preview-badge { cursor: default; }
+.preview-badge:hover { color: var(--axi-text-dim); box-shadow: none; transform: none; }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
-.overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: #dfe7ef; z-index: 3; }
+.overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: var(--axi-text); z-index: 3; }
 /* Translucent, blurred pill so overlay messages stay readable over any preview. */
-.overlay-pill { display: inline-block; max-width: 460px; padding: 10px 16px; border-radius: 14px; background: rgba(12,15,20,.62); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 13px; line-height: 1.4; }
-.overlay.error .overlay-pill { color: #ffb3bf; border-color: rgba(240,85,107,.4); }
-.overlay.warn .overlay-pill { color: #ffd479; border-color: rgba(255,212,121,.35); }
+.overlay-pill { display: inline-block; max-width: 460px; padding: 10px 16px; border-radius: 14px; background: color-mix(in srgb, var(--axi-ground-deep) 62%, transparent); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 13px; line-height: 1.4; }
+.overlay.error .overlay-pill { color: var(--axi-danger); border-color: color-mix(in srgb, var(--axi-danger) 40%, transparent); }
+.overlay.warn .overlay-pill { color: var(--axi-warn); border-color: color-mix(in srgb, var(--axi-warn) 35%, transparent); }
 
 .hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px; background: linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 55%,transparent); z-index: 3; }
-.statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: #e6edf3; font-size: 13px; text-shadow: 0 1px 2px #000; }
+.statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: var(--axi-text); font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 .statusrow .spacer { flex: 1; }
-.dot.good { color: #5fe39a; } .dot.good::before { content: '●'; }
-.chips { display: flex; gap: 8px; }
-.chip { color: #cdd6e0; background: rgba(0,0,0,.42); border: 1px solid rgba(255,255,255,.12); padding: 7px 11px; border-radius: 9px; font: 600 11px/1 ui-monospace, monospace; white-space: nowrap; }
-.chip.good { color: #7be3a0; }
-.chip.warn { color: #fbbf24; }
-.chip.bad { color: #f87171; }
-.link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
+.dot.good { color: var(--axi-ok); } .dot.good::before { content: '●'; }
+.link { background: none; border: 0; color: var(--axi-accent); cursor: pointer; font: inherit; }
 
-/* Buttons */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; padding: 14px 20px; font-weight: 800; cursor: pointer; }
-.btn.lg { width: 100%; padding: 17px; font-size: 17px; }
-.btn.primary { background: linear-gradient(180deg,#26d3ee,#0bb6d6); color: #06222a; box-shadow: 0 10px 26px rgba(34,211,238,.3); }
-.btn.primary:disabled { opacity: .55; cursor: default; box-shadow: none; }
-.btn.danger { background: rgba(226,58,82,.18); color: #ff8b9c; border: 1px solid #f0556b; }
-.btn.ghost { background: #1a222c; color: #c7d0d9; border: 1px solid #2a323b; font-weight: 700; }
-.btn.ghost:hover { background: #222c38; }
+/* Buttons — the language's .axi-btn family. .lg has no language step (only
+   --sm and --xs go smaller than the default), so it stays a local modifier for
+   the one full-width, oversized CTA the wizard-free setup hero wants. */
+.axi-btn.lg { width: 100%; padding: 17px; font-size: 17px; }
 /* Compact bottom-bar action (Go Live / End Stream) — sits inline, content-width,
-   so it reads as a control rather than a full-width banner. */
-.btn.action { align-self: flex-start; padding: 12px 22px; font-size: 15px; border-radius: 10px; }
-.btn.primary.action { box-shadow: 0 4px 14px rgba(34,211,238,.22); }
-.btn.primary.action:hover { box-shadow: 0 6px 18px rgba(34,211,238,.32); }
-/* Extra-small ghost button for inline actions like "Switch source". */
-.btn.xs { padding: 5px 9px; font-size: 11px; border-radius: 8px; font-weight: 600; gap: 5px; }
+   so it reads as a control rather than a full-width banner. 10px radius is
+   deliberate — see test/styles-radius.test.ts's note on this file. */
+.axi-btn.action { align-self: flex-start; padding: 12px 22px; font-size: 15px; border-radius: 10px; }
+.axi-btn.axi-btn--primary.action { box-shadow: 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
+.axi-btn.axi-btn--primary.action:hover { box-shadow: 0 6px 18px color-mix(in srgb, var(--axi-accent) 32%, transparent); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Settings screen */
-.settings-panel { display: block; background: #0c0f15; overflow: auto; }
+.settings-panel { display: block; background: var(--axi-ground-deep); overflow: auto; }
 .settings-panel::before { display: none; }
-.settings-inner { max-width: 1120px; padding: 26px; }
+/* .axi-page's own measure (1280px) is the reading/browsing default; this
+   panel was tuned at 1120, and axi-page's padding-inline knob only covers
+   the sides — the original rule padded top/bottom too. */
+.settings-inner { --axi-page: 1120px; --axi-page-pad: 26px; padding-block: 26px; }
 /* Ultrawide: sections flow into two columns when there's room. */
 /* Multi-column, not grid: grid rows stretch to the tallest cell, which left
-   huge voids under short sections next to tall ones. Columns pack top-down. */
+   huge voids under short sections next to tall ones. Columns pack top-down.
+   .axi-grid is CSS Grid auto-fill and would reintroduce exactly that — left
+   local on purpose, not an oversight. */
 .settings-grid { columns: 2 420px; column-gap: 40px; }
-.settings-grid > .setting { min-width: 0; margin-bottom: 22px; break-inside: avoid; }
+.settings-grid > .axi-panel { min-width: 0; margin-bottom: 22px; break-inside: avoid; }
 .settings-inner h2 { margin: 0 0 18px; }
-.setting { background: #0e131a; border: 1px solid #1d2530; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-.setting h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }
-.muted { color: #768390; font-size: 13px; margin: 0 0 12px; }
-.ok { color: #7be3a0; font-size: 13px; }
+.axi-panel h3 { margin: 0 0 10px; font-size: 14px; color: var(--axi-text-dim); }
+.ok { color: var(--axi-ok); font-size: 13px; }
+/* .muted carried size and spacing the language's bare ink utility
+   (.axi-ink-dim is colour-only) doesn't model. */
+.axi-ink-dim { font-size: 13px; }
+p.axi-ink-dim { margin: 0 0 12px; }
 
 /* YouTube settings */
 .yt-settings { display: flex; flex-direction: column; gap: 10px; }
-.yt-settings h3 { margin: 0 0 6px; font-size: 14px; color: #c7d0d9; }
+.yt-settings h3 { margin: 0 0 6px; font-size: 14px; color: var(--axi-text-dim); }
 .yt-settings label,
-.yt-settings .field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #8b949e; }
-.yt-settings input { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; }
+.yt-settings .field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--axi-text-dim); }
 /* Match the text inputs stacked beside them rather than the tighter metric
    the camera and quality panels use. */
-.yt-settings .sel-trigger { padding: 10px 34px 10px 11px; font-size: 14px; }
-.yt-account { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.yt-settings .axi-picker__btn { padding: 10px 34px 10px 11px; font-size: 14px; }
+.yt-account { font-size: 13px; }
 .audio-row { flex-direction: row !important; align-items: center; gap: 8px; cursor: pointer; }
 .audio-row input { width: auto; }
 .yt-account button { margin-left: auto; }
 .yt-connect { align-self: flex-start; }
-.btn.sm { width: auto; padding: 9px 14px; font-size: 13px; font-weight: 700; border-radius: 10px; }
-.yt-vars { font-size: 12px; color: #5b6470; font-family: ui-monospace, monospace; }
-.yt-preview { font-size: 13px; color: #9fd8ff; }
-.yt-hint { font-size: 12px; color: #5b6470; }
-.yt-hint code { background: rgba(255,255,255,.08); border-radius: 4px; padding: 1px 4px; font-size: 11px; }
+.yt-vars { font-size: 12px; color: var(--axi-text-faint); font-family: ui-monospace, monospace; }
+.yt-preview { font-size: 13px; color: var(--axi-accent); }
+.yt-hint { font-size: 12px; color: var(--axi-text-faint); }
 
 /* Discord announcement */
 .yt-discord { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
-.yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: #8b98a5; }
-.yt-discord-test { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.yt-test-ok { font-size: 12px; font-weight: 600; color: #3fb950; }
+.yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--axi-text-faint); }
+.yt-discord-test { margin-top: 10px; }
+.yt-test-ok { font-size: 12px; font-weight: 600; color: var(--axi-ok); }
 /* Inline failure attached to a specific control. Discrete background events
    use toasts instead; phase-level conditions use .overlay. */
-.field-err { font-size: 12px; font-weight: 600; color: #f85149; }
-.updates-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field-err { font-size: 12px; font-weight: 600; color: var(--axi-danger); }
 .whatsnew { border-top: 1px solid rgba(255,255,255,.08); margin-top: 12px; padding-top: 10px; }
-.whatsnew-body { white-space: pre-wrap; font-size: 12px; color: #c4cedb; background: #0b1017; border: 1px solid #1c242e; border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; }
+/* The well (fill/border/radius/shadow) is .axi-prose pre's; a release-notes
+   blob is one long unbroken line without the wrap, and taller than the
+   language's own code block expects to run without a scroll cap. */
+.whatsnew-body { white-space: pre-wrap; max-height: 220px; overflow: auto; }
 .about-obs { margin-top: 12px; }
-.about-links { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; }
+.about-links { --axi-row-gap: 6px 12px; margin-top: 10px; }
 
-/* Title prompt modal */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { background: #1c2128; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 24px; min-width: 340px; display: flex; flex-direction: column; gap: 14px; }
-.modal h3 { margin: 0; font-size: 15px; color: #e6edf3; }
-.modal input[type="text"] { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; width: 100%; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* Title prompt / wizard modal shell — the language's real .axi-scrim +
+   .axi-modal (head/body/foot), not a hand-rolled backdrop-and-box pair. Kept
+   as a plain div rather than a native <dialog>, because this app's Escape/
+   focus handling already lives in use-modal-keys.ts; re-platforming onto
+   <dialog> would trade a working behaviour for one this migration doesn't
+   need to touch. .axi-modal__head's own heading rule targets h2 — these
+   modals use h3, so that part is restated here. */
+.modal-backdrop { display: flex; align-items: center; justify-content: center; }
+.axi-modal__head h3 { margin: 0; font: var(--axi-t-h3); letter-spacing: var(--axi-ls-h3); }
+/* Portalled to <body>, so it sits outside any modal's DOM subtree and needs
+   to clear .axi-scrim's z-index (50) by rule rather than by nesting — or a
+   dropdown opened from inside a modal (the wizard's microphone picker, the
+   add-modifier menu) would open behind the modal's own backdrop. */
+.axi-picker__pop--fixed, .axi-menu__pop { z-index: 55; }
+/* .axi-picker__pop carries min-width: 100% so a statically-positioned popup is
+   never narrower than the trigger it hangs under. --fixed changes nothing but
+   `position`, and for a fixed element the containing block is the VIEWPORT — so
+   that 100% resolves to the whole window and, being a min-width, beats the
+   inline `width` Select.tsx measures off the trigger. Every dropdown in the app
+   is this popup, so the floor has to be released here; the measured width is
+   what min-width: 100% was approximating in the first place. */
+.axi-picker__pop--fixed { min-width: 0; }
+/* Select.tsx focuses the listbox programmatically on open (focus stays on the
+   popup and aria-activedescendant reports the active row), so a keyboard-opened
+   dropdown would otherwise take the language's global accent :focus-visible
+   ring around the entire popup, on top of its own border. Scoped to this
+   element rather than weakening the global rule. */
+.axi-picker__pop:focus-visible { outline: 0; }
 
 /* Welcome banner — floats over the hero's top edge rather than joining the
    flex column, so it never reflows the preview underneath it. Below the
-   window controls (z-index 10), above the hero's own chrome. */
+   window controls (z-index 10), above the hero's own chrome. The box itself
+   (fill, border, radius, shadow, padding) is .axi-notice's; this is only the
+   floating position the language has no opinion on. */
 .welcome-banner {
   position: absolute; top: 52px; left: 50%; transform: translateX(-50%); z-index: 6;
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 8px 7px 14px; border-radius: 999px;
-  background: rgba(13,15,20,.86); border: 1px solid rgba(34,211,238,.35);
-  backdrop-filter: blur(6px); font-size: 12px; color: #c7d0d9; white-space: nowrap;
+  align-items: center; width: auto; font-size: 12px; white-space: nowrap;
 }
 /* The mask toolbar takes the same centered slot at the same z-index, and the
    mask editor is a focused editing mode in which the banner is not actionable
@@ -221,81 +238,98 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .app:has(.mask-editor) .welcome-banner { display: none; }
 .welcome-x {
   display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  background: transparent; border: 0; color: #8b949e; cursor: pointer;
+  background: transparent; border: 0; color: var(--axi-text-dim); cursor: pointer;
 }
-.welcome-x:hover { color: #e6edf3; background: rgba(255,255,255,.08); }
+.welcome-x:hover { color: var(--axi-text); background: rgba(255,255,255,.08); }
 
-/* Wizard — the modal shell, plus a wider body than the title prompt needs. */
-.modal.wizard { min-width: 420px; max-width: 480px; gap: 12px; }
-.wizard-head { display: flex; align-items: center; justify-content: space-between; }
-.wizard-head h3 { margin: 0; }
-.wizard-dots { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+/* Wizard — the modal shell, plus a wider body than the title prompt needs.
+   The dots are a step progress indicator and the body is a single centred
+   dialog's content, not .axi-pages (numbered pagination links) or .axi-sheet
+   (a full-viewport takeover with no scrim) — neither language component fits
+   this shape, so they stay local. */
+.axi-modal.wizard { min-width: 420px; max-width: 480px; }
+/* The floor the pre-migration .modal carried for every modal. .axi-modal
+   declares only a max-width, and the modal is a flex item of .axi-scrim with
+   align-items: center, so without this the title prompt shrinks to the
+   intrinsic width of its <input> plus the body's padding — about 215px. The
+   wizard kept its floor above; this is the same floor the old .modal had. */
+.axi-modal.title-prompt { min-width: 340px; }
+.wizard-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.wizard-dots { display: flex; gap: 6px; list-style: none; margin: 0 0 12px; padding: 0; }
 .wizard-dots li { height: 3px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.1); }
-.wizard-dots li.done { background: rgba(34,211,238,.45); }
-.wizard-dots li.on { background: #22d3ee; }
+.wizard-dots li.done { background: color-mix(in srgb, var(--axi-accent) 45%, transparent); }
+.wizard-dots li.on { background: var(--axi-accent); }
 .wizard-body { display: flex; flex-direction: column; gap: 12px; min-height: 130px; }
-.wizard-body .muted { margin: 0; font-size: 12px; }
-.wizard-ok { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; color: #c7d0d9; }
-.wizard-ok svg { color: #22d3ee; flex: none; }
-.modal-actions .spacer { flex: 1; }
+.wizard-body .axi-ink-dim { margin: 0; font-size: 12px; }
+.wizard-ok { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; color: var(--axi-text-dim); }
+.wizard-ok svg { color: var(--axi-accent); flex: none; }
+.axi-modal__foot .spacer { flex: 1; }
 
 /* Privacy-mask editor: sits over the preview video, under modals. */
 .mask-editor { position: absolute; inset: 0; z-index: 4; overflow: hidden; touch-action: none; }
 .mask-toolbar { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px;
-  background: rgba(13,15,20,.82); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; backdrop-filter: blur(6px); }
-.mask-hint { font-size: 11px; color: #8b95a5; white-space: nowrap; }
-.mask-rect { position: absolute; z-index: 5; background: rgba(15,17,21,.78); border: 1.5px dashed rgba(34,211,238,.85); border-radius: 4px; cursor: move; }
+  background: color-mix(in srgb, var(--axi-ground-deep) 82%, transparent); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; backdrop-filter: blur(6px); }
+.mask-hint { font-size: 11px; color: var(--axi-text-faint); white-space: nowrap; }
+.mask-rect { position: absolute; z-index: 5; background: color-mix(in srgb, var(--axi-ground-deep) 78%, transparent); border: 1.5px dashed color-mix(in srgb, var(--axi-accent) 85%, transparent); border-radius: 4px; cursor: move; }
 .mask-delete { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
-  background: #1a1e26; color: #c4cedb; display: grid; place-items: center; cursor: pointer; padding: 0; }
-.mask-delete:hover { color: #fff; background: #2a2f3a; }
+  background: var(--axi-surface); color: var(--axi-text-dim); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.mask-delete:hover { color: var(--axi-text); background: var(--axi-surface-raised); }
 .mask-resize { position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; cursor: nwse-resize;
-  background: rgba(34,211,238,.9); border: 1px solid rgba(13,15,20,.8); }
+  background: color-mix(in srgb, var(--axi-accent) 90%, transparent); border: 1px solid color-mix(in srgb, var(--axi-ground-deep) 80%, transparent); }
 
 /* "What viewers hear" checkbox list (Audio settings). */
-.hear-list { border: 1px solid #1d2530; border-radius: 10px; overflow: hidden; }
+/* "What viewers hear" checkbox list (Audio settings). .hear-list/.hear-row/
+   .hear-apps etc. stay local: .axi-meter-list is a label|bar|value grid for
+   level meters, not a checked-row list, and these are real <input type=
+   "checkbox"> rows (native toggling, label-click-to-check) that .axi-switch
+   would ask to re-platform onto a <button role="switch"> for no behaviour
+   this app needs back. */
+.hear-list { border: 1px solid var(--axi-ink-line); border-radius: 10px; overflow: hidden; }
 /* row !important: .yt-settings label sets flex-direction column for the
    device-picker labels; these rows must stay inline (same fix as .audio-row). */
-.hear-row { display: flex; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: #c7d0d9; cursor: pointer; }
+.hear-row { display: flex; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--axi-text-dim); cursor: pointer; }
 .hear-apps { max-height: 220px; overflow-y: auto; }
-.hear-search { margin: 8px 12px 4px; padding: 6px 10px; width: calc(100% - 24px); background: #10161f; color: #c7d0d9; border: 1px solid #2a323b; border-radius: 8px; font-size: 13px; }
-.hear-search::placeholder { color: #566070; }
-.hear-row:hover { background: #131a24; }
-.hear-row input { accent-color: #22d3ee; width: 15px; height: 15px; cursor: pointer; }
+/* The box and the magnifier are the language's (.axi-search/.axi-input); this
+   is only the margin that fits it into the device list's own rhythm. */
+.hear-search { display: block; margin: 8px 12px 4px; width: calc(100% - 24px); }
+.hear-row:hover { background: var(--axi-surface); }
+.hear-row input { accent-color: var(--axi-accent); width: 15px; height: 15px; cursor: pointer; }
 .hear-row.all span:first-of-type { font-weight: 600; }
-.hear-row .sub { color: #768390; font-size: 12px; }
-.hear-pill { color: #fbbf24; font-size: 11px; font-weight: 500; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.25); border-radius: 999px; padding: 1px 8px; }
-.hear-divider { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #0b0f15; border-top: 1px solid #1d2530; border-bottom: 1px solid #1d2530; }
-.hear-divider span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #566070; font-weight: 600; }
-.hear-divider .line { flex: 1; height: 1px; background: #1d2530; }
-.hear-refresh { margin-left: auto; background: none; border: none; color: #566070; cursor: pointer; padding: 2px 4px; border-radius: 6px; display: grid; place-items: center; }
-.hear-refresh:hover { color: #22d3ee; background: #131a24; }
-.yt-settings .hear-devrow { display: flex; flex-direction: column; gap: 5px; padding: 8px 12px 10px 37px; background: #0b0f15; border-top: 1px solid #1d2530; font-size: 12px; color: #8b949e; }
+.hear-row .sub { color: var(--axi-text-faint); font-size: 12px; }
+.hear-divider { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--axi-ground-deep); border-top: 1px solid var(--axi-ink-line); border-bottom: 1px solid var(--axi-ink-line); }
+.hear-divider span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--axi-text-faint); font-weight: 600; }
+.hear-divider .line { flex: 1; height: 1px; background: var(--axi-ink-line); }
+.hear-refresh { margin-left: auto; background: none; border: none; color: var(--axi-text-faint); cursor: pointer; padding: 2px 4px; border-radius: 6px; display: grid; place-items: center; }
+.hear-refresh:hover { color: var(--axi-accent); background: var(--axi-surface); }
+.yt-settings .hear-devrow { display: flex; flex-direction: column; gap: 5px; padding: 8px 12px 10px 37px; background: var(--axi-ground-deep); border-top: 1px solid var(--axi-ink-line); font-size: 12px; color: var(--axi-text-dim); }
 .hear-install { padding: 10px 12px; }
 
 /* Thin themed scrollbars, app-wide. */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a323b; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #22d3ee; }
+::-webkit-scrollbar-thumb { background: var(--axi-ink-line); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--axi-accent); }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Mask style segmented toggle + inline blur-plugin prompt. */
 .mask-style { display: flex; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; }
-.mask-style-btn { background: none; border: none; color: #8b95a5; font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer; }
-.mask-style-btn.on { background: rgba(34,211,238,.15); color: #bfeef7; }
+.mask-style-btn { background: none; border: none; color: var(--axi-text-faint); font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer; }
+.mask-style-btn.on { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); color: var(--axi-accent); }
 .mask-blur-prompt { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px;
-  background: rgba(13,15,20,.85); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: #c4cedb; }
+  background: color-mix(in srgb, var(--axi-ground-deep) 85%, transparent); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: var(--axi-text-dim); }
 
 /* Audio pulse meters. */
 .audio-pulse { margin-left: auto; display: grid; place-items: center; }
-.audio-pulse rect { fill: #3a4552; transition: height .12s ease, y .12s ease, fill .2s ease; }
-.audio-pulse.live rect { fill: #22d3ee; }
+.audio-pulse rect { fill: var(--axi-rule); transition: height .12s ease, y .12s ease, fill .2s ease; }
+.audio-pulse.live rect { fill: var(--axi-accent); }
 .hear-divider .audio-pulse { margin-left: 0; }
 
 /* Push to talk */
+/* Push to talk — also a native checkbox for the same reason .hear-row is;
+   .axi-switch stays unused here too. */
 .ptt { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
-.ptt-live { margin-left: auto; font-size: 11px; font-weight: 800; color: #f85149; letter-spacing: .04em; }
-.ptt-muted { margin-left: auto; font-size: 11px; color: #8b98a5; }
+.ptt-live { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--axi-danger); letter-spacing: .04em; }
+.ptt-muted { margin-left: auto; font-size: 11px; color: var(--axi-text-faint); }
 
 /* Stream audio check */
 .audio-test { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
@@ -304,85 +338,113 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* PTT key picker (combo builder) */
 .keypicker { display: flex; flex-direction: column; gap: 8px; margin: 6px 0; }
 .keypicker-combo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.keypicker-chip { display: inline-flex; align-items: center; gap: 7px; background: rgba(38,211,238,.12); border: 1px solid rgba(38,211,238,.45); color: #26d3ee; border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 700; }
 .keypicker-x { background: none; border: 0; color: inherit; opacity: .7; cursor: pointer; font-size: 13px; padding: 0; }
 .keypicker-x:hover { opacity: 1; }
-.keypicker-plus { color: #8b98a5; font-weight: 800; }
-.keypicker-key { background: #1f2732; border: 1px solid #3a4552; color: #e6edf3; border-radius: 9px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
-.keypicker-key:hover { border-color: #26d3ee; }
+.keypicker-plus { color: var(--axi-text-faint); font-weight: 800; }
+/* The bound key always wears the pill's filled look: it is the current value,
+   not a toggle that happens to be on. The language reaches that fill only
+   through .axi-pill[aria-pressed="true"], and this button is a disclosure
+   (aria-expanded), so the three declarations that rule sets are restated for
+   this one button rather than lying about the control's semantics.
+
+   Both halves of the language's PAIR, not just the resting one. axi.css spells
+   its hover rule out rather than leaving it to the cascade, and the comment
+   above it says why: `transform` is set only by .axi-pill:where(:hover), so a
+   pill that takes its fill and block from the higher-weight rule still takes
+   the hover's translate — a slide, not a lift, which is the failure rule 4
+   names. Copying the resting rule alone reproduced exactly that. */
+.keypicker-key { background: var(--axi-pill-fill, var(--axi-accent)); color: var(--axi-accent-ink); box-shadow: var(--axi-shadow-control); }
+.keypicker-key:hover { box-shadow: var(--axi-shadow-control-hover); }
+/* Trigger for the add-modifier disclosure; the disclosure itself is
+   .axi-menu__pop (see the Go Live drop-up's own rule, above, for why its
+   button rows are painted locally — same reason here). */
 .keypicker-menu { position: relative; }
-.keypicker-addmod { background: #1a222c; border: 1px dashed #2a323b; color: #8b98a5; border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
-.keypicker-addmod:hover { color: #e6edf3; border-color: #3a4552; }
-.keypicker-menulist { position: absolute; top: 110%; left: 0; background: #161c26; border: 1px solid #2a323b; border-radius: 10px; padding: 6px; z-index: 5; min-width: 120px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
-.keypicker-menulist button { display: block; width: 100%; text-align: left; background: none; border: 0; color: #e6edf3; font-size: 12px; padding: 6px 10px; border-radius: 7px; cursor: pointer; }
-.keypicker-menulist button:hover { background: #222c38; }
-.keypicker-grid { background: #161c26; border: 1px solid #2a323b; border-radius: 12px; padding: 12px; }
-.keypicker-grid input { width: 100%; box-sizing: border-box; background: #0f141b; border: 1px solid #2a323b; border-radius: 8px; color: #e6edf3; padding: 7px 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
-.keypicker-grid input:focus { border-color: #26d3ee; }
+.keypicker-addmod { background: var(--axi-surface); border: 1px dashed var(--axi-ink-line); color: var(--axi-text-faint); border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.keypicker-addmod:hover { color: var(--axi-text); border-color: var(--axi-rule); }
+.keypicker-menu .axi-menu__pop { top: 110%; min-width: 120px; width: auto; }
+.keypicker-grid { background: var(--axi-well-fill); border: 1px solid var(--axi-ink-line); border-radius: 12px; padding: 12px; }
+.keypicker-grid input { width: 100%; box-sizing: border-box; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); border-radius: 8px; color: var(--axi-text); padding: 7px 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
+.keypicker-grid input:focus { border-color: var(--axi-accent); }
 .keypicker-group { margin-bottom: 8px; }
-.keypicker-glabel { color: #8b98a5; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 6px; }
+.keypicker-glabel { color: var(--axi-text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 6px; }
 .keypicker-keys { display: flex; flex-wrap: wrap; gap: 5px; }
-.keypicker-k { background: #1a222c; border: 1px solid #2a323b; color: #c7d0d9; border-radius: 7px; padding: 4px 9px; font-size: 11px; font-weight: 600; cursor: pointer; min-width: 28px; }
-.keypicker-k:hover { background: #222c38; border-color: #3a4552; }
-.keypicker-k.sel { background: rgba(38,211,238,.15); border-color: #26d3ee; color: #26d3ee; }
 
 /* Hotkey settings rows — label left, picker right, matching neighbouring rows. */
-.hotkey-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-.hotkey-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid rgba(58,69,82,.4); }
+/* .axi-stack/.axi-row give the list its rhythm and each row its flex
+   layout; justify-content and the hairline divider are this app's own —
+   the language's .axi-row doesn't space its ends apart, and .axi-kbd (a
+   literal keycap) doesn't fit .hotkey-label, which names an ACTION
+   ("Mic mute"), not a key. */
+.hotkey-rows { --axi-stack-gap: 4px; margin-top: 8px; }
+.hotkey-row { justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--axi-rule) 40%, transparent); }
 .hotkey-row:last-child { border-bottom: none; }
-.hotkey-label { color: #e6edf3; font-size: 13px; font-weight: 600; }
+.hotkey-label { color: var(--axi-text); font-size: 13px; font-weight: 600; }
 
 /* Toast stack — discrete events only (conditions use .overlay). Sits below
    .wctl so window controls stay clickable, above .overlay and the preview.
    Inside the .dragbar band, so it must opt out of window dragging. */
-.toasts { position: absolute; top: 44px; right: 11px; z-index: 8; display: flex; flex-direction: column; gap: 8px; max-width: 340px; -webkit-app-region: no-drag; }
-.toast { display: flex; align-items: flex-start; gap: 9px; padding: 10px 11px; border-radius: 10px; background: rgba(12,15,20,.92); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.45); }
-.toast .toast-icon { flex: none; margin-top: 1px; }
-.toast.info .toast-icon { color: #7ee3f2; }
-.toast.success .toast-icon { color: #56d364; }
-.toast.error { border-color: rgba(240,85,107,.45); }
-.toast.error .toast-icon { color: #f85149; }
+/* Positioned to this app's own top bar, not the language's default
+   bottom-right — below .wctl so window controls stay clickable, inside the
+   .dragbar band so it must opt out of window dragging (behaviour, stays
+   local regardless of paint). The box itself (fill, border, radius, shadow)
+   is .axi-toast's. */
+.axi-toasts { position: absolute; top: 44px; right: 11px; bottom: auto; left: auto; z-index: 8; max-width: 340px; -webkit-app-region: no-drag; }
+/* The status border, restated in tokens from the pre-migration .toast.error,
+   which carried the danger hue at 45% alpha. (The literal is deliberately not
+   quoted here: styles-tokens.test.ts scans comments for rgba forms too, and
+   its own docstring rests on no comment in this file containing one.)
+   The language's own tone modifiers only colour an
+   .axi-toast__dot, which this host does not render — and a 15px glyph is not
+   what makes an error toast readable at a glance, because the stack sits over
+   the moving preview. The border is. */
+.axi-toast.error { border-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); }
+.axi-toast .toast-icon { flex: none; margin-top: 1px; }
+.axi-toast.info .toast-icon { color: var(--axi-accent); }
+.axi-toast.success .toast-icon { color: var(--axi-ok); }
+.axi-toast.error .toast-icon { color: var(--axi-danger); }
 .toast-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.toast-msg { font-size: 13px; line-height: 1.35; color: #e6edf3; }
+.toast-msg { font-size: 13px; line-height: 1.35; color: var(--axi-text); }
 /* Technical detail is selectable — users paste it to us. */
-.toast-detail { font: 11px/1.4 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
-.toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: #8b949e; background: none; border: 0; cursor: pointer; }
-.toast-x:hover { color: #fff; background: rgba(255,255,255,.1); }
+.toast-detail { font: 11px/1.4 ui-monospace, monospace; color: var(--axi-text-dim); word-break: break-word; -webkit-user-select: text; user-select: text; }
+.toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--axi-text-dim); background: none; border: 0; cursor: pointer; }
+.toast-x:hover { color: var(--axi-text); background: rgba(255,255,255,.1); }
 
-/* Renderer crash fallback. Reuses .hero's centred layout. */
-.crash { gap: 10px; text-align: center; }
-.crash h2 { margin: 0; font-size: 17px; }
-.crash-live { margin: 0; font-size: 13px; color: #56d364; }
+/* Renderer crash fallback. Reuses .hero's layout; the card and the alert are
+   the language's (.axi-panel, .axi-notice--danger) — this is only the
+   centring and the bits neither names: the reassurance line, the selectable
+   error text, and the action row. */
+.crash { align-items: center; justify-content: center; }
+.crash .axi-panel { max-width: min(520px, 90%); }
+.crash-live { margin: 0; font-size: 13px; color: var(--axi-ok); }
 /* Selectable — the whole point is that the user can hand it to us. */
-.crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
-.crash-actions { display: flex; gap: 8px; margin-top: 4px; }
-
-/* Renderer crash fallback. Reuses .hero's centred layout. */
-.crash { gap: 10px; text-align: center; }
-.crash h2 { margin: 0; font-size: 17px; }
-.crash-live { margin: 0; font-size: 13px; color: #56d364; }
-/* Selectable — the whole point is that the user can hand it to us. */
-.crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
-.crash-actions { display: flex; gap: 8px; margin-top: 4px; }
+.crash-msg { margin: 8px 0 0; font: 11px/1.5 ui-monospace, monospace; color: var(--axi-text-dim); word-break: break-word; -webkit-user-select: text; user-select: text; }
+.crash-actions { display: flex; gap: 8px; margin-top: 16px; }
 
 /* End-of-stream summary panel. Reuses .hero's centred layout. */
-.summary-panel { gap: 18px; }
-.summary-stats { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
-.summary-stat { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-.summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; }
-.summary-value { font-size: 15px; }
+/* End-of-stream summary: a floating .axi-panel centred over the (still-full-
+   bleed) hero backdrop — .summary-panel itself carries only that centring,
+   which the language has no opinion on; the card's own fill/border/shadow
+   are .axi-panel's. */
+.summary-panel { align-items: center; justify-content: center; }
+.summary-panel .axi-panel { display: flex; flex-direction: column; gap: 18px; align-items: center; max-width: min(520px, 90%); }
+.summary-panel .axi-grid { --axi-grid-min: 140px; justify-items: center; text-align: center; }
 .summary-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
-.summary-path { font-size: 11px; color: #94a3b8; user-select: text; }
+.summary-path { font-size: 11px; color: var(--axi-text-dim); user-select: text; }
+/* The dropped-frame tiles' plain-English judgement. .axi-stat has a number
+   (__n) and a key (__k) and nothing for a sentence, and __k is uppercase micro
+   — shouting "VIEWERS LIKELY SAW STUTTERING" is not what a reassurance line
+   should do. Sentence case, one step under the key. */
+.summary-verdict { display: block; margin-top: 3px; font-size: 11px; line-height: 1.3; color: var(--axi-text-dim); }
 .rec-elapsed { margin-left: 6px; }
 
 /* Webcam settings: corner picker grid + manual mode selects. */
 .webcam-corners { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
-.webcam-settings .webcam-corners .btn { padding: 9px 12px; font-size: 12px; font-weight: 700; border-radius: 9px; }
+.webcam-settings .webcam-corners .axi-btn { padding: 9px 12px; font-size: 12px; font-weight: 700; border-radius: 9px; }
 .webcam-modes { display: grid; gap: 10px; margin-top: 10px; }
 
 /* Shared panel controls. Native checkbox/range chrome is light-themed on Linux
    and reads as a different app pasted into the panel, so these panels opt out
-   of it. (Dropdowns are no longer native at all — see .sel-trigger below.) Any
+   of it. (Dropdowns are no longer native at all — see .axi-picker__btn above.) Any
    new panel with a checkbox or a range should join these selector lists rather
    than restyle from scratch. */
 .webcam-settings { display: grid; gap: 12px; }
@@ -391,7 +453,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .quality-body label,
 .quality-body .field,
 .wizard-body label,
-.wizard-body .field { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
+.wizard-body .field { display: grid; gap: 6px; font-size: 13px; color: var(--axi-text-dim); }
 
 /* Checkbox rows read as a single line, so they opt out of the grid stacking. */
 .webcam-settings label.check,
@@ -407,137 +469,166 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .webcam-settings input[type="checkbox"]:checked,
 .quality-body input[type="checkbox"]:checked,
 .wizard-body input[type="checkbox"]:checked {
-  background: #22d3ee url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306222a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") no-repeat center / 12px;
-  border-color: #22d3ee;
+  background: var(--axi-accent) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2306222a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") no-repeat center / 12px;
+  border-color: var(--axi-accent);
 }
 .webcam-settings input[type="checkbox"]:focus-visible,
 .quality-body input[type="checkbox"]:focus-visible,
-.wizard-body input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+.wizard-body input[type="checkbox"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
 
 /* Size slider: the value rides on the same line as the label. */
 .webcam-settings label.slider { grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; }
 .webcam-settings label.slider > span.slider-label { grid-column: 1; }
-.webcam-settings label.slider > .slider-value { grid-column: 2; font: 600 12px/1 ui-monospace, monospace; color: #8b949e; }
+.webcam-settings label.slider > .slider-value { grid-column: 2; font: 600 12px/1 ui-monospace, monospace; color: var(--axi-text-dim); }
 .webcam-settings input[type="range"] {
   grid-column: 1 / -1; appearance: none; -webkit-appearance: none;
   width: 100%; height: 4px; margin: 4px 0; border-radius: 3px; cursor: pointer;
-  background: linear-gradient(90deg,#22d3ee,#0bb6d6) no-repeat, rgba(255,255,255,.14);
+  background: var(--axi-accent) no-repeat, rgba(255,255,255,.14);
   background-size: var(--fill, 50%) 100%;
 }
 .webcam-settings input[type="range"]::-webkit-slider-thumb {
   appearance: none; -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
-  background: #e6edf3; border: 0; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer;
+  background: var(--axi-text); border: 0; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer;
 }
-.webcam-settings input[type="range"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+.webcam-settings input[type="range"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
 
 /* Go Live split button: primary action + a caret that opens the drop-up. */
 /* align-items: stretch keeps the caret exactly as tall as the label half — the
    two have different content, so content-sized heights drift apart. */
 .action-split { position: relative; display: inline-flex; align-items: stretch; align-self: flex-start; }
-.action-split > .btn.action { align-self: stretch; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.action-split > .btn.action.caret {
+.action-split > .axi-btn.action { align-self: stretch; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.action-split > .axi-btn.action.caret {
   padding: 0 11px; gap: 5px;
   /* Restated: the shared .action rule above squares BOTH right corners. */
   border-radius: 0 10px 10px 0;
   margin-left: 1px;
 }
 /* The seam: a hairline so the two halves read as one control with two targets. */
-.action-split > .btn.primary.action.caret { box-shadow: inset 1px 0 0 rgba(6,34,42,.3), 0 4px 14px rgba(34,211,238,.22); }
-.action-split > .btn.danger.action.caret { border-left-color: rgba(240,85,107,.45); }
-.rec-dot { width: 7px; height: 7px; border-radius: 50%; background: #e23a52; box-shadow: 0 0 7px rgba(226,58,82,.9); }
+.action-split > .axi-btn.axi-btn--primary.action.caret { box-shadow: inset 1px 0 0 color-mix(in srgb, var(--axi-accent-ink) 30%, transparent), 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
+.action-split > .axi-btn.axi-ink-danger.action.caret { border-left-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); }
 
-.dropup {
-  /* Left-aligned to the split button: the button sits at the left edge of the
-     hero, so a right-aligned menu hangs off the window. */
-  position: absolute; bottom: calc(100% + 7px); left: 0; min-width: 210px;
-  display: flex; flex-direction: column; padding: 5px; z-index: 5;
-  background: rgba(14,19,26,.97); border: 1px solid #2a323b; border-radius: 11px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.5);
-}
-.dropup-item {
+/* Go Live drop-up — a disclosure of action buttons, drawn with the language's
+   .axi-menu popover shell. .axi-menu__pop only pre-styles its checkbox-filter
+   <label> rows (see axi-design src/shells.css); this one holds <button>s, so
+   they get the same treatment painted in tokens rather than the language's
+   label-only selector. */
+.axi-menu__pop button {
   display: flex; align-items: center; gap: 9px; width: 100%;
-  padding: 9px 11px; border: 0; border-radius: 8px; background: none;
-  color: #c7d0d9; font: 700 13px/1 inherit; text-align: left; cursor: pointer;
+  padding: 9px 11px; border: 0; border-radius: var(--axi-radius-sm);
+  background: none; color: var(--axi-text-dim); font: 700 13px/1 inherit;
+  text-align: left; cursor: pointer;
 }
-.dropup-item:hover:not(:disabled) { background: #222c38; color: #e6edf3; }
-.dropup-item:disabled { opacity: .45; cursor: default; }
-.dropup-item.danger { color: #ff8b9c; }
-.dropup-item .rec-elapsed { margin-left: auto; color: #8b949e; }
+.axi-menu__pop button:where(:hover, :focus-visible) { background: var(--axi-well-fill); color: var(--axi-text); }
+.axi-menu__pop button:disabled { opacity: .45; cursor: default; }
+.axi-menu__pop .rec-elapsed { margin-left: auto; color: var(--axi-text-dim); }
+/* This disclosure opens from a button pinned to the hero's bottom edge, so it
+   opens upward — a direction .axi-menu__pop (which only opens down) has no
+   modifier for. */
+.action-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; min-width: 210px; width: auto; }
 
 /* Quality panel. Flat like every other settings card — the summary reads as
-   chips so the mode (Auto vs Custom) is scannable without parsing a sentence. */
-.quality-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-.q-chip {
-  padding: 3px 8px; border-radius: 999px;
-  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
-  font: 600 11px/1.5 inherit; color: #8b949e; white-space: nowrap;
-}
-/* The mode chip is the one you scan for, so it carries the accent. */
-.q-chip.mode { background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.4); color: #22d3ee; }
-.q-chip.mode.custom { background: #22d3ee; border-color: #22d3ee; color: #06222a; }
+   chips (.axi-chip--meta, .axi-chip--accent for the scannable mode) so the
+   mode (Auto vs Custom) is scannable without parsing a sentence. Not
+   .axi-chip--action: these are read-only status, not something you press,
+   and --action's cursor/hover-lift would claim otherwise. */
+.quality-chips { --axi-row-gap: 6px; margin: 0 0 12px; }
 
 .quality-body { display: flex; flex-direction: column; gap: 12px; }
 .quality-body input[type='number'] {
   width: 9ch;
   background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
-  padding: 8px 10px; color: #e6edf3; font-size: 13px;
+  padding: 8px 10px; color: var(--axi-text); font-size: 13px;
 }
-.quality-body input[type='number']:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
-/* A control that only exists because the checkbox above it is ticked, indented
+.quality-body input[type='number']:focus-visible { outline: 0; border-color: var(--axi-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
+/* .q-sub/.q-note/.q-fallback stay local: .axi-well is an uncoloured recess
+   for objects that carry their own padding, with no warn/info variant, and
+   .axi-tabs is page navigation — neither fits a coloured inline callout.
+   A control that only exists because the checkbox above it is ticked, indented
    so the dependency is visible rather than inferred. */
 .q-sub { margin-top: -2px; padding-left: 26px; }
 /* A consequence of editing these fields, not a hint — it gets a notice. */
 .q-note {
   margin: 0; padding: 8px 11px; border-radius: 9px;
-  background: rgba(240,180,60,.1); border: 1px solid rgba(240,180,60,.3);
-  font-size: 12px; color: #e3b341;
+  background: color-mix(in srgb, var(--axi-warn) 10%, transparent); border: 1px solid color-mix(in srgb, var(--axi-warn) 30%, transparent);
+  font-size: 12px; color: var(--axi-warn);
 }
 /* State AxiStream chose for the user, which reads differently from advice. */
 .q-fallback {
   margin: 0; padding: 2px 0 2px 10px;
-  border-left: 2px solid #22d3ee; font-size: 12px; color: #c7d0d9;
+  border-left: 2px solid var(--axi-accent); font-size: 12px; color: var(--axi-text-dim);
 }
-.quality-body .muted { margin: 0; font-size: 12px; }
+.quality-body .axi-ink-dim { margin: 0; font-size: 12px; }
 
 
-/* Custom listbox (components/Select.tsx) — every dropdown in the app. Chromium
-   126 draws a native <select>'s popup itself: light-themed on Linux,
-   unreachable from CSS, reading as a different app pasted over the panel. The
-   trigger keeps the metrics the native selects had; the popup is finally ours. */
-.sel-trigger {
-  position: relative; width: 100%; text-align: left; font: inherit; font-size: 13px;
-  background: rgba(0,0,0,.4) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 10px center / 15px;
-  border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
-  padding: 9px 34px 9px 11px; color: #e6edf3; cursor: pointer;
-}
+/* Custom listbox (components/Select.tsx) — every dropdown in the app, drawn
+   with the language's .axi-picker (see axi-design docs/RULES.md §3): the
+   closed box and popover the OS's own <select> will not let us style.
+   Two details the language doesn't model, kept local and painted in tokens: */
 /* Nothing picked yet — reads as a prompt, not as a value. */
-.sel-trigger.empty { color: #7d8794; }
-.sel-trigger:hover { border-color: rgba(34,211,238,.45); }
-.sel-trigger[aria-expanded='true'],
-.sel-trigger:focus-visible { outline: 0; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
-
-/* Portalled to <body> (the settings panel scrolls and would clip it), so this
-   sits outside every panel's cascade and carries its own colours. */
-.sel-list {
-  /* Above .modal-backdrop (100) — the welcome wizard is a modal, and its
-     dropdown must not open behind it. */
-  z-index: 200; padding: 5px; overflow: auto;
-  background: #10141b; border: 1px solid #263041; border-radius: 10px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.6);
-}
-.sel-list:focus-visible { outline: 0; }
-.opt {
-  display: flex; align-items: baseline; gap: 8px;
-  padding: 8px 10px; border-radius: 7px; color: #dbe4ee; font-size: 13px; cursor: pointer;
-}
-.opt.active { background: rgba(255,255,255,.06); }
-.opt.on { background: rgba(34,211,238,.12); color: #bfeef7; box-shadow: inset 0 0 0 1px rgba(34,211,238,.28); }
-.opt.on .opt-label::after { content: '✓'; margin-left: 8px; color: #22d3ee; font-size: 12px; }
-/* Dim enough to read as unavailable, light enough to still read. */
-.opt[aria-disabled='true'] { color: #79838f; background: none; box-shadow: none; cursor: default; }
+.axi-picker__btn.sel-empty { color: var(--axi-text-faint); }
+/* The keyboard-highlighted row. .axi-picker__opt only lights up on :hover or
+   :focus, but these options are never themselves focused — focus stays on the
+   listbox and aria-activedescendant reports which row is "active" — so the
+   highlight needs a class the language has no opinion on. Reuses the same
+   fill the language's own hover state reads. */
+.axi-picker__opt.active { background: var(--axi-well-fill); color: var(--axi-text); }
+/* Uppercase chrome is the language's identity and stays on fixed labels this
+   app wrote ("Public", "Auto (1080p)", a key name). It is data distortion on
+   a name the system reports — a microphone, a webcam, an output device — so
+   those opt out via Select's systemLabels prop. Matches the precedent the
+   language sets for itself at .axi-card__btn (dist/axi.css), which resets to
+   `text-transform: inherit` for the same reason: a slot holding someone
+   else's words must not relabel them. */
+.axi-picker__btn--plain, .axi-picker__opt--plain { text-transform: none; }
 .opt-label { min-width: 0; }
+/* A dark recessed chip with a lighter edge, which is --axi-well-fill outlined
+   in --axi-surface-paint and not --axi-surface: flat and glass both put a
+   linear-gradient in --axi-surface, and `border: 1px solid <gradient>` is
+   invalid at computed-value time, which unsets all four border longhands —
+   style falls back to `none` and width to `0`. --axi-surface-paint is the
+   companion the language ships for exactly this colour position (see the token
+   comment in dist/axi.css). --axi-ink-line was the wrong fill for the same
+   reason from the other direction: it is light on both of those themes, so the
+   chip inverted from dark-on-light to pale-translucent and took
+   --axi-text-faint down with it. */
 .why {
   margin-left: auto; font: 600 10px/1 ui-monospace, monospace; white-space: nowrap;
-  color: #8a94a1; background: #161c25; border: 1px solid #232c38;
+  color: var(--axi-text-dim); background: var(--axi-well-fill); border: 1px solid var(--axi-surface-paint);
   padding: 3px 6px; border-radius: 5px;
+}
+
+/* Accent swatches. .axi-btn lends the block, the ink edge and the radius; the
+   language has no component for a colour sample, so the square's size and its
+   selected ring are local. Two things this has to work around: .axi-btn--icon
+   is only a padding knob (--axi-btn-pad: 7px) and these buttons have no
+   children, so without an explicit size each swatch is a ~14px hit target; and
+   .axi-btn styles no [aria-pressed] state at all, so twelve swatches were
+   indistinguishable with nothing marking the one in force. The ring is a
+   box-shadow rather than an outline so it survives the inline background (which
+   out-ranks any stylesheet and is the swatch's whole job), and it is drawn in
+   --axi-text over an --axi-ink-line gap so it reads against all twelve hues as
+   well as against the panel behind them. */
+.accent-swatch { width: 24px; height: 24px; padding: 0; }
+.accent-swatch[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--axi-ink-line), 0 0 0 4px var(--axi-text); }
+
+/* Accent and surface crossfade. One class, held for 500ms by
+   applyAccent/applySurface, so the whole window repaints together instead of
+   each element snapping on its own next frame. */
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    color 0.2s ease,
+    box-shadow 0.4s ease,
+    outline-color 0.4s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after {
+    transition: none !important;
+  }
 }
