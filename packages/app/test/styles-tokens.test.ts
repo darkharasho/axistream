@@ -7,6 +7,12 @@ import { URL as NodeURL } from 'node:url'
 // workaround), so this uses the real node:url URL rather than the
 // jsdom-polyfilled global.
 const PATH = new NodeURL('../src/renderer/styles.css', import.meta.url)
+// The one other file in the renderer's paint path. components-tokens.test.ts
+// owns every .ts/.tsx under src/renderer/ and this file owns the stylesheet,
+// which left index.html seen by neither: a <style> block, a bgcolor or an
+// inline style attribute there would pass both guards silently. It is
+// colour-free today, so this closes a seam rather than fixing a leak.
+const INDEX_PATH = new NodeURL('../index.html', import.meta.url)
 
 /**
  * The migration's end state: every colour in this stylesheet comes from a
@@ -152,6 +158,10 @@ describe('styles.css has no colour literals', () => {
   it('contains no hex, non-greyscale rgb()/rgba(), hsl()/hsla(), or named colour anywhere', () => {
     const css = readFileSync(PATH, 'utf8')
     expect(offenders(css)).toEqual([])
+  })
+
+  it('covers index.html too, which neither guard used to see', () => {
+    expect(offenders(readFileSync(INDEX_PATH, 'utf8'))).toEqual([])
   })
 
   it('reaches for tokens instead', () => {

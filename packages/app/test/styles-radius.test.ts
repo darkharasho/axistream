@@ -39,9 +39,13 @@ describe('the window radius follows the surface', () => {
 
   it('leaves no bare 10px radius on the frame/shell selectors', () => {
     // Scoped to the five selectors this task owns, not the whole sheet: other
-    // controls (.btn.action, .toast, .sel-list, .keypicker-menulist, ...)
-    // carry their own unrelated 10px radius and are out of this task's
-    // worklist. --axi-radius-sm is 0 on the default 'axi' surface, so forcing
+    // controls (.keypicker-grid, .updatepill, .enginepill, ...) carry their
+    // own unrelated fixed radius and are out of this task's worklist. The
+    // examples this comment originally named — .btn.action, .toast, .sel-list,
+    // .keypicker-menulist — were all migrated later on this same branch
+    // (.axi-btn, .axi-toast, .axi-picker__pop, .axi-menu__pop); the reasoning
+    // still holds, the examples had to be refreshed.
+    // --axi-radius-sm is 0 on the default 'axi' surface, so forcing
     // those onto the token would square off buttons/menus on first launch —
     // a visible regression the "look essentially unchanged" constraint rules
     // out. Converting them is a later task's job, not this one's.

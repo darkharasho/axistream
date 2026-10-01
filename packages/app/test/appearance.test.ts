@@ -180,14 +180,23 @@ describe('the accent is no longer welded into the stylesheet', () => {
     expect(styles()).toMatch(/var\(--axi-accent\)/)
   })
 
-  // Review Focus 4 — this one local rule currently overrides the language's
-  // focus ring on every element in the app, including the three components
-  // that style themselves inline and that no stylesheet can reach.
-  it('no longer overrides the language\'s focus ring', () => {
+  // Review Focus 4 — a bare `:focus-visible` rule here overrides the
+  // language's focus ring on every element in the app, including the
+  // components that style themselves inline and that no stylesheet can reach.
+  //
+  // The constraint is that no focus rule is GLOBAL, so that is what is
+  // asserted. This used to look for the literal `outline: 2px solid #`, which
+  // a reintroduced `:focus-visible { outline: 2px solid var(--axi-accent) }`
+  // — the form someone mid-migration would actually write — walked straight
+  // past. Element-scoped rules are allowed and three exist today, all local to
+  // a checkbox or a number input or the portalled picker popup.
+  it('scopes every focus rule to an element, overriding the language\'s ring nowhere', () => {
     const css = styles()
-    const focusRules = css.split('\n').filter((l) => l.includes(':focus-visible'))
-    for (const rule of focusRules) {
-      expect(rule).not.toMatch(/outline:\s*2px solid #/)
-    }
+    const unscoped = css.split('\n')
+      .filter((l) => l.includes(':focus-visible') && l.includes('{'))
+      .map((l) => l.slice(0, l.indexOf('{')).trim())
+      .filter((selector) => selector.split(',')
+        .some((s) => /^(\*|html|body)?:focus-visible$/.test(s.trim())))
+    expect(unscoped).toEqual([])
   })
 })
