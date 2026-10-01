@@ -8,11 +8,13 @@ export function Sidebar({ active, state, onNav, axi, update = null }: { active: 
   const live = state.phase === 'LIVE' || state.phase === 'RECONNECTING'
   const { audio, masks, masksVisible, ptt, webcam } = state
   return (
-    <div className="sidebar">
+    <div className="axi-rail axi-rail--flush">
       <div className="brand"><AxiMark size={20} /><span className="wordmark"><span>Axi</span><span className="accent">Stream</span></span></div>
       <div className="menu-label">MENU</div>
-      <button className={`navitem ${active === 'stream' ? 'on' : ''}`} onClick={() => onNav('stream')}><Radio size={ICON} /> Stream</button>
-      <button className={`navitem ${active === 'settings' ? 'on' : ''}`} onClick={() => onNav('settings')}><Settings size={ICON} /> Settings</button>
+      <div className="axi-rail__nav">
+        <button className="axi-rail__item" aria-current={active === 'stream' ? 'page' : undefined} onClick={() => onNav('stream')}><Radio size={ICON} /> Stream</button>
+        <button className="axi-rail__item" aria-current={active === 'settings' ? 'page' : undefined} onClick={() => onNav('settings')}><Settings size={ICON} /> Settings</button>
+      </div>
 
       <div className="quick">
         <div className="menu-label">QUICK</div>

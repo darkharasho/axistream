@@ -11,12 +11,12 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* Corner rounding (KWin/compositor rounds the window; #root matches the radius
    so content doesn't poke into the rounded corner). Window is opaque
    (transparent:false + dark backgroundColor) — same technique as axibridge. */
-#root { height: 100%; overflow: hidden; border-radius: 10px; }
+#root { height: 100%; overflow: hidden; border-radius: var(--axi-radius); }
 
 /* App is a row: sidebar | active screen. Window controls float top-right. */
 /* clip-path clips composited descendants (the preview <video>) to the rounded
    corners — overflow:hidden + border-radius alone does not. */
-.app { position: relative; height: 100%; display: flex; background: #0b0d12; border-radius: 10px; overflow: hidden; border: 1px solid #1d2530; clip-path: inset(0 round 10px); }
+.app { position: relative; height: 100%; display: flex; background-color: var(--axi-ground); background-image: var(--axi-ground-image); border-radius: var(--axi-radius); overflow: hidden; border: var(--axi-border-panel) solid var(--axi-ink-line); clip-path: inset(0 round var(--axi-radius)); }
 
 /* Full-width top strip is draggable (a titlebar replacement). Sits below the
    window controls (z-index 10, no-drag) so they stay clickable. */
@@ -24,24 +24,23 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* Window controls — raised to the very top-right corner, over the preview. */
 .wctl { position: absolute; top: 9px; right: 11px; display: flex; gap: 5px; z-index: 10; -webkit-app-region: no-drag; }
-.wbtn { width: 28px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: #b9c4cf; background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.08); font-size: 12px; cursor: pointer; }
-.wbtn:hover { color: #fff; background: rgba(255,255,255,.1); }
-.wbtn.close:hover { color: #fff; background: rgba(226,58,82,.7); border-color: transparent; }
+.wbtn { width: 28px; height: 24px; border-radius: var(--axi-radius-sm); display: grid; place-items: center; color: var(--axi-text-dim); background: rgba(0,0,0,.32); border: var(--axi-border-control) solid rgba(255,255,255,.08); font-size: 12px; cursor: pointer; }
+.wbtn:hover { color: var(--axi-text); background: rgba(255,255,255,.1); }
+.wbtn.close:hover { color: var(--axi-ink-on-fill); background: var(--axi-danger); border-color: transparent; }
 
-/* Sidebar — brand at top, then nav, then engine pill. The whole bar is a
-   window-drag handle (frameless window); interactive children must opt out
-   or Electron eats their clicks. */
-.sidebar { width: 200px; background: #0a0c11; border-right: 1px solid #161c25; display: flex; flex-direction: column; padding: 0 10px 12px; -webkit-app-region: drag; }
-.sidebar button { -webkit-app-region: no-drag; }
+/* The rail is a window-drag handle (frameless window); interactive children
+   must opt out or Electron eats their clicks. This is behaviour, not paint, so
+   it stays local rather than being pushed upstream. */
+.axi-rail { -webkit-app-region: drag; }
+.axi-rail button { -webkit-app-region: no-drag; }
+/* The language's rail defaults to 208px; this app's sidebar has always been 200. */
+.axi-rail { --axi-rail-w: 200px; }
 .brand { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px; }
 /* Wordmark matches the Axi house titlebar: Cinzel, two-tone (Axi white + accent). */
 .brand .wordmark { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 0.06em; font-weight: 500; color: #ffffff; }
 .brand .wordmark .accent { color: var(--axi-accent); }
 .dot.accent { width: 9px; height: 9px; border-radius: 50%; background: var(--axi-accent); box-shadow: 0 0 10px var(--axi-accent); }
 .menu-label { color: #5b6470; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
-.navitem { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 9px; color: #8b949e; font-size: 14px; background: none; border: 0; text-align: left; cursor: pointer; margin-top: 3px; }
-.navitem.on { background: color-mix(in srgb, var(--axi-accent) 10%, transparent); color: var(--axi-accent); border: 1px solid color-mix(in srgb, var(--axi-accent) 22%, transparent); }
-.navitem.dim { color: #586069; }
 .soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid #2a323b; padding: 3px 5px; border-radius: 5px; }
 /* Update banner */
 .updatepill { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 9px 11px; border-radius: 9px; background: color-mix(in srgb, var(--axi-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); color: var(--axi-accent); font: 600 11px/1 ui-monospace, monospace; cursor: pointer; }
@@ -61,11 +60,13 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .enginepill.onair { background: rgba(240,85,107,.08); border-color: rgba(240,85,107,.25); color: #f0a3ae; }
 .enginepill.onair .dot { background: #f0556b; box-shadow: 0 0 7px #f0556b; }
 
-/* Hero — the full-height, preview-forward Stream screen. */
+/* Hero — the full-height, preview-forward Stream screen. The placeholder
+   gradient is decoration (no capture yet), not legibility, so it follows the
+   surface: --axi-ground-deep + --axi-ground-image are glass's radial wash. */
 /* The hero rounds its OWN right corners (= the window's right corners). A
    background-image (the live preview) is a composited layer that the parent's
    border-radius can't clip, so the hero must self-clip. */
-.hero { flex: 1; position: relative; overflow: hidden; background: linear-gradient(135deg,#13243a 0%,#1c1c40 45%,#311a35 80%,#3a1f2a 100%); background-size: cover; background-position: center; display: flex; flex-direction: column; border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+.hero { flex: 1; position: relative; overflow: hidden; background-color: var(--axi-ground-deep); background-image: var(--axi-ground-image); background-size: cover; background-position: center; display: flex; flex-direction: column; border-top-right-radius: var(--axi-radius); border-bottom-right-radius: var(--axi-radius); }
 /* Radial depth only on the setup screen (placeholder gradient). The live Stream
    view shows the real preview video instead, so no tint. */
 .hero.setup::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 34%,rgba(120,180,255,.26),transparent 55%),radial-gradient(circle at 76% 70%,rgba(200,120,255,.2),transparent 52%); pointer-events: none; z-index: 1; }
@@ -77,9 +78,9 @@ input, textarea { -webkit-user-select: text; user-select: text; }
    so contain's bars read as a glow of the game instead of black. It touches
    the window corners, so it carries the self border-radius (see the
    hardware-overlay note above). */
-.preview-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: blur(28px) brightness(.55); border-radius: 0 10px 10px 0; opacity: 1; transition: opacity .35s ease; }
+.preview-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: blur(28px) brightness(.55); border-radius: 0 var(--axi-radius) var(--axi-radius) 0; opacity: 1; transition: opacity .35s ease; }
 .preview-backdrop.loading { opacity: 0; }
-.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; background: transparent; border-radius: 0 10px 10px 0; opacity: 1; transition: opacity .35s ease; }
+.preview-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; background: transparent; border-radius: 0 var(--axi-radius) var(--axi-radius) 0; opacity: 1; transition: opacity .35s ease; }
 /* Not actively showing frames (startup / source switch / OBS restart): fade out
    so the hero's colored gradient backsplash shows through instead of black. */
 .preview-video.loading { opacity: 0; }
