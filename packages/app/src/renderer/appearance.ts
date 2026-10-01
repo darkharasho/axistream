@@ -7,12 +7,13 @@ export type AccentDefinition = { id: string; label: string; hex: string }
 export const ACCENTS: AccentDefinition[] = accentsJson as AccentDefinition[]
 
 /**
- * AxiStream was built around #22d3ee, and `electric-cyan` exists in the palette
- * precisely so that colour survives this migration. The app therefore looks
- * essentially unchanged out of the box — but every cyan in it now follows the
- * picker instead of being welded into the stylesheet.
+ * The house colour, as in every other axi app. AxiStream was built around
+ * #22d3ee and `electric-cyan` exists in the palette precisely so that colour
+ * survives — it is one pick away in Appearance, and every cyan in the app now
+ * follows the picker rather than being welded into the stylesheet. What it is
+ * no longer is the colour an axi app wears when nobody has chosen one.
  */
-export const DEFAULT_ACCENT_ID = 'electric-cyan'
+export const DEFAULT_ACCENT_ID = 'axi-gold'
 
 /**
  * The surfaces the design language paints. 'axi' is the language itself, drawn
@@ -49,6 +50,15 @@ export function resolveSurfaceId(id?: string | null): SurfaceId {
   return SURFACES.some((s) => s.id === id) ? (id as SurfaceId) : DEFAULT_SURFACE_ID
 }
 
+/**
+ * `persist: false` applies an appearance without remembering it. Boot needs it:
+ * writing the resolved value back on every launch would turn the first launch's
+ * default into a stored choice, and the next time the default changed nobody
+ * who had ever opened the app would see it. A default has to stay a fallback to
+ * stay a default — storage is for what the reader actually picked.
+ */
+type ApplyOptions = { transition?: boolean; persist?: boolean }
+
 let transitionTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
@@ -84,13 +94,14 @@ export function readSurface(): SurfaceId {
 
 /** Puts an accent on <html>, where accents.css's [data-axi-accent] rules hang,
  *  and remembers it. */
-export function applyAccent(id?: string | null, opts: { transition?: boolean } = {}): string {
+export function applyAccent(id?: string | null, opts: ApplyOptions = {}): string {
   const resolved = resolveAccentId(id)
   const root = document.documentElement
 
   if (opts.transition !== false) crossfade(root)
 
   root.setAttribute('data-axi-accent', resolved)
+  if (opts.persist === false) return resolved
   try {
     localStorage.setItem(ACCENT_STORAGE_KEY, resolved)
   } catch {
@@ -106,7 +117,7 @@ export function applyAccent(id?: string | null, opts: { transition?: boolean } =
  * axi-design's own rule is that removing `data-axi-theme` leaves you back on it
  * with no other change.
  */
-export function applySurface(id?: string | null, opts: { transition?: boolean } = {}): SurfaceId {
+export function applySurface(id?: string | null, opts: ApplyOptions = {}): SurfaceId {
   const resolved = resolveSurfaceId(id)
   const root = document.documentElement
 
@@ -115,6 +126,7 @@ export function applySurface(id?: string | null, opts: { transition?: boolean } 
   if (resolved === 'axi') root.removeAttribute('data-axi-theme')
   else root.setAttribute('data-axi-theme', resolved)
 
+  if (opts.persist === false) return resolved
   try {
     localStorage.setItem(SURFACE_STORAGE_KEY, resolved)
   } catch {
@@ -129,6 +141,6 @@ export function applySurface(id?: string | null, opts: { transition?: boolean } 
  * unthemed page is visible as a flash.
  */
 export function bootAppearance(): void {
-  applyAccent(readAccent(), { transition: false })
-  applySurface(readSurface(), { transition: false })
+  applyAccent(readAccent(), { transition: false, persist: false })
+  applySurface(readSurface(), { transition: false, persist: false })
 }

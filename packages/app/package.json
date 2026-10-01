@@ -17,7 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@axiapps/axi-design": "^1.47.0",
+    "@axiapps/axi-design": "^1.48.0",
     "archiver": "^5.3.2",
     "koffi": "^2.9.0"
   },

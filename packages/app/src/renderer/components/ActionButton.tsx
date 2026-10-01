@@ -39,19 +39,19 @@ export function ActionButton({ state, axi }: { state: AppState; axi: AxiApi }) {
         }
 
   return (
-    <div className="action-split" ref={wrap}>
+    <div className="axi-btn-split" ref={wrap}>
       <button className={`axi-btn ${tone} action`} disabled={primary.disabled} onClick={primary.onClick}>
         {primary.label}
       </button>
       <button
-        className={`axi-btn ${tone} action caret`}
+        className={`axi-btn ${tone} axi-btn-split__toggle`}
         aria-label="More stream actions"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
         {/* Recording is otherwise invisible once it moves into the menu, so the
-            caret carries the indicator. */}
+            disclosure half carries the indicator. */}
         {state.recording.active ? <span className="axi-diamond axi-diamond--danger" title="Recording" /> : null}
         <ChevronUp size={16} />
       </button>

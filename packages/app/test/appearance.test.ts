@@ -33,10 +33,13 @@ describe('the palette', () => {
     expect(cyan!.hex).toBe('#22d3ee')
   })
 
-  // The whole point of adding a twelfth accent: the app's identity colour
-  // survives the migration, so a first launch looks unchanged.
-  it('defaults to electric-cyan, axistream\'s identity colour', () => {
-    expect(DEFAULT_ACCENT_ID).toBe('electric-cyan')
+  // The house colour, as in every other axi app. electric-cyan was added to
+  // the palette so axistream's identity colour survived the migration, and it
+  // is one pick away - but the colour an app wears before anyone has chosen is
+  // the language's own.
+  it('defaults to the axi gold', () => {
+    expect(DEFAULT_ACCENT_ID).toBe('axi-gold')
+    expect(ACCENTS.find((a) => a.id === DEFAULT_ACCENT_ID)!.hex).toBe('#ffc53d')
   })
 
   it('offers the three surfaces in order, defaulting to the language', () => {
@@ -157,6 +160,23 @@ describe('bootAppearance', () => {
   it('does not crossfade the first paint, which would flash against an unthemed page', () => {
     bootAppearance()
     expect(document.documentElement.classList.contains('theme-transitioning')).toBe(false)
+  })
+
+  // Boot applies, it does not choose. Writing the resolved value back would
+  // turn the first launch's fallback into a stored pick, and the next time the
+  // default moved nobody who had ever opened the app would see it.
+  it('does not remember a default nobody picked', () => {
+    bootAppearance()
+    expect(localStorage.getItem(ACCENT_STORAGE_KEY)).toBeNull()
+    expect(localStorage.getItem(SURFACE_STORAGE_KEY)).toBeNull()
+  })
+
+  it('leaves a remembered choice exactly where it was', () => {
+    localStorage.setItem(ACCENT_STORAGE_KEY, 'rose-pink')
+    localStorage.setItem(SURFACE_STORAGE_KEY, 'glass')
+    bootAppearance()
+    expect(localStorage.getItem(ACCENT_STORAGE_KEY)).toBe('rose-pink')
+    expect(localStorage.getItem(SURFACE_STORAGE_KEY)).toBe('glass')
   })
 })
 
