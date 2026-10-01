@@ -98,7 +98,7 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
   }
 
   return (
-    <div className="quality-settings">
+    <div>
       <h3>Quality</h3>
       {/* What the stream is actually getting, as chips: the mode is what you
           scan for, so it leads and carries the accent. */}

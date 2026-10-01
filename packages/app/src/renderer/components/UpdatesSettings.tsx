@@ -29,7 +29,7 @@ export function UpdatesSettings() {
     <section className="yt-settings">
       <h3>Updates</h3>
       <p className="axi-ink-dim">AxiStream {version}</p>
-      <div className="axi-row updates-row">
+      <div className="axi-row">
         <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={busy} onClick={() => axi().checkForUpdates()}>Check for updates</button>
         {status?.state === 'ready' && <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => axi().installUpdate()}>Restart &amp; update</button>}
         {status && <span className={status.state === 'error' ? 'field-err' : 'axi-ink-dim'}>{line()}</span>}

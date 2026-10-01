@@ -28,7 +28,13 @@ export function KeyPicker({ binding, onBind, onClear }: {
               </span>
             )}
             {modifier && <span className="keypicker-plus">+</span>}
-            <button className="axi-pill axi-pill--sm" aria-pressed="true" onClick={() => setOpen((o) => !o)}>{binding.key.name}</button>
+            {/* A disclosure, not a toggle: it opens the key grid, it does not
+                toggle a pressed state, so aria-expanded and not a hardcoded
+                aria-pressed="true" (which told a screen-reader user "pressed"
+                about a pressedness that never changed). .axi-pill reaches its
+                filled look only through [aria-pressed], so the fill the bound
+                key wants is restated in styles.css for this one button. */}
+            <button className="axi-pill axi-pill--sm keypicker-key" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{binding.key.name}</button>
             <div className="keypicker-menu">
               <button className="keypicker-addmod" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((m) => !m)}>+ modifier</button>
               {menuOpen && (
@@ -39,10 +45,10 @@ export function KeyPicker({ binding, onBind, onClear }: {
                 </div>
               )}
             </div>
-            {onClear && <button className="keypicker-clear" onClick={onClear}>Clear</button>}
+            {onClear && <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={onClear}>Clear</button>}
           </>
         ) : (
-          <button className="axi-pill axi-pill--sm" onClick={() => setOpen((o) => !o)}>Set key</button>
+          <button className="axi-pill axi-pill--sm" aria-expanded={open} onClick={() => setOpen((o) => !o)}>Set key</button>
         )}
       </div>
       {open && (

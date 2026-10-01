@@ -39,9 +39,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* Wordmark matches the Axi house titlebar: Cinzel, two-tone (Axi white + accent). */
 .brand .wordmark { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 0.06em; font-weight: 500; color: var(--axi-text); }
 .brand .wordmark .accent { color: var(--axi-accent); }
-.dot.accent { width: 9px; height: 9px; border-radius: 50%; background: var(--axi-accent); box-shadow: 0 0 10px var(--axi-accent); }
 .menu-label { color: var(--axi-text-faint); font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
-.soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid var(--axi-ink-line); padding: 3px 5px; border-radius: 5px; }
 /* Update banner */
 .updatepill { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 9px 11px; border-radius: 9px; background: color-mix(in srgb, var(--axi-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); color: var(--axi-accent); font: 600 11px/1 ui-monospace, monospace; cursor: pointer; }
 .updatepill:hover { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); }
@@ -343,6 +341,12 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .keypicker-x { background: none; border: 0; color: inherit; opacity: .7; cursor: pointer; font-size: 13px; padding: 0; }
 .keypicker-x:hover { opacity: 1; }
 .keypicker-plus { color: var(--axi-text-faint); font-weight: 800; }
+/* The bound key always wears the pill's filled look: it is the current value,
+   not a toggle that happens to be on. The language reaches that fill only
+   through .axi-pill[aria-pressed="true"], and this button is a disclosure
+   (aria-expanded), so the three declarations that rule sets are restated for
+   this one button rather than lying about the control's semantics. */
+.keypicker-key { background: var(--axi-pill-fill, var(--axi-accent)); color: var(--axi-accent-ink); box-shadow: var(--axi-shadow-control); }
 /* Trigger for the add-modifier disclosure; the disclosure itself is
    .axi-menu__pop (see the Go Live drop-up's own rule, above, for why its
    button rows are painted locally — same reason here). */

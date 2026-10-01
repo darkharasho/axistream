@@ -66,70 +66,70 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
           <button className="welcome-x" aria-label="Close" onClick={onClose}><X size={13} /></button>
         </div>
         <div className="axi-modal__body">
-        <ol className="wizard-dots">
-          {STEPS.map((s, i) => <li key={s} className={i === step ? 'on' : i < step ? 'done' : ''} />)}
-        </ol>
+          <ol className="wizard-dots">
+            {STEPS.map((s, i) => <li key={s} className={i === step ? 'on' : i < step ? 'done' : ''} />)}
+          </ol>
 
-        {step === 0 ? (
-          <div className="wizard-body">
-            <p className="axi-ink-dim">AxiStream captures one screen or window — the one showing your game.</p>
-            {capture
-              ? <p className="wizard-ok"><Check size={14} /> Capturing {capture.sourceLabel}</p>
-              : choosing
-              ? <div className="capture-target-list" role="list" aria-label="Available displays">
-                  {state.captureTargets.map((target) => (
-                    <button key={`${target.property}:${String(target.value)}`} className="axi-btn target"
-                      disabled={setupPending} onClick={() => runSetup(target)}>{target.label}</button>
-                  ))}
-                </div>
-              : <button className="axi-btn axi-btn--primary axi-btn--sm" disabled={preparing} onClick={() => runSetup()}>
-                  {preparing ? <><Loader2 size={13} className="spin" /> Preparing capture…</> : 'Choose what to capture'}
-                </button>}
-          </div>
-        ) : null}
+          {step === 0 ? (
+            <div className="wizard-body">
+              <p className="axi-ink-dim">AxiStream captures one screen or window — the one showing your game.</p>
+              {capture
+                ? <p className="wizard-ok"><Check size={14} /> Capturing {capture.sourceLabel}</p>
+                : choosing
+                ? <div className="capture-target-list" role="list" aria-label="Available displays">
+                    {state.captureTargets.map((target) => (
+                      <button key={`${target.property}:${String(target.value)}`} className="axi-btn target"
+                        disabled={setupPending} onClick={() => runSetup(target)}>{target.label}</button>
+                    ))}
+                  </div>
+                : <button className="axi-btn axi-btn--primary axi-btn--sm" disabled={preparing} onClick={() => runSetup()}>
+                    {preparing ? <><Loader2 size={13} className="spin" /> Preparing capture…</> : 'Choose what to capture'}
+                  </button>}
+            </div>
+          ) : null}
 
-        {step === 1 ? (
-          <div className="wizard-body">
-            <p className="axi-ink-dim">Connecting YouTube lets AxiStream create the broadcast for you — no stream key to copy.</p>
-            {connected
-              ? <p className="wizard-ok"><Check size={14} /> Connected as {state.youtube.channel}</p>
-              : <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => void axi.connectYouTube()}>Connect YouTube</button>}
-            <p className="axi-ink-dim">You can skip this and paste a stream key in Settings instead.</p>
-          </div>
-        ) : null}
+          {step === 1 ? (
+            <div className="wizard-body">
+              <p className="axi-ink-dim">Connecting YouTube lets AxiStream create the broadcast for you — no stream key to copy.</p>
+              {connected
+                ? <p className="wizard-ok"><Check size={14} /> Connected as {state.youtube.channel}</p>
+                : <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => void axi.connectYouTube()}>Connect YouTube</button>}
+              <p className="axi-ink-dim">You can skip this and paste a stream key in Settings instead.</p>
+            </div>
+          ) : null}
 
-        {step === 2 ? (
-          <div className="wizard-body">
-            <p className="axi-ink-dim">Hear yourself before a stranger does.</p>
-            <Select
-              label="Microphone"
-              value={state.audio.micDevice ?? ''}
-              systemLabels
-              onChange={(v) => { void axi.setMicEnabled(true); void axi.setMicDevice(v) }}
-              options={[
-                { value: '', label: 'Choose a microphone…' },
-                ...devices.map((d) => ({ value: d.id, label: d.name })),
-              ]}
-            />
-            <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={test.st === 'recording'} onClick={() => void runMicTest()}>
-              {test.st === 'recording' ? <><Loader2 size={13} className="spin" /> Recording — speak now…</> : 'Test my mic'}
-            </button>
-            {test.st === 'ready' && test.url ? <audio controls autoPlay src={test.url} /> : null}
-            {test.st === 'error' ? <p className="field-err" role="alert">{test.error}</p> : null}
-          </div>
-        ) : null}
+          {step === 2 ? (
+            <div className="wizard-body">
+              <p className="axi-ink-dim">Hear yourself before a stranger does.</p>
+              <Select
+                label="Microphone"
+                value={state.audio.micDevice ?? ''}
+                systemLabels
+                onChange={(v) => { void axi.setMicEnabled(true); void axi.setMicDevice(v) }}
+                options={[
+                  { value: '', label: 'Choose a microphone…' },
+                  ...devices.map((d) => ({ value: d.id, label: d.name })),
+                ]}
+              />
+              <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={test.st === 'recording'} onClick={() => void runMicTest()}>
+                {test.st === 'recording' ? <><Loader2 size={13} className="spin" /> Recording — speak now…</> : 'Test my mic'}
+              </button>
+              {test.st === 'ready' && test.url ? <audio controls autoPlay src={test.url} /> : null}
+              {test.st === 'error' ? <p className="field-err" role="alert">{test.error}</p> : null}
+            </div>
+          ) : null}
 
-        {step === 3 ? (
-          <div className="wizard-body">
-            <p className="wizard-ok">{capture ? <Check size={14} /> : null} Capture — {capture ? capture.sourceLabel : 'not set up'}</p>
-            <p className="wizard-ok">{connected ? <Check size={14} /> : null} YouTube — {connected ? state.youtube.channel : 'using a stream key'}</p>
-            <p className="wizard-ok">{test.st === 'ready' ? <Check size={14} /> : null} Microphone — {test.st === 'ready' ? 'tested' : 'not tested'}</p>
-            <p className="axi-ink-dim">Everything here can be changed later in Settings.</p>
-          </div>
-        ) : null}
+          {step === 3 ? (
+            <div className="wizard-body">
+              <p className="wizard-ok">{capture ? <Check size={14} /> : null} Capture — {capture ? capture.sourceLabel : 'not set up'}</p>
+              <p className="wizard-ok">{connected ? <Check size={14} /> : null} YouTube — {connected ? state.youtube.channel : 'using a stream key'}</p>
+              <p className="wizard-ok">{test.st === 'ready' ? <Check size={14} /> : null} Microphone — {test.st === 'ready' ? 'tested' : 'not tested'}</p>
+              <p className="axi-ink-dim">Everything here can be changed later in Settings.</p>
+            </div>
+          ) : null}
         </div>
 
-        <div className="axi-modal__foot modal-actions">
+        <div className="axi-modal__foot">
           <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={onClose}>Skip setup</button>
           <span className="spacer" />
           <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
