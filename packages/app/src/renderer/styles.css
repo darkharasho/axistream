@@ -131,9 +131,14 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* Compact bottom-bar action (Go Live / End Stream) — sits inline, content-width,
    so it reads as a control rather than a full-width banner. 10px radius is
    deliberate — see test/styles-radius.test.ts's note on this file. */
-.axi-btn.action { align-self: flex-start; padding: 12px 22px; font-size: 15px; border-radius: 10px; }
-.axi-btn.axi-btn--primary.action { box-shadow: 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
-.axi-btn.axi-btn--primary.action:hover { box-shadow: 0 6px 18px color-mix(in srgb, var(--axi-accent) 32%, transparent); }
+/* The hero size: the one button on a view that is the view's reason for being
+   there. Both numbers go through .axi-btn's own knobs rather than overriding
+   padding and font-size, so everything else about the button - its border
+   weight, its radius, the block it lifts onto - stays whatever the active
+   surface says it is. This rule used to spell a 10px radius and an accent
+   glow, which made every button wearing .action the only button in the app
+   that looked the same on all three surfaces while the rest followed them. */
+.axi-btn.action { --axi-btn-pad: 12px 22px; --axi-btn-size: 15px; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -492,20 +497,11 @@ p.axi-ink-dim { margin: 0 0 12px; }
 }
 .webcam-settings input[type="range"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
 
-/* Go Live split button: primary action + a caret that opens the drop-up. */
-/* align-items: stretch keeps the caret exactly as tall as the label half — the
-   two have different content, so content-sized heights drift apart. */
-.action-split { position: relative; display: inline-flex; align-items: stretch; align-self: flex-start; }
-.action-split > .axi-btn.action { align-self: stretch; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.action-split > .axi-btn.action.caret {
-  padding: 0 11px; gap: 5px;
-  /* Restated: the shared .action rule above squares BOTH right corners. */
-  border-radius: 0 10px 10px 0;
-  margin-left: 1px;
-}
-/* The seam: a hairline so the two halves read as one control with two targets. */
-.action-split > .axi-btn.axi-btn--primary.action.caret { box-shadow: inset 1px 0 0 color-mix(in srgb, var(--axi-accent-ink) 30%, transparent), 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
-.action-split > .axi-btn.axi-ink-danger.action.caret { border-left-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); }
+/* Go Live is .axi-btn-split now - the joined corners, the shared edge and the
+   one-piece hover all come from the language. What is left here is the one
+   thing the language cannot know: this control sits at the start of the hero's
+   column, so it must not stretch across it. */
+.axi-btn-split { align-self: flex-start; }
 
 /* Go Live drop-up — a disclosure of action buttons, drawn with the language's
    .axi-menu popover shell. .axi-menu__pop only pre-styles its checkbox-filter
@@ -524,7 +520,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 /* This disclosure opens from a button pinned to the hero's bottom edge, so it
    opens upward — a direction .axi-menu__pop (which only opens down) has no
    modifier for. */
-.action-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; min-width: 210px; width: auto; }
+.axi-btn-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; min-width: 210px; width: auto; }
 
 /* Quality panel. Flat like every other settings card — the summary reads as
    chips (.axi-chip--meta, .axi-chip--accent for the scannable mode) so the
