@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { URL as NodeURL } from 'node:url'
 import {
   ACCENTS,
   SURFACES,
@@ -155,5 +157,37 @@ describe('bootAppearance', () => {
   it('does not crossfade the first paint, which would flash against an unthemed page', () => {
     bootAppearance()
     expect(document.documentElement.classList.contains('theme-transitioning')).toBe(false)
+  })
+})
+
+function styles(): string {
+  return readFileSync(new NodeURL('../src/renderer/styles.css', import.meta.url), 'utf8')
+}
+
+describe('the accent is no longer welded into the stylesheet', () => {
+  it('has no cyan literals left', () => {
+    const css = styles()
+    // The app's identity colour and the two shades the primary button's
+    // gradient used.
+    expect(css).not.toMatch(/#22d3ee/i)
+    expect(css).not.toMatch(/#26d3ee/i)
+    expect(css).not.toMatch(/#0bb6d6/i)
+    // The rgba() form the same colour was written in for fills and borders.
+    expect(css).not.toMatch(/rgba\(\s*34\s*,\s*211\s*,\s*238/)
+  })
+
+  it('uses the accent token where the cyan used to be', () => {
+    expect(styles()).toMatch(/var\(--axi-accent\)/)
+  })
+
+  // Review Focus 4 — this one local rule currently overrides the language's
+  // focus ring on every element in the app, including the three components
+  // that style themselves inline and that no stylesheet can reach.
+  it('no longer overrides the language\'s focus ring', () => {
+    const css = styles()
+    const focusRules = css.split('\n').filter((l) => l.includes(':focus-visible'))
+    for (const rule of focusRules) {
+      expect(rule).not.toMatch(/outline:\s*2px solid #/)
+    }
   })
 })
