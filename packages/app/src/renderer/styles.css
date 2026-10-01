@@ -549,9 +549,19 @@ p.axi-ink-dim { margin: 0 0 12px; }
    else's words must not relabel them. */
 .axi-picker__btn--plain, .axi-picker__opt--plain { text-transform: none; }
 .opt-label { min-width: 0; }
+/* A dark recessed chip with a lighter edge, which is --axi-well-fill outlined
+   in --axi-surface-paint and not --axi-surface: flat and glass both put a
+   linear-gradient in --axi-surface, and `border: 1px solid <gradient>` is
+   invalid at computed-value time, which unsets all four border longhands —
+   style falls back to `none` and width to `0`. --axi-surface-paint is the
+   companion the language ships for exactly this colour position (see the token
+   comment in dist/axi.css). --axi-ink-line was the wrong fill for the same
+   reason from the other direction: it is light on both of those themes, so the
+   chip inverted from dark-on-light to pale-translucent and took
+   --axi-text-faint down with it. */
 .why {
   margin-left: auto; font: 600 10px/1 ui-monospace, monospace; white-space: nowrap;
-  color: var(--axi-text-faint); background: var(--axi-ink-line); border: 1px solid var(--axi-surface);
+  color: var(--axi-text-dim); background: var(--axi-well-fill); border: 1px solid var(--axi-surface-paint);
   padding: 3px 6px; border-radius: 5px;
 }
 
