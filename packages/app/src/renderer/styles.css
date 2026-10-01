@@ -52,12 +52,12 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .quickrow { display: flex; gap: 6px; }
 .qt { flex: 1; display: grid; place-items: center; padding: 8px 0; border-radius: 8px; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); color: var(--axi-text-faint); cursor: pointer; }
 .qt.on { color: var(--axi-accent); border-color: color-mix(in srgb, var(--axi-accent) 35%, transparent); }
-.qt.tx { color: var(--axi-danger); border-color: rgba(240,85,107,.45); box-shadow: 0 0 8px rgba(240,85,107,.35); }
+.qt.tx { color: var(--axi-danger); border-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); box-shadow: 0 0 8px color-mix(in srgb, var(--axi-danger) 35%, transparent); }
 .qt:disabled { opacity: .4; cursor: default; }
 .qt:not(:disabled):hover { background: var(--axi-surface); }
 .enginepill { margin-top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); color: var(--axi-text-dim); font: 600 11px/1 ui-monospace, monospace; }
 .enginepill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--axi-ok); box-shadow: 0 0 7px var(--axi-ok); }
-.enginepill.onair { background: rgba(240,85,107,.08); border-color: rgba(240,85,107,.25); color: var(--axi-danger); }
+.enginepill.onair { background: color-mix(in srgb, var(--axi-danger) 8%, transparent); border-color: color-mix(in srgb, var(--axi-danger) 25%, transparent); color: var(--axi-danger); }
 .enginepill.onair .dot { background: var(--axi-danger); box-shadow: 0 0 7px var(--axi-danger); }
 
 /* Hero — the full-height, preview-forward Stream screen. The placeholder
@@ -96,18 +96,18 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .hero.setup h2 { text-shadow: 0 1px 4px rgba(0,0,0,.5); }
 .hero.setup .axi-btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
 .setup-icon { width: 58px; height: 58px; border-radius: 16px; background: color-mix(in srgb, var(--axi-accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); display: grid; place-items: center; color: var(--axi-accent); font-size: 26px; }
-.setup-icon.error { color: var(--axi-danger); background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.35); }
+.setup-icon.error { color: var(--axi-danger); background: color-mix(in srgb, var(--axi-danger) 10%, transparent); border-color: color-mix(in srgb, var(--axi-danger) 35%, transparent); }
 .setup-error { color: var(--axi-danger) !important; }
 .capture-target-list { display: flex; flex-direction: column; gap: 8px; width: min(420px, 80%); margin: 8px 0; }
 /* text-transform: none — the label is a monitor or window name the OS
    reports (e.g. "DP-2 (2560x1440)"), not a label this app wrote. */
-.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: var(--axi-text); background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); text-transform: none; }
+.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: var(--axi-text); background: color-mix(in srgb, var(--axi-ground-deep) 55%, transparent); border: 1px solid rgba(255,255,255,.13); text-transform: none; }
 .capture-target-list .axi-btn.target:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axi-accent) 55%, transparent); background: color-mix(in srgb, var(--axi-accent) 9%, transparent); }
 
 .hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
 .hero-title { color: var(--axi-text); font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
 .pill { display: inline-flex; align-items: center; gap: 6px; color: var(--axi-text); background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
-.pill.warn { color: var(--axi-warn); border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
+.pill.warn { color: var(--axi-warn); border-color: color-mix(in srgb, var(--axi-warn) 35%, transparent); background: color-mix(in srgb, var(--axi-warn) 7%, transparent); }
 /* The resting PREVIEW badge is a status readout, not a control — .axi-pill's
    cursor and hover lift are a false affordance here (there is no onClick). */
 .preview-badge { cursor: default; }
@@ -116,9 +116,9 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 .overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: var(--axi-text); z-index: 3; }
 /* Translucent, blurred pill so overlay messages stay readable over any preview. */
-.overlay-pill { display: inline-block; max-width: 460px; padding: 10px 16px; border-radius: 14px; background: rgba(12,15,20,.62); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 13px; line-height: 1.4; }
-.overlay.error .overlay-pill { color: var(--axi-danger); border-color: rgba(240,85,107,.4); }
-.overlay.warn .overlay-pill { color: var(--axi-warn); border-color: rgba(255,212,121,.35); }
+.overlay-pill { display: inline-block; max-width: 460px; padding: 10px 16px; border-radius: 14px; background: color-mix(in srgb, var(--axi-ground-deep) 62%, transparent); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 13px; line-height: 1.4; }
+.overlay.error .overlay-pill { color: var(--axi-danger); border-color: color-mix(in srgb, var(--axi-danger) 40%, transparent); }
+.overlay.warn .overlay-pill { color: var(--axi-warn); border-color: color-mix(in srgb, var(--axi-warn) 35%, transparent); }
 
 .hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px; background: linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 55%,transparent); z-index: 3; }
 .statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: var(--axi-text); font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
@@ -250,14 +250,14 @@ p.axi-ink-dim { margin: 0 0 12px; }
 /* Privacy-mask editor: sits over the preview video, under modals. */
 .mask-editor { position: absolute; inset: 0; z-index: 4; overflow: hidden; touch-action: none; }
 .mask-toolbar { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px;
-  background: rgba(13,15,20,.82); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; backdrop-filter: blur(6px); }
+  background: color-mix(in srgb, var(--axi-ground-deep) 82%, transparent); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; backdrop-filter: blur(6px); }
 .mask-hint { font-size: 11px; color: var(--axi-text-faint); white-space: nowrap; }
-.mask-rect { position: absolute; z-index: 5; background: rgba(15,17,21,.78); border: 1.5px dashed color-mix(in srgb, var(--axi-accent) 85%, transparent); border-radius: 4px; cursor: move; }
+.mask-rect { position: absolute; z-index: 5; background: color-mix(in srgb, var(--axi-ground-deep) 78%, transparent); border: 1.5px dashed color-mix(in srgb, var(--axi-accent) 85%, transparent); border-radius: 4px; cursor: move; }
 .mask-delete { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
   background: var(--axi-surface); color: var(--axi-text-dim); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .mask-delete:hover { color: var(--axi-text); background: var(--axi-surface-raised); }
 .mask-resize { position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; cursor: nwse-resize;
-  background: color-mix(in srgb, var(--axi-accent) 90%, transparent); border: 1px solid rgba(13,15,20,.8); }
+  background: color-mix(in srgb, var(--axi-accent) 90%, transparent); border: 1px solid color-mix(in srgb, var(--axi-ground-deep) 80%, transparent); }
 
 /* "What viewers hear" checkbox list (Audio settings). */
 /* "What viewers hear" checkbox list (Audio settings). .hear-list/.hear-row/
@@ -298,7 +298,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .mask-style-btn { background: none; border: none; color: var(--axi-text-faint); font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer; }
 .mask-style-btn.on { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); color: var(--axi-accent); }
 .mask-blur-prompt { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px;
-  background: rgba(13,15,20,.85); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: var(--axi-text-dim); }
+  background: color-mix(in srgb, var(--axi-ground-deep) 85%, transparent); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: var(--axi-text-dim); }
 
 /* Audio pulse meters. */
 .audio-pulse { margin-left: auto; display: grid; place-items: center; }
@@ -344,7 +344,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
    literal keycap) doesn't fit .hotkey-label, which names an ACTION
    ("Mic mute"), not a key. */
 .hotkey-rows { --axi-stack-gap: 4px; margin-top: 8px; }
-.hotkey-row { justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid rgba(58,69,82,.4); }
+.hotkey-row { justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--axi-rule) 40%, transparent); }
 .hotkey-row:last-child { border-bottom: none; }
 .hotkey-label { color: var(--axi-text); font-size: 13px; font-weight: 600; }
 
@@ -458,7 +458,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
   margin-left: 1px;
 }
 /* The seam: a hairline so the two halves read as one control with two targets. */
-.action-split > .axi-btn.axi-btn--primary.action.caret { box-shadow: inset 1px 0 0 rgba(6,34,42,.3), 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
+.action-split > .axi-btn.axi-btn--primary.action.caret { box-shadow: inset 1px 0 0 color-mix(in srgb, var(--axi-accent-ink) 30%, transparent), 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
 .action-split > .axi-btn.axi-ink-danger.action.caret { border-left-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); }
 
 /* Go Live drop-up — a disclosure of action buttons, drawn with the language's
@@ -503,7 +503,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 /* A consequence of editing these fields, not a hint — it gets a notice. */
 .q-note {
   margin: 0; padding: 8px 11px; border-radius: 9px;
-  background: rgba(240,180,60,.1); border: 1px solid rgba(240,180,60,.3);
+  background: color-mix(in srgb, var(--axi-warn) 10%, transparent); border: 1px solid color-mix(in srgb, var(--axi-warn) 30%, transparent);
   font-size: 12px; color: var(--axi-warn);
 }
 /* State AxiStream chose for the user, which reads differently from advice. */
