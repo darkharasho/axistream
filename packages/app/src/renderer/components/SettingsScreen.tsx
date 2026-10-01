@@ -1,4 +1,5 @@
 import type { AppState, AxiApi } from '../../shared/state.js'
+import { AppearanceSettings } from './AppearanceSettings.js'
 import { YouTubeSettings } from './YouTubeSettings.js'
 import { AudioSettings } from './AudioSettings.js'
 import { HotkeySettings } from './HotkeySettings.js'
@@ -15,6 +16,10 @@ export function SettingsScreen({ state, axi, onRunSetup }: { state: AppState; ax
       <div className="settings-inner">
         <h2>Settings</h2>
         <div className="settings-grid">
+
+          <section className="setting">
+            <AppearanceSettings />
+          </section>
 
           <section className="setting">
             <YouTubeSettings youtube={state.youtube} />
