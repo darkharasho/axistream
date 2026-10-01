@@ -181,22 +181,29 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .about-obs { margin-top: 12px; }
 .about-links { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; }
 
-/* Title prompt modal */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { background: #1c2128; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 24px; min-width: 340px; display: flex; flex-direction: column; gap: 14px; }
-.modal h3 { margin: 0; font-size: 15px; color: #e6edf3; }
-.modal input[type="text"] { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; width: 100%; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* Title prompt / wizard modal shell — the language's real .axi-scrim +
+   .axi-modal (head/body/foot), not a hand-rolled backdrop-and-box pair. Kept
+   as a plain div rather than a native <dialog>, because this app's Escape/
+   focus handling already lives in use-modal-keys.ts; re-platforming onto
+   <dialog> would trade a working behaviour for one this migration doesn't
+   need to touch. .axi-modal__head's own heading rule targets h2 — these
+   modals use h3, so that part is restated here. */
+.modal-backdrop { display: flex; align-items: center; justify-content: center; }
+.axi-modal__head h3 { margin: 0; font: var(--axi-t-h3); letter-spacing: var(--axi-ls-h3); }
+/* Portalled to <body>, so it sits outside any modal's DOM subtree and needs
+   to clear .axi-scrim's z-index (50) by rule rather than by nesting — or a
+   dropdown opened from inside a modal (the wizard's microphone picker, the
+   add-modifier menu) would open behind the modal's own backdrop. */
+.axi-picker__pop--fixed, .axi-menu__pop { z-index: 55; }
 
 /* Welcome banner — floats over the hero's top edge rather than joining the
    flex column, so it never reflows the preview underneath it. Below the
-   window controls (z-index 10), above the hero's own chrome. */
+   window controls (z-index 10), above the hero's own chrome. The box itself
+   (fill, border, radius, shadow, padding) is .axi-notice's; this is only the
+   floating position the language has no opinion on. */
 .welcome-banner {
   position: absolute; top: 52px; left: 50%; transform: translateX(-50%); z-index: 6;
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 8px 7px 14px; border-radius: 999px;
-  background: rgba(13,15,20,.86); border: 1px solid color-mix(in srgb, var(--axi-accent) 35%, transparent);
-  backdrop-filter: blur(6px); font-size: 12px; color: #c7d0d9; white-space: nowrap;
+  align-items: center; width: auto; font-size: 12px; white-space: nowrap;
 }
 /* The mask toolbar takes the same centered slot at the same z-index, and the
    mask editor is a focused editing mode in which the banner is not actionable
@@ -210,11 +217,14 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 .welcome-x:hover { color: #e6edf3; background: rgba(255,255,255,.08); }
 
-/* Wizard — the modal shell, plus a wider body than the title prompt needs. */
-.modal.wizard { min-width: 420px; max-width: 480px; gap: 12px; }
-.wizard-head { display: flex; align-items: center; justify-content: space-between; }
-.wizard-head h3 { margin: 0; }
-.wizard-dots { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+/* Wizard — the modal shell, plus a wider body than the title prompt needs.
+   The dots are a step progress indicator and the body is a single centred
+   dialog's content, not .axi-pages (numbered pagination links) or .axi-sheet
+   (a full-viewport takeover with no scrim) — neither language component fits
+   this shape, so they stay local. */
+.axi-modal.wizard { min-width: 420px; max-width: 480px; }
+.wizard-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.wizard-dots { display: flex; gap: 6px; list-style: none; margin: 0 0 12px; padding: 0; }
 .wizard-dots li { height: 3px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.1); }
 .wizard-dots li.done { background: color-mix(in srgb, var(--axi-accent) 45%, transparent); }
 .wizard-dots li.on { background: var(--axi-accent); }
@@ -222,7 +232,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .wizard-body .muted { margin: 0; font-size: 12px; }
 .wizard-ok { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; color: #c7d0d9; }
 .wizard-ok svg { color: var(--axi-accent); flex: none; }
-.modal-actions .spacer { flex: 1; }
+.axi-modal__foot .spacer { flex: 1; }
 
 /* Privacy-mask editor: sits over the preview video, under modals. */
 .mask-editor { position: absolute; inset: 0; z-index: 4; overflow: hidden; touch-action: none; }
@@ -289,27 +299,22 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* PTT key picker (combo builder) */
 .keypicker { display: flex; flex-direction: column; gap: 8px; margin: 6px 0; }
 .keypicker-combo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.keypicker-chip { display: inline-flex; align-items: center; gap: 7px; background: color-mix(in srgb, var(--axi-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 45%, transparent); color: var(--axi-accent); border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 700; }
 .keypicker-x { background: none; border: 0; color: inherit; opacity: .7; cursor: pointer; font-size: 13px; padding: 0; }
 .keypicker-x:hover { opacity: 1; }
 .keypicker-plus { color: #8b98a5; font-weight: 800; }
-.keypicker-key { background: #1f2732; border: 1px solid #3a4552; color: #e6edf3; border-radius: 9px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
-.keypicker-key:hover { border-color: var(--axi-accent); }
+/* Trigger for the add-modifier disclosure; the disclosure itself is
+   .axi-menu__pop (see the Go Live drop-up's own rule, above, for why its
+   button rows are painted locally — same reason here). */
 .keypicker-menu { position: relative; }
 .keypicker-addmod { background: #1a222c; border: 1px dashed #2a323b; color: #8b98a5; border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .keypicker-addmod:hover { color: #e6edf3; border-color: #3a4552; }
-.keypicker-menulist { position: absolute; top: 110%; left: 0; background: #161c26; border: 1px solid #2a323b; border-radius: 10px; padding: 6px; z-index: 5; min-width: 120px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
-.keypicker-menulist button { display: block; width: 100%; text-align: left; background: none; border: 0; color: #e6edf3; font-size: 12px; padding: 6px 10px; border-radius: 7px; cursor: pointer; }
-.keypicker-menulist button:hover { background: #222c38; }
+.keypicker-menu .axi-menu__pop { top: 110%; min-width: 120px; width: auto; }
 .keypicker-grid { background: #161c26; border: 1px solid #2a323b; border-radius: 12px; padding: 12px; }
 .keypicker-grid input { width: 100%; box-sizing: border-box; background: #0f141b; border: 1px solid #2a323b; border-radius: 8px; color: #e6edf3; padding: 7px 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
 .keypicker-grid input:focus { border-color: var(--axi-accent); }
 .keypicker-group { margin-bottom: 8px; }
 .keypicker-glabel { color: #8b98a5; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 6px; }
 .keypicker-keys { display: flex; flex-wrap: wrap; gap: 5px; }
-.keypicker-k { background: #1a222c; border: 1px solid #2a323b; color: #c7d0d9; border-radius: 7px; padding: 4px 9px; font-size: 11px; font-weight: 600; cursor: pointer; min-width: 28px; }
-.keypicker-k:hover { background: #222c38; border-color: #3a4552; }
-.keypicker-k.sel { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); border-color: var(--axi-accent); color: var(--axi-accent); }
 
 /* Hotkey settings rows — label left, picker right, matching neighbouring rows. */
 .hotkey-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }

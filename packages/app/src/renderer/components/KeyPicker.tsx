@@ -22,17 +22,17 @@ export function KeyPicker({ binding, onBind, onClear }: {
         {binding ? (
           <>
             {modifier && (
-              <span className="keypicker-chip">
+              <span className="axi-chip axi-chip--accent">
                 {MODIFIER_LABELS[modifier]}
                 <button aria-label="remove modifier" className="keypicker-x" onClick={() => onBind({ key: binding.key, modifier: null })}>✕</button>
               </span>
             )}
             {modifier && <span className="keypicker-plus">+</span>}
-            <button className="keypicker-key" onClick={() => setOpen((o) => !o)}>{binding.key.name}</button>
+            <button className="axi-pill axi-pill--sm" aria-pressed="true" onClick={() => setOpen((o) => !o)}>{binding.key.name}</button>
             <div className="keypicker-menu">
-              <button className="keypicker-addmod" onClick={() => setMenuOpen((m) => !m)}>+ modifier</button>
+              <button className="keypicker-addmod" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((m) => !m)}>+ modifier</button>
               {menuOpen && (
-                <div className="keypicker-menulist">
+                <div className="axi-menu__pop">
                   {(Object.keys(MODIFIER_LABELS) as PttModifier[]).filter((m) => !MODIFIER_CODES[m].includes(binding.key.code)).map((m) => (
                     <button key={m} onClick={() => { setMenuOpen(false); onBind({ key: binding.key, modifier: m }) }}>{MODIFIER_LABELS[m]}</button>
                   ))}
@@ -42,7 +42,7 @@ export function KeyPicker({ binding, onBind, onClear }: {
             {onClear && <button className="keypicker-clear" onClick={onClear}>Clear</button>}
           </>
         ) : (
-          <button className="keypicker-key" onClick={() => setOpen((o) => !o)}>Set key</button>
+          <button className="axi-pill axi-pill--sm" onClick={() => setOpen((o) => !o)}>Set key</button>
         )}
       </div>
       {open && (
@@ -56,7 +56,7 @@ export function KeyPicker({ binding, onBind, onClear }: {
                 <div className="keypicker-glabel">{g.label}</div>
                 <div className="keypicker-keys">
                   {keys.map((k) => (
-                    <button key={k.code} className={k.code === keyCode ? 'keypicker-k sel' : 'keypicker-k'}
+                    <button key={k.code} className="axi-pill axi-pill--xs" aria-pressed={k.code === keyCode}
                       onClick={() => onBind({ key: k, modifier })}>{k.name}</button>
                   ))}
                 </div>

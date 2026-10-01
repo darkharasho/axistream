@@ -59,12 +59,13 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
   }
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal wizard" ref={ref} role="dialog" aria-modal="true" aria-label="Set up AxiStream">
-        <div className="wizard-head">
+    <div className="axi-scrim modal-backdrop">
+      <div className="axi-modal wizard" ref={ref} role="dialog" aria-modal="true" aria-label="Set up AxiStream">
+        <div className="axi-modal__head wizard-head">
           <h3>{STEPS[step]}</h3>
           <button className="welcome-x" aria-label="Close" onClick={onClose}><X size={13} /></button>
         </div>
+        <div className="axi-modal__body">
         <ol className="wizard-dots">
           {STEPS.map((s, i) => <li key={s} className={i === step ? 'on' : i < step ? 'done' : ''} />)}
         </ol>
@@ -125,8 +126,9 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
             <p className="muted">Everything here can be changed later in Settings.</p>
           </div>
         ) : null}
+        </div>
 
-        <div className="modal-actions">
+        <div className="axi-modal__foot modal-actions">
           <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={onClose}>Skip setup</button>
           <span className="spacer" />
           <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
