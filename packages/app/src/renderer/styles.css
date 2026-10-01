@@ -169,7 +169,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .yt-settings input { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; }
 /* Match the text inputs stacked beside them rather than the tighter metric
    the camera and quality panels use. */
-.yt-settings .sel-trigger { padding: 10px 34px 10px 11px; font-size: 14px; }
+.yt-settings .axi-picker__btn { padding: 10px 34px 10px 11px; font-size: 14px; }
 .yt-account { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .audio-row { flex-direction: row !important; align-items: center; gap: 8px; cursor: pointer; }
 .audio-row input { width: auto; }
@@ -381,7 +381,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* Shared panel controls. Native checkbox/range chrome is light-themed on Linux
    and reads as a different app pasted into the panel, so these panels opt out
-   of it. (Dropdowns are no longer native at all — see .sel-trigger below.) Any
+   of it. (Dropdowns are no longer native at all — see .axi-picker__btn above.) Any
    new panel with a checkbox or a range should join these selector lists rather
    than restyle from scratch. */
 .webcam-settings { display: grid; gap: 12px; }
@@ -499,41 +499,18 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .quality-body .muted { margin: 0; font-size: 12px; }
 
 
-/* Custom listbox (components/Select.tsx) — every dropdown in the app. Chromium
-   126 draws a native <select>'s popup itself: light-themed on Linux,
-   unreachable from CSS, reading as a different app pasted over the panel. The
-   trigger keeps the metrics the native selects had; the popup is finally ours. */
-.sel-trigger {
-  position: relative; width: 100%; text-align: left; font: inherit; font-size: 13px;
-  background: rgba(0,0,0,.4) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 10px center / 15px;
-  border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
-  padding: 9px 34px 9px 11px; color: #e6edf3; cursor: pointer;
-}
+/* Custom listbox (components/Select.tsx) — every dropdown in the app, drawn
+   with the language's .axi-picker (see axi-design docs/RULES.md §3): the
+   closed box and popover the OS's own <select> will not let us style.
+   Two details the language doesn't model, kept local and painted in tokens: */
 /* Nothing picked yet — reads as a prompt, not as a value. */
-.sel-trigger.empty { color: #7d8794; }
-.sel-trigger:hover { border-color: color-mix(in srgb, var(--axi-accent) 45%, transparent); }
-.sel-trigger[aria-expanded='true'],
-.sel-trigger:focus-visible { outline: 0; border-color: var(--axi-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
-
-/* Portalled to <body> (the settings panel scrolls and would clip it), so this
-   sits outside every panel's cascade and carries its own colours. */
-.sel-list {
-  /* Above .modal-backdrop (100) — the welcome wizard is a modal, and its
-     dropdown must not open behind it. */
-  z-index: 200; padding: 5px; overflow: auto;
-  background: #10141b; border: 1px solid #263041; border-radius: 10px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.6);
-}
-.sel-list:focus-visible { outline: 0; }
-.opt {
-  display: flex; align-items: baseline; gap: 8px;
-  padding: 8px 10px; border-radius: 7px; color: #dbe4ee; font-size: 13px; cursor: pointer;
-}
-.opt.active { background: rgba(255,255,255,.06); }
-.opt.on { background: color-mix(in srgb, var(--axi-accent) 12%, transparent); color: var(--axi-accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--axi-accent) 28%, transparent); }
-.opt.on .opt-label::after { content: '✓'; margin-left: 8px; color: var(--axi-accent); font-size: 12px; }
-/* Dim enough to read as unavailable, light enough to still read. */
-.opt[aria-disabled='true'] { color: #79838f; background: none; box-shadow: none; cursor: default; }
+.axi-picker__btn.sel-empty { color: var(--axi-text-faint); }
+/* The keyboard-highlighted row. .axi-picker__opt only lights up on :hover or
+   :focus, but these options are never themselves focused — focus stays on the
+   listbox and aria-activedescendant reports which row is "active" — so the
+   highlight needs a class the language has no opinion on. Reuses the same
+   fill the language's own hover state reads. */
+.axi-picker__opt.active { background: var(--axi-well-fill); color: var(--axi-text); }
 .opt-label { min-width: 0; }
 .why {
   margin-left: auto; font: 600 10px/1 ui-monospace, monospace; white-space: nowrap;
