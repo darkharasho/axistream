@@ -345,8 +345,16 @@ p.axi-ink-dim { margin: 0 0 12px; }
    not a toggle that happens to be on. The language reaches that fill only
    through .axi-pill[aria-pressed="true"], and this button is a disclosure
    (aria-expanded), so the three declarations that rule sets are restated for
-   this one button rather than lying about the control's semantics. */
+   this one button rather than lying about the control's semantics.
+
+   Both halves of the language's PAIR, not just the resting one. axi.css spells
+   its hover rule out rather than leaving it to the cascade, and the comment
+   above it says why: `transform` is set only by .axi-pill:where(:hover), so a
+   pill that takes its fill and block from the higher-weight rule still takes
+   the hover's translate — a slide, not a lift, which is the failure rule 4
+   names. Copying the resting rule alone reproduced exactly that. */
 .keypicker-key { background: var(--axi-pill-fill, var(--axi-accent)); color: var(--axi-accent-ink); box-shadow: var(--axi-shadow-control); }
+.keypicker-key:hover { box-shadow: var(--axi-shadow-control-hover); }
 /* Trigger for the add-modifier disclosure; the disclosure itself is
    .axi-menu__pop (see the Go Live drop-up's own rule, above, for why its
    button rows are painted locally — same reason here). */
