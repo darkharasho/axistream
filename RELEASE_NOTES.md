@@ -1,5 +1,28 @@
 # Release Notes
 
+## Version v1.1.0 — October 1, 2026
+
+AxiStream has been redrawn in axi-design, the visual language the Axi apps share, and it now lets you choose how it looks.
+
+### Choose a surface and an accent
+Appearance has two new controls. **Surface** switches the whole app between three looks: **Axi**, the flat outlined one with square corners and hard offset blocks; **Flat**, the same shapes softened with rounded corners and real shadows; and **Glass**, translucent panels with depth and blur. **Accent** picks the colour the app's chrome is painted in — buttons, focus rings, the active tab, the live indicator.
+
+Both stick between launches, and switching either one repaints the app immediately.
+
+AxiStream now opens in the Axi gold, the house colour the other Axi apps wear. The cyan it used to be is still there as **Electric Cyan** — one pick away in Appearance.
+
+### Go Live is one button again
+The Go Live button and the arrow beside it are now a single joined control, built from the shared language instead of hand-drawn here. Before this they only lined up correctly on one of the three surfaces; now the corner radius, the divider between the halves and the shadow all come from whichever surface you've chosen.
+
+### Smaller things
+- The end-of-stream summary leads with the number and treats the verdict as a caption, so you read the figure first.
+- Error toasts have their status border back.
+- The selected accent swatch is marked as selected, and the swatches are big enough to hit.
+- A bound hotkey's pill lifts when you point at it rather than sliding sideways.
+- The stream-title prompt no longer collapses narrower than its buttons.
+
+Nothing about what AxiStream *does* has changed — same capture, same encoders, same destinations. This is a reskin plus the two pickers.
+
 ## Version v1.0.6 — September 3, 2026
 
 You can pick your encoder now, and the app stops claiming an encoder it isn't using.
