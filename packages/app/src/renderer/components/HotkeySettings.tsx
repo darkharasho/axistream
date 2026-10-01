@@ -22,9 +22,9 @@ export function HotkeySettings({ hotkeys, axi }: { hotkeys: AppState['hotkeys'];
       <p className="axi-ink-dim">Control AxiStream without leaving the game. Nothing is bound until you set it.</p>
       {hotkeys.mode ? <p className="axi-ink-dim">{MODE_COPY[hotkeys.mode]}</p> : null}
       {alert ? <p className="field-err" role="alert">{alert}</p> : null}
-      <div className="hotkey-rows">
+      <div className="axi-stack hotkey-rows">
         {HOTKEY_IDS.map((id) => (
-          <div className="hotkey-row" key={id}>
+          <div className="axi-row hotkey-row" key={id}>
             <span className="hotkey-label">{HOTKEY_LABELS[id]}</span>
             <KeyPicker binding={hotkeys.bindings[id]} onBind={(b) => void bind(id, b)} onClear={() => void bind(id, null)} />
           </div>

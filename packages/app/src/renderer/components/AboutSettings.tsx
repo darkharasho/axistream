@@ -27,9 +27,9 @@ export function AboutSettings({ onRunSetup }: { onRunSetup: () => void }) {
         AxiStream bundles OBS Studio 32.1.2, licensed GPL-2.0-or-later. The corresponding
         source is attached to every release.
       </p>
-      <div className="about-links">
+      <div className="axi-row about-links">
         {LINKS.map((l) => (
-          <button key={l.url} className="axi-btn axi-btn--ghost axi-btn--xs" onClick={() => void axi().openExternalUrl(l.url)}>{l.label}</button>
+          <button key={l.url} className="axi-link" onClick={() => void axi().openExternalUrl(l.url)}>{l.label}</button>
         ))}
       </div>
     </section>

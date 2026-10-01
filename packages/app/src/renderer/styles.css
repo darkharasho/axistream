@@ -160,11 +160,10 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .yt-settings h3 { margin: 0 0 6px; font-size: 14px; color: #c7d0d9; }
 .yt-settings label,
 .yt-settings .field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #8b949e; }
-.yt-settings input { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 10px; color: #e6edf3; font-size: 14px; }
 /* Match the text inputs stacked beside them rather than the tighter metric
    the camera and quality panels use. */
 .yt-settings .axi-picker__btn { padding: 10px 34px 10px 11px; font-size: 14px; }
-.yt-account { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.yt-account { font-size: 13px; }
 .audio-row { flex-direction: row !important; align-items: center; gap: 8px; cursor: pointer; }
 .audio-row input { width: auto; }
 .yt-account button { margin-left: auto; }
@@ -172,21 +171,22 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .yt-vars { font-size: 12px; color: #5b6470; font-family: ui-monospace, monospace; }
 .yt-preview { font-size: 13px; color: #9fd8ff; }
 .yt-hint { font-size: 12px; color: #5b6470; }
-.yt-hint code { background: rgba(255,255,255,.08); border-radius: 4px; padding: 1px 4px; font-size: 11px; }
 
 /* Discord announcement */
 .yt-discord { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
 .yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: #8b98a5; }
-.yt-discord-test { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.yt-discord-test { margin-top: 10px; }
 .yt-test-ok { font-size: 12px; font-weight: 600; color: #3fb950; }
 /* Inline failure attached to a specific control. Discrete background events
    use toasts instead; phase-level conditions use .overlay. */
 .field-err { font-size: 12px; font-weight: 600; color: #f85149; }
-.updates-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .whatsnew { border-top: 1px solid rgba(255,255,255,.08); margin-top: 12px; padding-top: 10px; }
-.whatsnew-body { white-space: pre-wrap; font-size: 12px; color: #c4cedb; background: #0b1017; border: 1px solid #1c242e; border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; }
+/* The well (fill/border/radius/shadow) is .axi-prose pre's; a release-notes
+   blob is one long unbroken line without the wrap, and taller than the
+   language's own code block expects to run without a scroll cap. */
+.whatsnew-body { white-space: pre-wrap; max-height: 220px; overflow: auto; }
 .about-obs { margin-top: 12px; }
-.about-links { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; }
+.about-links { --axi-row-gap: 6px 12px; margin-top: 10px; }
 
 /* Title prompt / wizard modal shell — the language's real .axi-scrim +
    .axi-modal (head/body/foot), not a hand-rolled backdrop-and-box pair. Kept
@@ -254,18 +254,24 @@ p.axi-ink-dim { margin: 0 0 12px; }
   background: color-mix(in srgb, var(--axi-accent) 90%, transparent); border: 1px solid rgba(13,15,20,.8); }
 
 /* "What viewers hear" checkbox list (Audio settings). */
+/* "What viewers hear" checkbox list (Audio settings). .hear-list/.hear-row/
+   .hear-apps etc. stay local: .axi-meter-list is a label|bar|value grid for
+   level meters, not a checked-row list, and these are real <input type=
+   "checkbox"> rows (native toggling, label-click-to-check) that .axi-switch
+   would ask to re-platform onto a <button role="switch"> for no behaviour
+   this app needs back. */
 .hear-list { border: 1px solid #1d2530; border-radius: 10px; overflow: hidden; }
 /* row !important: .yt-settings label sets flex-direction column for the
    device-picker labels; these rows must stay inline (same fix as .audio-row). */
 .hear-row { display: flex; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: #c7d0d9; cursor: pointer; }
 .hear-apps { max-height: 220px; overflow-y: auto; }
-.hear-search { margin: 8px 12px 4px; padding: 6px 10px; width: calc(100% - 24px); background: #10161f; color: #c7d0d9; border: 1px solid #2a323b; border-radius: 8px; font-size: 13px; }
-.hear-search::placeholder { color: #566070; }
+/* The box and the magnifier are the language's (.axi-search/.axi-input); this
+   is only the margin that fits it into the device list's own rhythm. */
+.hear-search { display: block; margin: 8px 12px 4px; width: calc(100% - 24px); }
 .hear-row:hover { background: #131a24; }
 .hear-row input { accent-color: var(--axi-accent); width: 15px; height: 15px; cursor: pointer; }
 .hear-row.all span:first-of-type { font-weight: 600; }
 .hear-row .sub { color: #768390; font-size: 12px; }
-.hear-pill { color: #fbbf24; font-size: 11px; font-weight: 500; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.25); border-radius: 999px; padding: 1px 8px; }
 .hear-divider { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #0b0f15; border-top: 1px solid #1d2530; border-bottom: 1px solid #1d2530; }
 .hear-divider span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #566070; font-weight: 600; }
 .hear-divider .line { flex: 1; height: 1px; background: #1d2530; }
@@ -295,6 +301,8 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .hear-divider .audio-pulse { margin-left: 0; }
 
 /* Push to talk */
+/* Push to talk — also a native checkbox for the same reason .hear-row is;
+   .axi-switch stays unused here too. */
 .ptt { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
 .ptt-live { margin-left: auto; font-size: 11px; font-weight: 800; color: #f85149; letter-spacing: .04em; }
 .ptt-muted { margin-left: auto; font-size: 11px; color: #8b98a5; }
@@ -324,8 +332,13 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .keypicker-keys { display: flex; flex-wrap: wrap; gap: 5px; }
 
 /* Hotkey settings rows — label left, picker right, matching neighbouring rows. */
-.hotkey-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-.hotkey-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid rgba(58,69,82,.4); }
+/* .axi-stack/.axi-row give the list its rhythm and each row its flex
+   layout; justify-content and the hairline divider are this app's own —
+   the language's .axi-row doesn't space its ends apart, and .axi-kbd (a
+   literal keycap) doesn't fit .hotkey-label, which names an ACTION
+   ("Mic mute"), not a key. */
+.hotkey-rows { --axi-stack-gap: 4px; margin-top: 8px; }
+.hotkey-row { justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid rgba(58,69,82,.4); }
 .hotkey-row:last-child { border-bottom: none; }
 .hotkey-label { color: #e6edf3; font-size: 13px; font-weight: 600; }
 
@@ -349,21 +362,16 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: #8b949e; background: none; border: 0; cursor: pointer; }
 .toast-x:hover { color: #fff; background: rgba(255,255,255,.1); }
 
-/* Renderer crash fallback. Reuses .hero's centred layout. */
-.crash { gap: 10px; text-align: center; }
-.crash h2 { margin: 0; font-size: 17px; }
+/* Renderer crash fallback. Reuses .hero's layout; the card and the alert are
+   the language's (.axi-panel, .axi-notice--danger) — this is only the
+   centring and the bits neither names: the reassurance line, the selectable
+   error text, and the action row. */
+.crash { align-items: center; justify-content: center; }
+.crash .axi-panel { max-width: min(520px, 90%); }
 .crash-live { margin: 0; font-size: 13px; color: #56d364; }
 /* Selectable — the whole point is that the user can hand it to us. */
-.crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
-.crash-actions { display: flex; gap: 8px; margin-top: 4px; }
-
-/* Renderer crash fallback. Reuses .hero's centred layout. */
-.crash { gap: 10px; text-align: center; }
-.crash h2 { margin: 0; font-size: 17px; }
-.crash-live { margin: 0; font-size: 13px; color: #56d364; }
-/* Selectable — the whole point is that the user can hand it to us. */
-.crash-msg { margin: 0; max-width: 460px; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
-.crash-actions { display: flex; gap: 8px; margin-top: 4px; }
+.crash-msg { margin: 8px 0 0; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
+.crash-actions { display: flex; gap: 8px; margin-top: 16px; }
 
 /* End-of-stream summary panel. Reuses .hero's centred layout. */
 /* End-of-stream summary: a floating .axi-panel centred over the (still-full-
@@ -467,16 +475,11 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .action-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; }
 
 /* Quality panel. Flat like every other settings card — the summary reads as
-   chips so the mode (Auto vs Custom) is scannable without parsing a sentence. */
-.quality-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-.q-chip {
-  padding: 3px 8px; border-radius: 999px;
-  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
-  font: 600 11px/1.5 inherit; color: #8b949e; white-space: nowrap;
-}
-/* The mode chip is the one you scan for, so it carries the accent. */
-.q-chip.mode { background: color-mix(in srgb, var(--axi-accent) 12%, transparent); border-color: color-mix(in srgb, var(--axi-accent) 40%, transparent); color: var(--axi-accent); }
-.q-chip.mode.custom { background: var(--axi-accent); border-color: var(--axi-accent); color: var(--axi-accent-ink); }
+   chips (.axi-chip--meta, .axi-chip--accent for the scannable mode) so the
+   mode (Auto vs Custom) is scannable without parsing a sentence. Not
+   .axi-chip--action: these are read-only status, not something you press,
+   and --action's cursor/hover-lift would claim otherwise. */
+.quality-chips { --axi-row-gap: 6px; margin: 0 0 12px; }
 
 .quality-body { display: flex; flex-direction: column; gap: 12px; }
 .quality-body input[type='number'] {
@@ -485,7 +488,10 @@ p.axi-ink-dim { margin: 0 0 12px; }
   padding: 8px 10px; color: #e6edf3; font-size: 13px;
 }
 .quality-body input[type='number']:focus-visible { outline: 0; border-color: var(--axi-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
-/* A control that only exists because the checkbox above it is ticked, indented
+/* .q-sub/.q-note/.q-fallback stay local: .axi-well is an uncoloured recess
+   for objects that carry their own padding, with no warn/info variant, and
+   .axi-tabs is page navigation — neither fits a coloured inline callout.
+   A control that only exists because the checkbox above it is ticked, indented
    so the dependency is visible rather than inferred. */
 .q-sub { margin-top: -2px; padding-left: 26px; }
 /* A consequence of editing these fields, not a hint — it gets a notice. */

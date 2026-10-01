@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RotateCw } from 'lucide-react'
+import { RotateCw, Search } from 'lucide-react'
 import type { AxiApi, AudioDevice, AppState, AudioLevels } from '../../shared/state.js'
 import { staleOption } from '../device-options.js'
 import { GameAudioSettings } from './GameAudioSettings.js'
@@ -155,15 +155,18 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
 
         {pluginReady ? (
           <>
-            <input className="hear-search" type="search" placeholder="Search apps…" aria-label="Search apps"
-              value={appFilter} onChange={(e) => setAppFilter(e.target.value)} />
+            <div className="axi-search hear-search">
+              <Search className="axi-search__icon" size={13} aria-hidden />
+              <input className="axi-input" type="search" placeholder="Search apps…" aria-label="Search apps"
+                value={appFilter} onChange={(e) => setAppFilter(e.target.value)} />
+            </div>
             <div className="hear-apps">
               {shownRows.map((app) => (
                 <label key={app.id} className="hear-row">
                   <input type="checkbox" checked={audio.gameAudioApps.includes(app.id)} aria-label={app.name}
                     onChange={() => toggleApp(app.id)} />
                   <span>{app.name}</span>
-                  {!isRunning(app.id) && <span className="hear-pill">not running</span>}
+                  {!isRunning(app.id) && <span className="axi-chip axi-chip--warn">not running</span>}
                 </label>
               ))}
             </div>

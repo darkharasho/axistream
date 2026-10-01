@@ -39,7 +39,7 @@ export function DiagnosticsSettings({ axi }: { axi: AxiApi }) {
         <>
           <p className="axi-ink-dim">Bundle saved — attach this file to your report.</p>
           <p className="mono summary-path">{path}</p>
-          <div className="yt-account">
+          <div className="axi-row yt-account">
             <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void axi.revealFile(path)}>Show in folder</button>
             <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy path'}</button>
           </div>

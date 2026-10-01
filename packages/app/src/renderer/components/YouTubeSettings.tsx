@@ -34,7 +34,7 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
     <section className="yt-settings">
       <h3>YouTube</h3>
       {youtube.connected ? (
-        <div className="yt-account">
+        <div className="axi-row yt-account">
           <span>Connected as <strong>{youtube.channel ?? 'your channel'}</strong></span>
           <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => axi().disconnectYouTube()}>Disconnect</button>
         </div>
@@ -45,14 +45,14 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
       {s && (
         <>
           <label>Stream title template
-            <input value={s.titleTemplate} placeholder="Raid night - {{date}}" onChange={(e) => update({ titleTemplate: e.target.value })} />
+            <input className="axi-input" value={s.titleTemplate} placeholder="Raid night - {{date}}" onChange={(e) => update({ titleTemplate: e.target.value })} />
           </label>
           <div className="yt-vars">Variables: {VARS}</div>
           <div className="yt-preview">Preview: <strong>{preview || '—'}</strong></div>
           <div className="yt-hint">Leave blank to be asked for a title each time you go live.</div>
 
           <label>Date format
-            <input value={s.dateFormat} onChange={(e) => update({ dateFormat: e.target.value })} />
+            <input className="axi-input" value={s.dateFormat} onChange={(e) => update({ dateFormat: e.target.value })} />
           </label>
 
           <Select
@@ -69,16 +69,16 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
           <div className="yt-discord">
             <h4 className="yt-discord-head">Discord announcement</h4>
             <label>Discord webhook URL
-              <input value={s.discordWebhookUrl} placeholder="https://discord.com/api/webhooks/…"
+              <input className="axi-input" value={s.discordWebhookUrl} placeholder="https://discord.com/api/webhooks/…"
                 onChange={(e) => update({ discordWebhookUrl: e.target.value })} />
             </label>
             <div className="yt-hint">Server Settings → Integrations → Webhooks. Announces your stream when you go live.</div>
             <label>Announcement message (optional)
-              <input value={s.discordMessage} placeholder="@here WvW raid starting"
+              <input className="axi-input" value={s.discordMessage} placeholder="@here WvW raid starting"
                 onChange={(e) => update({ discordMessage: e.target.value })} />
             </label>
-            <div className="yt-hint">Prepended above the embed — use <code>@here</code> or a role mention to ping.</div>
-            <div className="yt-discord-test">
+            <div className="yt-hint">Prepended above the embed — use <code className="axi-code">@here</code> or a role mention to ping.</div>
+            <div className="axi-row yt-discord-test">
               <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={!s.discordWebhookUrl.trim()} onClick={sendDiscordTest}>
                 Send test
               </button>

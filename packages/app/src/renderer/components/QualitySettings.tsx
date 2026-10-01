@@ -102,11 +102,11 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
       <h3>Quality</h3>
       {/* What the stream is actually getting, as chips: the mode is what you
           scan for, so it leads and carries the accent. */}
-      <div className="quality-chips">
-        <span className={isCustom ? 'q-chip mode custom' : 'q-chip mode'}>{isCustom ? 'Custom' : 'Auto'}</span>
-        <span className="q-chip">{resolved}</span>
-        <span className="q-chip">{bitrate}</span>
-        <span className="q-chip">{state.encoder}</span>
+      <div className="axi-row quality-chips">
+        <span className={isCustom ? 'axi-chip axi-chip--accent' : 'axi-chip axi-chip--meta'}>{isCustom ? 'Custom' : 'Auto'}</span>
+        <span className="axi-chip axi-chip--meta">{resolved}</span>
+        <span className="axi-chip axi-chip--meta">{bitrate}</span>
+        <span className="axi-chip axi-chip--meta">{state.encoder}</span>
       </div>
 
       <div className="quality-body">
