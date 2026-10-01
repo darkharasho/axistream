@@ -104,6 +104,7 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
             <Select
               label="Microphone"
               value={state.audio.micDevice ?? ''}
+              systemLabels
               onChange={(v) => { void axi.setMicEnabled(true); void axi.setMicDevice(v) }}
               options={[
                 { value: '', label: 'Choose a microphone…' },

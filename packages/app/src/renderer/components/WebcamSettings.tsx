@@ -55,6 +55,7 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
       <Select
         label="Camera"
         value={webcam.deviceId ?? ''}
+        systemLabels
         onChange={(v) => {
           const id = v || null
           const name = devices.find((d) => d.id === id)?.name ?? null
@@ -115,11 +116,11 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
 
       {manual && (
         <div className="webcam-modes">
-          <Select label="Format" value={webcam.mode?.pixelformat ?? ''}
+          <Select label="Format" value={webcam.mode?.pixelformat ?? ''} systemLabels
             onChange={(v) => setMode({ pixelformat: v })} options={props.pixelformats} />
-          <Select label="Resolution" value={webcam.mode?.resolution ?? ''}
+          <Select label="Resolution" value={webcam.mode?.resolution ?? ''} systemLabels
             onChange={(v) => setMode({ resolution: v })} options={props.resolutions} />
-          <Select label="Frame rate" value={webcam.mode?.framerate ?? ''}
+          <Select label="Frame rate" value={webcam.mode?.framerate ?? ''} systemLabels
             onChange={(v) => setMode({ framerate: v })} options={props.framerates} />
         </div>
       )}

@@ -11,7 +11,7 @@ export function LiveBadge({ phase, liveUnconfirmed, durationMs }:
   if (phase === 'STARTING_ON_YOUTUBE') {
     return <span className="axi-chip axi-chip--warn">● Starting on YouTube…</span>
   }
-  if (!live) return <span className="axi-pill">● PREVIEW</span>
+  if (!live) return <span className="axi-pill axi-pill--xs preview-badge">● PREVIEW</span>
   return (
     <>
       <span className="axi-chip axi-chip--danger"><span aria-hidden>● </span>LIVE</span>

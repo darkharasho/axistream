@@ -66,7 +66,7 @@ function matchFrom(options: readonly SelectOption[], query: string, start: numbe
   return -1
 }
 
-export function Select({ label, value, options, onChange, className, placeholder }: {
+export function Select({ label, value, options, onChange, className, placeholder, systemLabels }: {
   label: string
   value: string
   options: readonly SelectOption[]
@@ -76,6 +76,11 @@ export function Select({ label, value, options, onChange, className, placeholder
   /** Shown when nothing is chosen yet — for pickers where an empty value is a
    *  real state ("whatever OBS defaults to"), not a missing row. */
   placeholder?: string
+  /** Set when the options are names the system reports — devices, formats,
+   *  resolutions — rather than labels this app wrote. .axi-picker's uppercase
+   *  chrome is fine for "Public"/"Unlisted"/fixed enums; it is data
+   *  distortion on "Blue Yeti" or "HD Pro Webcam C920", so those skip it. */
+  systemLabels?: boolean
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -189,7 +194,7 @@ export function Select({ label, value, options, onChange, className, placeholder
         <button
           ref={triggerRef}
           type="button"
-          className={empty ? 'axi-picker__btn sel-empty' : 'axi-picker__btn'}
+          className={`axi-picker__btn${empty ? ' sel-empty' : ''}${systemLabels ? ' axi-picker__btn--plain' : ''}`}
           aria-haspopup="listbox"
           aria-labelledby={`${id}-label`}
           aria-controls={`${id}-list`}
@@ -230,7 +235,7 @@ export function Select({ label, value, options, onChange, className, placeholder
                 role="option"
                 aria-selected={o.value === value}
                 aria-disabled={o.disabled || undefined}
-                className={`axi-picker__opt${i === active && !o.disabled ? ' active' : ''}`}
+                className={`axi-picker__opt${systemLabels ? ' axi-picker__opt--plain' : ''}${i === active && !o.disabled ? ' active' : ''}`}
                 // Options are not focusable: focus stays on the listbox and
                 // aria-activedescendant reports the active row, so a click never
                 // has to steal it back.

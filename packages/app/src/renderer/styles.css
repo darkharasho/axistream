@@ -99,13 +99,19 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .setup-icon.error { color: #fb7185; background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.35); }
 .setup-error { color: #fecdd3 !important; }
 .capture-target-list { display: flex; flex-direction: column; gap: 8px; width: min(420px, 80%); margin: 8px 0; }
-.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: #e6edf3; background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); }
+/* text-transform: none — the label is a monitor or window name the OS
+   reports (e.g. "DP-2 (2560x1440)"), not a label this app wrote. */
+.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: #e6edf3; background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); text-transform: none; }
 .capture-target-list .axi-btn.target:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axi-accent) 55%, transparent); background: color-mix(in srgb, var(--axi-accent) 9%, transparent); }
 
 .hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
 .pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
 .pill.warn { color: #fbbf24; border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
+/* The resting PREVIEW badge is a status readout, not a control — .axi-pill's
+   cursor and hover lift are a false affordance here (there is no onClick). */
+.preview-badge { cursor: default; }
+.preview-badge:hover { color: var(--axi-text-dim); box-shadow: none; transform: none; }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
 .overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: #dfe7ef; z-index: 3; }
@@ -472,7 +478,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 /* This disclosure opens from a button pinned to the hero's bottom edge, so it
    opens upward — a direction .axi-menu__pop (which only opens down) has no
    modifier for. */
-.action-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; }
+.action-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; min-width: 210px; width: auto; }
 
 /* Quality panel. Flat like every other settings card — the summary reads as
    chips (.axi-chip--meta, .axi-chip--accent for the scannable mode) so the
@@ -520,6 +526,14 @@ p.axi-ink-dim { margin: 0 0 12px; }
    highlight needs a class the language has no opinion on. Reuses the same
    fill the language's own hover state reads. */
 .axi-picker__opt.active { background: var(--axi-well-fill); color: var(--axi-text); }
+/* Uppercase chrome is the language's identity and stays on fixed labels this
+   app wrote ("Public", "Auto (1080p)", a key name). It is data distortion on
+   a name the system reports — a microphone, a webcam, an output device — so
+   those opt out via Select's systemLabels prop. Matches the precedent the
+   language sets for itself at .axi-card__btn (dist/axi.css), which resets to
+   `text-transform: inherit` for the same reason: a slot holding someone
+   else's words must not relabel them. */
+.axi-picker__btn--plain, .axi-picker__opt--plain { text-transform: none; }
 .opt-label { min-width: 0; }
 .why {
   margin-left: auto; font: 600 10px/1 ui-monospace, monospace; white-space: nowrap;

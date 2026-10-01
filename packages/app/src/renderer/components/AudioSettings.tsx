@@ -132,6 +132,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
             <Select
               label="Output device"
               className="hear-devrow"
+              systemLabels
               placeholder="System default"
               value={audio.desktopDevice ?? ''}
               onChange={(v) => axi().setDesktopDevice(v)}
@@ -191,6 +192,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
         return (
           <Select
             label="Microphone device"
+            systemLabels
             placeholder="System default"
             value={audio.micDevice ?? ''}
             onChange={(v) => axi().setMicDevice(v)}
