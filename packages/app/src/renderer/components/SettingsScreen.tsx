@@ -48,7 +48,7 @@ export function SettingsScreen({ state, axi, onRunSetup }: { state: AppState; ax
           <section className="setting">
             <h3>Capture</h3>
             <p className="muted">Re-run setup if you changed monitors or the capture stopped working.</p>
-            <button className="btn ghost" onClick={() => axi.repairCapture()}>Re-set up capture</button>
+            <button className="axi-btn axi-btn--ghost" onClick={() => axi.repairCapture()}>Re-set up capture</button>
           </section>
 
           <section className="setting">

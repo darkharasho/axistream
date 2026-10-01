@@ -74,7 +74,7 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
         {CORNERS.map((c) => (
           <button
             key={c.value}
-            className={webcam.corner === c.value ? 'btn' : 'btn ghost'}
+            className={webcam.corner === c.value ? 'axi-btn' : 'axi-btn axi-btn--ghost'}
             onClick={() => void axi.setWebcam({ corner: c.value })}
           >{c.label}</button>
         ))}

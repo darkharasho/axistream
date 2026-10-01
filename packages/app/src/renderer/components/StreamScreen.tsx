@@ -52,11 +52,11 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
           <p>These displays are reported directly by the private AxiStream capture engine.</p>
           <div className="capture-target-list" role="list" aria-label="Available displays">
             {state.captureTargets.map((target) => (
-              <button key={`${target.property}:${String(target.value)}`} className="btn target"
+              <button key={`${target.property}:${String(target.value)}`} className="axi-btn target"
                 disabled={setupPending} onClick={() => runSetup(target)}>{target.label}</button>
             ))}
           </div>
-          <button className="btn ghost sm" disabled={setupPending}
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={setupPending}
             onClick={() => { if (!setupInFlight.current) void axi.cancelCaptureSelection() }}>Cancel</button>
         </div>
       )
@@ -67,7 +67,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
           <div className="setup-icon error"><MonitorPlay size={26} /></div>
           <h2>Capture setup failed</h2>
           <p className="setup-error" role="alert">{state.error ?? 'The capture engine could not be prepared.'}</p>
-          <button className="btn primary lg" disabled={setupPending} onClick={() => runSetup()}>
+          <button className="axi-btn axi-btn--primary lg" disabled={setupPending} onClick={() => runSetup()}>
             {setupPending ? <><Loader2 size={15} className="spin" /> Preparing capture…</> : 'Retry setup'}
           </button>
         </div>
@@ -78,7 +78,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
         <div className="setup-icon"><MonitorPlay size={26} /></div>
         <h2>Set up your capture</h2>
         <p>AxiStream will ask you to pick the screen showing your game. You'll only do this once.</p>
-        <button className="btn primary lg" disabled={preparing} onClick={() => runSetup()}>
+        <button className="axi-btn axi-btn--primary lg" disabled={preparing} onClick={() => runSetup()}>
           {preparing ? <><Loader2 size={15} className="spin" /> Preparing capture…</> : 'Set up capture →'}
         </button>
       </div>
@@ -119,12 +119,12 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
           <span className="dot good" /> Capture {capture ? 'ready' : '…'}
           {live || phase === 'GOING_LIVE' || phase === 'STARTING_ON_YOUTUBE' ? null
             : phase === 'AWAITING_APPROVAL'
-            ? <button className="btn ghost xs" disabled><Loader2 size={12} className="spin" /> Switching…</button>
-            : <button className="btn ghost xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
+            ? <button className="axi-btn axi-btn--ghost axi-btn--xs" disabled><Loader2 size={12} className="spin" /> Switching…</button>
+            : <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={() => axi.switchSource()} title="Pick a different screen or window"><RefreshCw size={12} /> Switch source</button>}
           {phase === 'AWAITING_APPROVAL' ? null
-            : <button className="btn ghost xs" onClick={() => setEditingMasks((v) => !v)} title="Black out chat or other areas on the stream"><Shield size={12} /> Masks</button>}
+            : <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={() => setEditingMasks((v) => !v)} title="Black out chat or other areas on the stream"><Shield size={12} /> Masks</button>}
           {capture && phase !== 'AWAITING_APPROVAL'
-            ? <button className="btn ghost xs" onClick={() => axi.fitWindowToCapture()}
+            ? <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={() => axi.fitWindowToCapture()}
                 title={state.windowFitted ? 'Back to the default window size' : "Resize the window to the game's aspect (removes letterbox bars)"}>
                 <Scan size={12} /> {state.windowFitted ? 'Unfit' : 'Fit'}
               </button>
@@ -135,7 +135,7 @@ export function StreamScreen({ state, preview, axi, store }: { state: AppState; 
 
         <ActionButton state={state} axi={axi} />
         {state.watchUrl ? (
-          <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={copyLink} title="Copy the YouTube watch link">
             {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
           </button>
         ) : null}

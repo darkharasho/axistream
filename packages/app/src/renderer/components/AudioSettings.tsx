@@ -225,14 +225,14 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
                 onBind={(b) => axi().setPttBinding(b)} />
               {capturing
                 ? <span className="muted">Press any key… {captureLeft}s (Esc cancels)</span>
-                : <button className="btn ghost xs" onClick={rebind}>…or press the key: Rebind</button>}
+                : <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={rebind}>…or press the key: Rebind</button>}
               {captureMsg && !capturing && <p className="muted">{captureMsg}</p>}
             </>
           )}
           {ptt.enabled && ptt.mode === 'exclusive' && (
             <>
               <p className="muted">AxiStream owns the key — Discord won't see {ptt.keyName}.</p>
-              <button className="btn ghost xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
+              <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
               <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
               {unlockErr && <p className="field-err">{unlockErr}</p>}
               <Select
@@ -251,7 +251,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
       )}
 
       <div className="audio-test">
-        <button className="btn ghost sm" disabled={!canTest || test.st === 'recording'} onClick={runTest}>
+        <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={!canTest || test.st === 'recording'} onClick={runTest}>
           {test.st === 'recording' ? `Recording — speak now… ${test.left}` : 'Test audio'}
         </button>
         {test.st === 'ready' && test.url && (

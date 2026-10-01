@@ -94,13 +94,13 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .hero.setup > * { position: relative; z-index: 3; }
 .hero.setup p { max-width: 360px; color: #c4cedb; line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .hero.setup h2 { text-shadow: 0 1px 4px rgba(0,0,0,.5); }
-.hero.setup .btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
+.hero.setup .axi-btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
 .setup-icon { width: 58px; height: 58px; border-radius: 16px; background: color-mix(in srgb, var(--axi-accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); display: grid; place-items: center; color: var(--axi-accent); font-size: 26px; }
 .setup-icon.error { color: #fb7185; background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.35); }
 .setup-error { color: #fecdd3 !important; }
 .capture-target-list { display: flex; flex-direction: column; gap: 8px; width: min(420px, 80%); margin: 8px 0; }
-.capture-target-list .btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: #e6edf3; background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); }
-.capture-target-list .btn.target:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axi-accent) 55%, transparent); background: color-mix(in srgb, var(--axi-accent) 9%, transparent); }
+.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: #e6edf3; background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); }
+.capture-target-list .axi-btn.target:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axi-accent) 55%, transparent); background: color-mix(in srgb, var(--axi-accent) 9%, transparent); }
 
 .hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
@@ -128,21 +128,16 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .chip.bad { color: #f87171; }
 .link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
 
-/* Buttons */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; padding: 14px 20px; font-weight: 800; cursor: pointer; }
-.btn.lg { width: 100%; padding: 17px; font-size: 17px; }
-.btn.primary { background: var(--axi-accent); color: var(--axi-accent-ink); box-shadow: none; }
-.btn.primary:disabled { opacity: .55; cursor: default; box-shadow: none; }
-.btn.danger { background: rgba(226,58,82,.18); color: #ff8b9c; border: 1px solid #f0556b; }
-.btn.ghost { background: #1a222c; color: #c7d0d9; border: 1px solid #2a323b; font-weight: 700; }
-.btn.ghost:hover { background: #222c38; }
+/* Buttons — the language's .axi-btn family. .lg has no language step (only
+   --sm and --xs go smaller than the default), so it stays a local modifier for
+   the one full-width, oversized CTA the wizard-free setup hero wants. */
+.axi-btn.lg { width: 100%; padding: 17px; font-size: 17px; }
 /* Compact bottom-bar action (Go Live / End Stream) — sits inline, content-width,
-   so it reads as a control rather than a full-width banner. */
-.btn.action { align-self: flex-start; padding: 12px 22px; font-size: 15px; border-radius: 10px; }
-.btn.primary.action { box-shadow: 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
-.btn.primary.action:hover { box-shadow: 0 6px 18px color-mix(in srgb, var(--axi-accent) 32%, transparent); }
-/* Extra-small ghost button for inline actions like "Switch source". */
-.btn.xs { padding: 5px 9px; font-size: 11px; border-radius: 8px; font-weight: 600; gap: 5px; }
+   so it reads as a control rather than a full-width banner. 10px radius is
+   deliberate — see test/styles-radius.test.ts's note on this file. */
+.axi-btn.action { align-self: flex-start; padding: 12px 22px; font-size: 15px; border-radius: 10px; }
+.axi-btn.axi-btn--primary.action { box-shadow: 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
+.axi-btn.axi-btn--primary.action:hover { box-shadow: 0 6px 18px color-mix(in srgb, var(--axi-accent) 32%, transparent); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -175,7 +170,6 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .audio-row input { width: auto; }
 .yt-account button { margin-left: auto; }
 .yt-connect { align-self: flex-start; }
-.btn.sm { width: auto; padding: 9px 14px; font-size: 13px; font-weight: 700; border-radius: 10px; }
 .yt-vars { font-size: 12px; color: #5b6470; font-family: ui-monospace, monospace; }
 .yt-preview { font-size: 13px; color: #9fd8ff; }
 .yt-hint { font-size: 12px; color: #5b6470; }
@@ -376,7 +370,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* Webcam settings: corner picker grid + manual mode selects. */
 .webcam-corners { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
-.webcam-settings .webcam-corners .btn { padding: 9px 12px; font-size: 12px; font-weight: 700; border-radius: 9px; }
+.webcam-settings .webcam-corners .axi-btn { padding: 9px 12px; font-size: 12px; font-weight: 700; border-radius: 9px; }
 .webcam-modes { display: grid; gap: 10px; margin-top: 10px; }
 
 /* Shared panel controls. Native checkbox/range chrome is light-themed on Linux
@@ -433,35 +427,35 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* align-items: stretch keeps the caret exactly as tall as the label half — the
    two have different content, so content-sized heights drift apart. */
 .action-split { position: relative; display: inline-flex; align-items: stretch; align-self: flex-start; }
-.action-split > .btn.action { align-self: stretch; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.action-split > .btn.action.caret {
+.action-split > .axi-btn.action { align-self: stretch; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.action-split > .axi-btn.action.caret {
   padding: 0 11px; gap: 5px;
   /* Restated: the shared .action rule above squares BOTH right corners. */
   border-radius: 0 10px 10px 0;
   margin-left: 1px;
 }
 /* The seam: a hairline so the two halves read as one control with two targets. */
-.action-split > .btn.primary.action.caret { box-shadow: inset 1px 0 0 rgba(6,34,42,.3), 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
-.action-split > .btn.danger.action.caret { border-left-color: rgba(240,85,107,.45); }
-.rec-dot { width: 7px; height: 7px; border-radius: 50%; background: #e23a52; box-shadow: 0 0 7px rgba(226,58,82,.9); }
+.action-split > .axi-btn.axi-btn--primary.action.caret { box-shadow: inset 1px 0 0 rgba(6,34,42,.3), 0 4px 14px color-mix(in srgb, var(--axi-accent) 22%, transparent); }
+.action-split > .axi-btn.axi-ink-danger.action.caret { border-left-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); }
 
-.dropup {
-  /* Left-aligned to the split button: the button sits at the left edge of the
-     hero, so a right-aligned menu hangs off the window. */
-  position: absolute; bottom: calc(100% + 7px); left: 0; min-width: 210px;
-  display: flex; flex-direction: column; padding: 5px; z-index: 5;
-  background: rgba(14,19,26,.97); border: 1px solid #2a323b; border-radius: 11px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.5);
-}
-.dropup-item {
+/* Go Live drop-up — a disclosure of action buttons, drawn with the language's
+   .axi-menu popover shell. .axi-menu__pop only pre-styles its checkbox-filter
+   <label> rows (see axi-design src/shells.css); this one holds <button>s, so
+   they get the same treatment painted in tokens rather than the language's
+   label-only selector. */
+.axi-menu__pop button {
   display: flex; align-items: center; gap: 9px; width: 100%;
-  padding: 9px 11px; border: 0; border-radius: 8px; background: none;
-  color: #c7d0d9; font: 700 13px/1 inherit; text-align: left; cursor: pointer;
+  padding: 9px 11px; border: 0; border-radius: var(--axi-radius-sm);
+  background: none; color: var(--axi-text-dim); font: 700 13px/1 inherit;
+  text-align: left; cursor: pointer;
 }
-.dropup-item:hover:not(:disabled) { background: #222c38; color: #e6edf3; }
-.dropup-item:disabled { opacity: .45; cursor: default; }
-.dropup-item.danger { color: #ff8b9c; }
-.dropup-item .rec-elapsed { margin-left: auto; color: #8b949e; }
+.axi-menu__pop button:where(:hover, :focus-visible) { background: var(--axi-well-fill); color: var(--axi-text); }
+.axi-menu__pop button:disabled { opacity: .45; cursor: default; }
+.axi-menu__pop .rec-elapsed { margin-left: auto; color: var(--axi-text-dim); }
+/* This disclosure opens from a button pinned to the hero's bottom edge, so it
+   opens upward — a direction .axi-menu__pop (which only opens down) has no
+   modifier for. */
+.action-split .axi-menu__pop { top: auto; bottom: calc(100% + 7px); left: 0; }
 
 /* Quality panel. Flat like every other settings card — the summary reads as
    chips so the mode (Auto vs Custom) is scannable without parsing a sentence. */

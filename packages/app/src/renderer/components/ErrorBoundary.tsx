@@ -67,9 +67,9 @@ export class ErrorBoundary extends Component<Props, State> {
         {live ? <p className="crash-live">Your stream is still running.</p> : null}
         <p className="crash-msg">{error.message}</p>
         <div className="crash-actions">
-          <button className="btn primary" onClick={this.reset}>Reload</button>
-          <button className="btn ghost" onClick={() => void this.copy()}>Copy error details</button>
-          <button className="btn ghost" onClick={() => void this.exportDiagnostics()}>Export diagnostics</button>
+          <button className="axi-btn axi-btn--primary" onClick={this.reset}>Reload</button>
+          <button className="axi-btn axi-btn--ghost" onClick={() => void this.copy()}>Copy error details</button>
+          <button className="axi-btn axi-btn--ghost" onClick={() => void this.exportDiagnostics()}>Export diagnostics</button>
         </div>
       </div>
     )

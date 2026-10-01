@@ -36,10 +36,10 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
       {youtube.connected ? (
         <div className="yt-account">
           <span>Connected as <strong>{youtube.channel ?? 'your channel'}</strong></span>
-          <button className="btn ghost sm" onClick={() => axi().disconnectYouTube()}>Disconnect</button>
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => axi().disconnectYouTube()}>Disconnect</button>
         </div>
       ) : (
-        <button className="btn primary sm yt-connect" onClick={() => axi().connectYouTube()}>Connect YouTube account</button>
+        <button className="axi-btn axi-btn--primary axi-btn--sm yt-connect" onClick={() => axi().connectYouTube()}>Connect YouTube account</button>
       )}
 
       {s && (
@@ -79,7 +79,7 @@ export function YouTubeSettings({ youtube }: { youtube: { connected: boolean; ch
             </label>
             <div className="yt-hint">Prepended above the embed — use <code>@here</code> or a role mention to ping.</div>
             <div className="yt-discord-test">
-              <button className="btn ghost sm" disabled={!s.discordWebhookUrl.trim()} onClick={sendDiscordTest}>
+              <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={!s.discordWebhookUrl.trim()} onClick={sendDiscordTest}>
                 Send test
               </button>
               {testMsg && <span className={testMsg.ok ? 'yt-test-ok' : 'field-err'}>{testMsg.text}</span>}

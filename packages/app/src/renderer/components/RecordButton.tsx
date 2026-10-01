@@ -39,21 +39,21 @@ export function RecordMenuItems({ recording, disabled, axi, onAct }: RecordMenuI
   return (
     <>
       {recording.active ? (
-        <button className="dropup-item danger" role="menuitem"
+        <button className="axi-ink-danger" role="menuitem"
           onClick={() => { onAct?.(); void axi.stopRecording() }}
           title="Stop the local recording">
           <Square size={13} /> Stop recording
           <span className="mono rec-elapsed">{formatElapsed(now - (recording.startedAt ?? now))}</span>
         </button>
       ) : (
-        <button className="dropup-item" role="menuitem" disabled={disabled}
+        <button role="menuitem" disabled={disabled}
           onClick={() => { onAct?.(); void axi.startRecording() }}
           title={disabled ? 'Not while an audio test is running' : 'Save a local copy of what you are capturing'}>
           <Circle size={13} /> Record
         </button>
       )}
       {lastPath ? (
-        <button className="dropup-item" role="menuitem"
+        <button role="menuitem"
           onClick={() => { onAct?.(); void axi.openRecording(lastPath) }} title={lastPath}>
           <FolderOpen size={13} /> Open recording
         </button>

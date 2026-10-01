@@ -77,11 +77,11 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
               : choosing
               ? <div className="capture-target-list" role="list" aria-label="Available displays">
                   {state.captureTargets.map((target) => (
-                    <button key={`${target.property}:${String(target.value)}`} className="btn target"
+                    <button key={`${target.property}:${String(target.value)}`} className="axi-btn target"
                       disabled={setupPending} onClick={() => runSetup(target)}>{target.label}</button>
                   ))}
                 </div>
-              : <button className="btn primary sm" disabled={preparing} onClick={() => runSetup()}>
+              : <button className="axi-btn axi-btn--primary axi-btn--sm" disabled={preparing} onClick={() => runSetup()}>
                   {preparing ? <><Loader2 size={13} className="spin" /> Preparing capture…</> : 'Choose what to capture'}
                 </button>}
           </div>
@@ -92,7 +92,7 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
             <p className="muted">Connecting YouTube lets AxiStream create the broadcast for you — no stream key to copy.</p>
             {connected
               ? <p className="wizard-ok"><Check size={14} /> Connected as {state.youtube.channel}</p>
-              : <button className="btn primary sm" onClick={() => void axi.connectYouTube()}>Connect YouTube</button>}
+              : <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => void axi.connectYouTube()}>Connect YouTube</button>}
             <p className="muted">You can skip this and paste a stream key in Settings instead.</p>
           </div>
         ) : null}
@@ -109,7 +109,7 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
                 ...devices.map((d) => ({ value: d.id, label: d.name })),
               ]}
             />
-            <button className="btn ghost sm" disabled={test.st === 'recording'} onClick={() => void runMicTest()}>
+            <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={test.st === 'recording'} onClick={() => void runMicTest()}>
               {test.st === 'recording' ? <><Loader2 size={13} className="spin" /> Recording — speak now…</> : 'Test my mic'}
             </button>
             {test.st === 'ready' && test.url ? <audio controls autoPlay src={test.url} /> : null}
@@ -127,12 +127,12 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
         ) : null}
 
         <div className="modal-actions">
-          <button className="btn ghost sm" onClick={onClose}>Skip setup</button>
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={onClose}>Skip setup</button>
           <span className="spacer" />
-          <button className="btn ghost sm" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
           {step === STEPS.length - 1
-            ? <button className="btn primary sm" onClick={onGoLive}>Go live</button>
-            : <button className="btn primary sm" disabled={!canAdvance} onClick={() => setStep((s) => s + 1)}>Next</button>}
+            ? <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={onGoLive}>Go live</button>
+            : <button className="axi-btn axi-btn--primary axi-btn--sm" disabled={!canAdvance} onClick={() => setStep((s) => s + 1)}>Next</button>}
         </div>
       </div>
     </div>

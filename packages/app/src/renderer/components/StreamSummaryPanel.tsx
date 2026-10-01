@@ -65,12 +65,12 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
           broken broadcast is worse than offering nothing. */}
       {watchUrl && !summary.endedWithError ? (
         <div className="summary-actions">
-          <button className="btn ghost sm" onClick={copyLink} title="Copy the YouTube watch link">
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={copyLink} title="Copy the YouTube watch link">
             {copied ? <><Check size={14} /> Copied!</> : <><Link size={14} /> Copy link</>}
           </button>
           {/* Through main: a renderer href to an external site opens a chrome-less
               in-app window, not the user's browser. */}
-          <button className="btn ghost sm" onClick={() => void axi.openExternalUrl(watchUrl)}
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void axi.openExternalUrl(watchUrl)}
             title="Open the broadcast in your browser">
             <ExternalLink size={14} /> Open on YouTube
           </button>
@@ -80,13 +80,13 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
       {summary.recordingStillActive ? (
         <div className="summary-actions">
           <span className="muted">Still recording — the stream ended but the recording did not.</span>
-          <button className="btn danger sm" onClick={() => void axi.stopRecording()}>
+          <button className="axi-btn axi-ink-danger axi-btn--sm" onClick={() => void axi.stopRecording()}>
             <Square size={13} /> Stop recording
           </button>
         </div>
       ) : recordingPath ? (
         <div className="summary-actions">
-          <button className="btn ghost sm" onClick={() => void axi.openRecording(recordingPath)}>
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void axi.openRecording(recordingPath)}>
             <FolderOpen size={14} /> Open recording
           </button>
           {/* Selectable so a failed open still leaves something to copy. */}
@@ -94,7 +94,7 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
         </div>
       ) : null}
 
-      <button className="btn primary action" onClick={() => void axi.dismissSummary()}>Done</button>
+      <button className="axi-btn axi-btn--primary action" onClick={() => void axi.dismissSummary()}>Done</button>
     </div>
   )
 }
