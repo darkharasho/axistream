@@ -565,6 +565,20 @@ p.axi-ink-dim { margin: 0 0 12px; }
   padding: 3px 6px; border-radius: 5px;
 }
 
+/* Accent swatches. .axi-btn lends the block, the ink edge and the radius; the
+   language has no component for a colour sample, so the square's size and its
+   selected ring are local. Two things this has to work around: .axi-btn--icon
+   is only a padding knob (--axi-btn-pad: 7px) and these buttons have no
+   children, so without an explicit size each swatch is a ~14px hit target; and
+   .axi-btn styles no [aria-pressed] state at all, so twelve swatches were
+   indistinguishable with nothing marking the one in force. The ring is a
+   box-shadow rather than an outline so it survives the inline background (which
+   out-ranks any stylesheet and is the swatch's whole job), and it is drawn in
+   --axi-text over an --axi-ink-line gap so it reads against all twelve hues as
+   well as against the panel behind them. */
+.accent-swatch { width: 24px; height: 24px; padding: 0; }
+.accent-swatch[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--axi-ink-line), 0 0 0 4px var(--axi-text); }
+
 /* Accent and surface crossfade. One class, held for 500ms by
    applyAccent/applySurface, so the whole window repaints together instead of
    each element snapping on its own next frame. */

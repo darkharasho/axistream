@@ -30,7 +30,7 @@ export function AppearanceSettings() {
               title={a.label}
               aria-label={a.label}
               aria-pressed={a.id === accent}
-              className="axi-btn axi-btn--icon"
+              className="axi-btn accent-swatch"
               // A swatch has to show the colour it selects, which is the one
               // place in this migration a value comes from data, not a token.
               style={{ background: a.hex }}
