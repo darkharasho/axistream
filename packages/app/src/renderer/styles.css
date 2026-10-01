@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 html, body { overflow: hidden; }
-body { margin: 0; background: transparent; color: #e6edf3; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+body { margin: 0; background: transparent; color: var(--axi-text); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 /* App chrome is not a document — no drag-selecting labels/buttons/pills.
    Re-enabled only where selecting has value: form fields and error text. */
 body { -webkit-user-select: none; user-select: none; }
@@ -37,28 +37,28 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .axi-rail { --axi-rail-w: 200px; }
 .brand { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 8px; }
 /* Wordmark matches the Axi house titlebar: Cinzel, two-tone (Axi white + accent). */
-.brand .wordmark { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 0.06em; font-weight: 500; color: #ffffff; }
+.brand .wordmark { font-family: 'Cinzel', serif; font-size: 0.95rem; letter-spacing: 0.06em; font-weight: 500; color: var(--axi-text); }
 .brand .wordmark .accent { color: var(--axi-accent); }
 .dot.accent { width: 9px; height: 9px; border-radius: 50%; background: var(--axi-accent); box-shadow: 0 0 10px var(--axi-accent); }
-.menu-label { color: #5b6470; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
-.soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid #2a323b; padding: 3px 5px; border-radius: 5px; }
+.menu-label { color: var(--axi-text-faint); font: 700 10px/1 ui-monospace, monospace; letter-spacing: .14em; margin: 8px 8px 10px; }
+.soon { margin-left: auto; font: 600 9px/1 ui-monospace, monospace; border: 1px solid var(--axi-ink-line); padding: 3px 5px; border-radius: 5px; }
 /* Update banner */
 .updatepill { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding: 9px 11px; border-radius: 9px; background: color-mix(in srgb, var(--axi-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); color: var(--axi-accent); font: 600 11px/1 ui-monospace, monospace; cursor: pointer; }
 .updatepill:hover { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); }
-.updatepill.passive { cursor: default; color: #8b98a5; background: #0d1117; border-color: #161c25; }
+.updatepill.passive { cursor: default; color: var(--axi-text-faint); background: var(--axi-ground-deep); border-color: var(--axi-ink-line); }
 
 /* Sidebar quick toggles */
 .quick { margin-top: auto; padding-bottom: 10px; }
 .quickrow { display: flex; gap: 6px; }
-.qt { flex: 1; display: grid; place-items: center; padding: 8px 0; border-radius: 8px; background: #0d1117; border: 1px solid #161c25; color: #55606c; cursor: pointer; }
+.qt { flex: 1; display: grid; place-items: center; padding: 8px 0; border-radius: 8px; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); color: var(--axi-text-faint); cursor: pointer; }
 .qt.on { color: var(--axi-accent); border-color: color-mix(in srgb, var(--axi-accent) 35%, transparent); }
-.qt.tx { color: #f0556b; border-color: rgba(240,85,107,.45); box-shadow: 0 0 8px rgba(240,85,107,.35); }
+.qt.tx { color: var(--axi-danger); border-color: rgba(240,85,107,.45); box-shadow: 0 0 8px rgba(240,85,107,.35); }
 .qt:disabled { opacity: .4; cursor: default; }
-.qt:not(:disabled):hover { background: #131a23; }
-.enginepill { margin-top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: #0d1117; border: 1px solid #161c25; color: #8b949e; font: 600 11px/1 ui-monospace, monospace; }
-.enginepill .dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 7px #3fb950; }
-.enginepill.onair { background: rgba(240,85,107,.08); border-color: rgba(240,85,107,.25); color: #f0a3ae; }
-.enginepill.onair .dot { background: #f0556b; box-shadow: 0 0 7px #f0556b; }
+.qt:not(:disabled):hover { background: var(--axi-surface); }
+.enginepill { margin-top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 11px; border-radius: 9px; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); color: var(--axi-text-dim); font: 600 11px/1 ui-monospace, monospace; }
+.enginepill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--axi-ok); box-shadow: 0 0 7px var(--axi-ok); }
+.enginepill.onair { background: rgba(240,85,107,.08); border-color: rgba(240,85,107,.25); color: var(--axi-danger); }
+.enginepill.onair .dot { background: var(--axi-danger); box-shadow: 0 0 7px var(--axi-danger); }
 
 /* Hero — the full-height, preview-forward Stream screen. The placeholder
    gradient is decoration (no capture yet), not legibility, so it follows the
@@ -92,39 +92,39 @@ input, textarea { -webkit-user-select: text; user-select: text; }
    just centering the call-to-action over it. */
 .hero.setup { align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 28px; }
 .hero.setup > * { position: relative; z-index: 3; }
-.hero.setup p { max-width: 360px; color: #c4cedb; line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.hero.setup p { max-width: 360px; color: var(--axi-text-dim); line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .hero.setup h2 { text-shadow: 0 1px 4px rgba(0,0,0,.5); }
 .hero.setup .axi-btn.lg { width: auto; padding: 14px 26px; font-size: 15px; }
 .setup-icon { width: 58px; height: 58px; border-radius: 16px; background: color-mix(in srgb, var(--axi-accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--axi-accent) 30%, transparent); display: grid; place-items: center; color: var(--axi-accent); font-size: 26px; }
-.setup-icon.error { color: #fb7185; background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.35); }
-.setup-error { color: #fecdd3 !important; }
+.setup-icon.error { color: var(--axi-danger); background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.35); }
+.setup-error { color: var(--axi-danger) !important; }
 .capture-target-list { display: flex; flex-direction: column; gap: 8px; width: min(420px, 80%); margin: 8px 0; }
 /* text-transform: none — the label is a monitor or window name the OS
    reports (e.g. "DP-2 (2560x1440)"), not a label this app wrote. */
-.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: #e6edf3; background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); text-transform: none; }
+.capture-target-list .axi-btn.target { justify-content: flex-start; width: 100%; padding: 11px 14px; color: var(--axi-text); background: rgba(8,14,24,.55); border: 1px solid rgba(255,255,255,.13); text-transform: none; }
 .capture-target-list .axi-btn.target:hover:not(:disabled) { border-color: color-mix(in srgb, var(--axi-accent) 55%, transparent); background: color-mix(in srgb, var(--axi-accent) 9%, transparent); }
 
 .hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
-.hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
-.pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
-.pill.warn { color: #fbbf24; border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
+.hero-title { color: var(--axi-text); font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
+.pill { display: inline-flex; align-items: center; gap: 6px; color: var(--axi-text); background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
+.pill.warn { color: var(--axi-warn); border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
 /* The resting PREVIEW badge is a status readout, not a control — .axi-pill's
    cursor and hover lift are a false affordance here (there is no onClick). */
 .preview-badge { cursor: default; }
 .preview-badge:hover { color: var(--axi-text-dim); box-shadow: none; transform: none; }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
 
-.overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: #dfe7ef; z-index: 3; }
+.overlay { position: absolute; inset: auto 0 130px; display: flex; justify-content: center; padding: 0 16px; text-align: center; color: var(--axi-text); z-index: 3; }
 /* Translucent, blurred pill so overlay messages stay readable over any preview. */
 .overlay-pill { display: inline-block; max-width: 460px; padding: 10px 16px; border-radius: 14px; background: rgba(12,15,20,.62); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 13px; line-height: 1.4; }
-.overlay.error .overlay-pill { color: #ffb3bf; border-color: rgba(240,85,107,.4); }
-.overlay.warn .overlay-pill { color: #ffd479; border-color: rgba(255,212,121,.35); }
+.overlay.error .overlay-pill { color: var(--axi-danger); border-color: rgba(240,85,107,.4); }
+.overlay.warn .overlay-pill { color: var(--axi-warn); border-color: rgba(255,212,121,.35); }
 
 .hero-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px; background: linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 55%,transparent); z-index: 3; }
-.statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: #e6edf3; font-size: 13px; text-shadow: 0 1px 2px #000; }
+.statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: var(--axi-text); font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 .statusrow .spacer { flex: 1; }
-.dot.good { color: #5fe39a; } .dot.good::before { content: '●'; }
-.link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
+.dot.good { color: var(--axi-ok); } .dot.good::before { content: '●'; }
+.link { background: none; border: 0; color: var(--axi-accent); cursor: pointer; font: inherit; }
 
 /* Buttons — the language's .axi-btn family. .lg has no language step (only
    --sm and --xs go smaller than the default), so it stays a local modifier for
@@ -140,7 +140,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Settings screen */
-.settings-panel { display: block; background: #0c0f15; overflow: auto; }
+.settings-panel { display: block; background: var(--axi-ground-deep); overflow: auto; }
 .settings-panel::before { display: none; }
 /* .axi-page's own measure (1280px) is the reading/browsing default; this
    panel was tuned at 1120, and axi-page's padding-inline knob only covers
@@ -154,8 +154,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .settings-grid { columns: 2 420px; column-gap: 40px; }
 .settings-grid > .axi-panel { min-width: 0; margin-bottom: 22px; break-inside: avoid; }
 .settings-inner h2 { margin: 0 0 18px; }
-.axi-panel h3 { margin: 0 0 10px; font-size: 14px; color: #c7d0d9; }
-.ok { color: #7be3a0; font-size: 13px; }
+.axi-panel h3 { margin: 0 0 10px; font-size: 14px; color: var(--axi-text-dim); }
+.ok { color: var(--axi-ok); font-size: 13px; }
 /* .muted carried size and spacing the language's bare ink utility
    (.axi-ink-dim is colour-only) doesn't model. */
 .axi-ink-dim { font-size: 13px; }
@@ -163,9 +163,9 @@ p.axi-ink-dim { margin: 0 0 12px; }
 
 /* YouTube settings */
 .yt-settings { display: flex; flex-direction: column; gap: 10px; }
-.yt-settings h3 { margin: 0 0 6px; font-size: 14px; color: #c7d0d9; }
+.yt-settings h3 { margin: 0 0 6px; font-size: 14px; color: var(--axi-text-dim); }
 .yt-settings label,
-.yt-settings .field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #8b949e; }
+.yt-settings .field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--axi-text-dim); }
 /* Match the text inputs stacked beside them rather than the tighter metric
    the camera and quality panels use. */
 .yt-settings .axi-picker__btn { padding: 10px 34px 10px 11px; font-size: 14px; }
@@ -174,18 +174,18 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .audio-row input { width: auto; }
 .yt-account button { margin-left: auto; }
 .yt-connect { align-self: flex-start; }
-.yt-vars { font-size: 12px; color: #5b6470; font-family: ui-monospace, monospace; }
-.yt-preview { font-size: 13px; color: #9fd8ff; }
-.yt-hint { font-size: 12px; color: #5b6470; }
+.yt-vars { font-size: 12px; color: var(--axi-text-faint); font-family: ui-monospace, monospace; }
+.yt-preview { font-size: 13px; color: var(--axi-accent); }
+.yt-hint { font-size: 12px; color: var(--axi-text-faint); }
 
 /* Discord announcement */
 .yt-discord { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
-.yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: #8b98a5; }
+.yt-discord-head { margin: 0 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--axi-text-faint); }
 .yt-discord-test { margin-top: 10px; }
-.yt-test-ok { font-size: 12px; font-weight: 600; color: #3fb950; }
+.yt-test-ok { font-size: 12px; font-weight: 600; color: var(--axi-ok); }
 /* Inline failure attached to a specific control. Discrete background events
    use toasts instead; phase-level conditions use .overlay. */
-.field-err { font-size: 12px; font-weight: 600; color: #f85149; }
+.field-err { font-size: 12px; font-weight: 600; color: var(--axi-danger); }
 .whatsnew { border-top: 1px solid rgba(255,255,255,.08); margin-top: 12px; padding-top: 10px; }
 /* The well (fill/border/radius/shadow) is .axi-prose pre's; a release-notes
    blob is one long unbroken line without the wrap, and taller than the
@@ -226,9 +226,9 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .app:has(.mask-editor) .welcome-banner { display: none; }
 .welcome-x {
   display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  background: transparent; border: 0; color: #8b949e; cursor: pointer;
+  background: transparent; border: 0; color: var(--axi-text-dim); cursor: pointer;
 }
-.welcome-x:hover { color: #e6edf3; background: rgba(255,255,255,.08); }
+.welcome-x:hover { color: var(--axi-text); background: rgba(255,255,255,.08); }
 
 /* Wizard — the modal shell, plus a wider body than the title prompt needs.
    The dots are a step progress indicator and the body is a single centred
@@ -243,7 +243,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .wizard-dots li.on { background: var(--axi-accent); }
 .wizard-body { display: flex; flex-direction: column; gap: 12px; min-height: 130px; }
 .wizard-body .axi-ink-dim { margin: 0; font-size: 12px; }
-.wizard-ok { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; color: #c7d0d9; }
+.wizard-ok { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; color: var(--axi-text-dim); }
 .wizard-ok svg { color: var(--axi-accent); flex: none; }
 .axi-modal__foot .spacer { flex: 1; }
 
@@ -251,11 +251,11 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .mask-editor { position: absolute; inset: 0; z-index: 4; overflow: hidden; touch-action: none; }
 .mask-toolbar { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px;
   background: rgba(13,15,20,.82); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; backdrop-filter: blur(6px); }
-.mask-hint { font-size: 11px; color: #8b95a5; white-space: nowrap; }
+.mask-hint { font-size: 11px; color: var(--axi-text-faint); white-space: nowrap; }
 .mask-rect { position: absolute; z-index: 5; background: rgba(15,17,21,.78); border: 1.5px dashed color-mix(in srgb, var(--axi-accent) 85%, transparent); border-radius: 4px; cursor: move; }
 .mask-delete { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
-  background: #1a1e26; color: #c4cedb; display: grid; place-items: center; cursor: pointer; padding: 0; }
-.mask-delete:hover { color: #fff; background: #2a2f3a; }
+  background: var(--axi-surface); color: var(--axi-text-dim); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.mask-delete:hover { color: var(--axi-text); background: var(--axi-surface-raised); }
 .mask-resize { position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; cursor: nwse-resize;
   background: color-mix(in srgb, var(--axi-accent) 90%, transparent); border: 1px solid rgba(13,15,20,.8); }
 
@@ -266,43 +266,43 @@ p.axi-ink-dim { margin: 0 0 12px; }
    "checkbox"> rows (native toggling, label-click-to-check) that .axi-switch
    would ask to re-platform onto a <button role="switch"> for no behaviour
    this app needs back. */
-.hear-list { border: 1px solid #1d2530; border-radius: 10px; overflow: hidden; }
+.hear-list { border: 1px solid var(--axi-ink-line); border-radius: 10px; overflow: hidden; }
 /* row !important: .yt-settings label sets flex-direction column for the
    device-picker labels; these rows must stay inline (same fix as .audio-row). */
-.hear-row { display: flex; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: #c7d0d9; cursor: pointer; }
+.hear-row { display: flex; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--axi-text-dim); cursor: pointer; }
 .hear-apps { max-height: 220px; overflow-y: auto; }
 /* The box and the magnifier are the language's (.axi-search/.axi-input); this
    is only the margin that fits it into the device list's own rhythm. */
 .hear-search { display: block; margin: 8px 12px 4px; width: calc(100% - 24px); }
-.hear-row:hover { background: #131a24; }
+.hear-row:hover { background: var(--axi-surface); }
 .hear-row input { accent-color: var(--axi-accent); width: 15px; height: 15px; cursor: pointer; }
 .hear-row.all span:first-of-type { font-weight: 600; }
-.hear-row .sub { color: #768390; font-size: 12px; }
-.hear-divider { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #0b0f15; border-top: 1px solid #1d2530; border-bottom: 1px solid #1d2530; }
-.hear-divider span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #566070; font-weight: 600; }
-.hear-divider .line { flex: 1; height: 1px; background: #1d2530; }
-.hear-refresh { margin-left: auto; background: none; border: none; color: #566070; cursor: pointer; padding: 2px 4px; border-radius: 6px; display: grid; place-items: center; }
-.hear-refresh:hover { color: var(--axi-accent); background: #131a24; }
-.yt-settings .hear-devrow { display: flex; flex-direction: column; gap: 5px; padding: 8px 12px 10px 37px; background: #0b0f15; border-top: 1px solid #1d2530; font-size: 12px; color: #8b949e; }
+.hear-row .sub { color: var(--axi-text-faint); font-size: 12px; }
+.hear-divider { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--axi-ground-deep); border-top: 1px solid var(--axi-ink-line); border-bottom: 1px solid var(--axi-ink-line); }
+.hear-divider span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--axi-text-faint); font-weight: 600; }
+.hear-divider .line { flex: 1; height: 1px; background: var(--axi-ink-line); }
+.hear-refresh { margin-left: auto; background: none; border: none; color: var(--axi-text-faint); cursor: pointer; padding: 2px 4px; border-radius: 6px; display: grid; place-items: center; }
+.hear-refresh:hover { color: var(--axi-accent); background: var(--axi-surface); }
+.yt-settings .hear-devrow { display: flex; flex-direction: column; gap: 5px; padding: 8px 12px 10px 37px; background: var(--axi-ground-deep); border-top: 1px solid var(--axi-ink-line); font-size: 12px; color: var(--axi-text-dim); }
 .hear-install { padding: 10px 12px; }
 
 /* Thin themed scrollbars, app-wide. */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a323b; border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: var(--axi-ink-line); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--axi-accent); }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Mask style segmented toggle + inline blur-plugin prompt. */
 .mask-style { display: flex; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; }
-.mask-style-btn { background: none; border: none; color: #8b95a5; font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer; }
+.mask-style-btn { background: none; border: none; color: var(--axi-text-faint); font-size: 11px; font-weight: 600; padding: 4px 10px; cursor: pointer; }
 .mask-style-btn.on { background: color-mix(in srgb, var(--axi-accent) 15%, transparent); color: var(--axi-accent); }
 .mask-blur-prompt { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px;
-  background: rgba(13,15,20,.85); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: #c4cedb; }
+  background: rgba(13,15,20,.85); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: var(--axi-text-dim); }
 
 /* Audio pulse meters. */
 .audio-pulse { margin-left: auto; display: grid; place-items: center; }
-.audio-pulse rect { fill: #3a4552; transition: height .12s ease, y .12s ease, fill .2s ease; }
+.audio-pulse rect { fill: var(--axi-rule); transition: height .12s ease, y .12s ease, fill .2s ease; }
 .audio-pulse.live rect { fill: var(--axi-accent); }
 .hear-divider .audio-pulse { margin-left: 0; }
 
@@ -310,8 +310,8 @@ p.axi-ink-dim { margin: 0 0 12px; }
 /* Push to talk — also a native checkbox for the same reason .hear-row is;
    .axi-switch stays unused here too. */
 .ptt { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; }
-.ptt-live { margin-left: auto; font-size: 11px; font-weight: 800; color: #f85149; letter-spacing: .04em; }
-.ptt-muted { margin-left: auto; font-size: 11px; color: #8b98a5; }
+.ptt-live { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--axi-danger); letter-spacing: .04em; }
+.ptt-muted { margin-left: auto; font-size: 11px; color: var(--axi-text-faint); }
 
 /* Stream audio check */
 .audio-test { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
@@ -322,19 +322,19 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .keypicker-combo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .keypicker-x { background: none; border: 0; color: inherit; opacity: .7; cursor: pointer; font-size: 13px; padding: 0; }
 .keypicker-x:hover { opacity: 1; }
-.keypicker-plus { color: #8b98a5; font-weight: 800; }
+.keypicker-plus { color: var(--axi-text-faint); font-weight: 800; }
 /* Trigger for the add-modifier disclosure; the disclosure itself is
    .axi-menu__pop (see the Go Live drop-up's own rule, above, for why its
    button rows are painted locally — same reason here). */
 .keypicker-menu { position: relative; }
-.keypicker-addmod { background: #1a222c; border: 1px dashed #2a323b; color: #8b98a5; border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
-.keypicker-addmod:hover { color: #e6edf3; border-color: #3a4552; }
+.keypicker-addmod { background: var(--axi-surface); border: 1px dashed var(--axi-ink-line); color: var(--axi-text-faint); border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.keypicker-addmod:hover { color: var(--axi-text); border-color: var(--axi-rule); }
 .keypicker-menu .axi-menu__pop { top: 110%; min-width: 120px; width: auto; }
-.keypicker-grid { background: #161c26; border: 1px solid #2a323b; border-radius: 12px; padding: 12px; }
-.keypicker-grid input { width: 100%; box-sizing: border-box; background: #0f141b; border: 1px solid #2a323b; border-radius: 8px; color: #e6edf3; padding: 7px 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
+.keypicker-grid { background: var(--axi-well-fill); border: 1px solid var(--axi-ink-line); border-radius: 12px; padding: 12px; }
+.keypicker-grid input { width: 100%; box-sizing: border-box; background: var(--axi-ground-deep); border: 1px solid var(--axi-ink-line); border-radius: 8px; color: var(--axi-text); padding: 7px 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
 .keypicker-grid input:focus { border-color: var(--axi-accent); }
 .keypicker-group { margin-bottom: 8px; }
-.keypicker-glabel { color: #8b98a5; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 6px; }
+.keypicker-glabel { color: var(--axi-text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 6px; }
 .keypicker-keys { display: flex; flex-wrap: wrap; gap: 5px; }
 
 /* Hotkey settings rows — label left, picker right, matching neighbouring rows. */
@@ -346,7 +346,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .hotkey-rows { --axi-stack-gap: 4px; margin-top: 8px; }
 .hotkey-row { justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid rgba(58,69,82,.4); }
 .hotkey-row:last-child { border-bottom: none; }
-.hotkey-label { color: #e6edf3; font-size: 13px; font-weight: 600; }
+.hotkey-label { color: var(--axi-text); font-size: 13px; font-weight: 600; }
 
 /* Toast stack — discrete events only (conditions use .overlay). Sits below
    .wctl so window controls stay clickable, above .overlay and the preview.
@@ -362,11 +362,11 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .axi-toast.success .toast-icon { color: var(--axi-ok); }
 .axi-toast.error .toast-icon { color: var(--axi-danger); }
 .toast-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.toast-msg { font-size: 13px; line-height: 1.35; color: #e6edf3; }
+.toast-msg { font-size: 13px; line-height: 1.35; color: var(--axi-text); }
 /* Technical detail is selectable — users paste it to us. */
-.toast-detail { font: 11px/1.4 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
-.toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: #8b949e; background: none; border: 0; cursor: pointer; }
-.toast-x:hover { color: #fff; background: rgba(255,255,255,.1); }
+.toast-detail { font: 11px/1.4 ui-monospace, monospace; color: var(--axi-text-dim); word-break: break-word; -webkit-user-select: text; user-select: text; }
+.toast-x { flex: none; margin-left: auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--axi-text-dim); background: none; border: 0; cursor: pointer; }
+.toast-x:hover { color: var(--axi-text); background: rgba(255,255,255,.1); }
 
 /* Renderer crash fallback. Reuses .hero's layout; the card and the alert are
    the language's (.axi-panel, .axi-notice--danger) — this is only the
@@ -374,9 +374,9 @@ p.axi-ink-dim { margin: 0 0 12px; }
    error text, and the action row. */
 .crash { align-items: center; justify-content: center; }
 .crash .axi-panel { max-width: min(520px, 90%); }
-.crash-live { margin: 0; font-size: 13px; color: #56d364; }
+.crash-live { margin: 0; font-size: 13px; color: var(--axi-ok); }
 /* Selectable — the whole point is that the user can hand it to us. */
-.crash-msg { margin: 8px 0 0; font: 11px/1.5 ui-monospace, monospace; color: #8b949e; word-break: break-word; -webkit-user-select: text; user-select: text; }
+.crash-msg { margin: 8px 0 0; font: 11px/1.5 ui-monospace, monospace; color: var(--axi-text-dim); word-break: break-word; -webkit-user-select: text; user-select: text; }
 .crash-actions { display: flex; gap: 8px; margin-top: 16px; }
 
 /* End-of-stream summary panel. Reuses .hero's centred layout. */
@@ -388,7 +388,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .summary-panel .axi-panel { display: flex; flex-direction: column; gap: 18px; align-items: center; max-width: min(520px, 90%); }
 .summary-panel .axi-grid { --axi-grid-min: 140px; justify-items: center; text-align: center; }
 .summary-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
-.summary-path { font-size: 11px; color: #94a3b8; user-select: text; }
+.summary-path { font-size: 11px; color: var(--axi-text-dim); user-select: text; }
 .rec-elapsed { margin-left: 6px; }
 
 /* Webcam settings: corner picker grid + manual mode selects. */
@@ -407,7 +407,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .quality-body label,
 .quality-body .field,
 .wizard-body label,
-.wizard-body .field { display: grid; gap: 6px; font-size: 13px; color: #c7d0d9; }
+.wizard-body .field { display: grid; gap: 6px; font-size: 13px; color: var(--axi-text-dim); }
 
 /* Checkbox rows read as a single line, so they opt out of the grid stacking. */
 .webcam-settings label.check,
@@ -433,7 +433,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 /* Size slider: the value rides on the same line as the label. */
 .webcam-settings label.slider { grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; }
 .webcam-settings label.slider > span.slider-label { grid-column: 1; }
-.webcam-settings label.slider > .slider-value { grid-column: 2; font: 600 12px/1 ui-monospace, monospace; color: #8b949e; }
+.webcam-settings label.slider > .slider-value { grid-column: 2; font: 600 12px/1 ui-monospace, monospace; color: var(--axi-text-dim); }
 .webcam-settings input[type="range"] {
   grid-column: 1 / -1; appearance: none; -webkit-appearance: none;
   width: 100%; height: 4px; margin: 4px 0; border-radius: 3px; cursor: pointer;
@@ -442,7 +442,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 }
 .webcam-settings input[type="range"]::-webkit-slider-thumb {
   appearance: none; -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
-  background: #e6edf3; border: 0; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer;
+  background: var(--axi-text); border: 0; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer;
 }
 .webcam-settings input[type="range"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
 
@@ -491,7 +491,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .quality-body input[type='number'] {
   width: 9ch;
   background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
-  padding: 8px 10px; color: #e6edf3; font-size: 13px;
+  padding: 8px 10px; color: var(--axi-text); font-size: 13px;
 }
 .quality-body input[type='number']:focus-visible { outline: 0; border-color: var(--axi-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--axi-accent) 18%, transparent); }
 /* .q-sub/.q-note/.q-fallback stay local: .axi-well is an uncoloured recess
@@ -504,12 +504,12 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .q-note {
   margin: 0; padding: 8px 11px; border-radius: 9px;
   background: rgba(240,180,60,.1); border: 1px solid rgba(240,180,60,.3);
-  font-size: 12px; color: #e3b341;
+  font-size: 12px; color: var(--axi-warn);
 }
 /* State AxiStream chose for the user, which reads differently from advice. */
 .q-fallback {
   margin: 0; padding: 2px 0 2px 10px;
-  border-left: 2px solid var(--axi-accent); font-size: 12px; color: #c7d0d9;
+  border-left: 2px solid var(--axi-accent); font-size: 12px; color: var(--axi-text-dim);
 }
 .quality-body .axi-ink-dim { margin: 0; font-size: 12px; }
 
@@ -537,7 +537,7 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .opt-label { min-width: 0; }
 .why {
   margin-left: auto; font: 600 10px/1 ui-monospace, monospace; white-space: nowrap;
-  color: #8a94a1; background: #161c25; border: 1px solid #232c38;
+  color: var(--axi-text-faint); background: var(--axi-ink-line); border: 1px solid var(--axi-surface);
   padding: 3px 6px; border-radius: 5px;
 }
 
