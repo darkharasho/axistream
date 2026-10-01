@@ -11,7 +11,7 @@ export function TitlePromptModal({ onClose }: { onClose: () => void }) {
   const submit = () => { if (!title.trim()) return; axi().goLive(title.trim()).catch(console.error); onClose() }
   return (
     <div className="axi-scrim modal-backdrop">
-      <div className="axi-modal" ref={ref} role="dialog" aria-modal="true" aria-label="Name your stream">
+      <div className="axi-modal title-prompt" ref={ref} role="dialog" aria-modal="true" aria-label="Name your stream">
         <div className="axi-modal__head"><h3>Name your stream</h3></div>
         <div className="axi-modal__body">
           <input className="axi-input" autoFocus type="text" value={title} placeholder="Stream title"
@@ -19,8 +19,8 @@ export function TitlePromptModal({ onClose }: { onClose: () => void }) {
             onKeyDown={(e) => { if (e.key === 'Enter') submit() }} />
         </div>
         <div className="axi-modal__foot">
-          <button onClick={onClose}>Cancel</button>
-          <button disabled={!title.trim()} onClick={submit}>Go Live</button>
+          <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={onClose}>Cancel</button>
+          <button className="axi-btn axi-btn--primary axi-btn--sm" disabled={!title.trim()} onClick={submit}>Go Live</button>
         </div>
       </div>
     </div>

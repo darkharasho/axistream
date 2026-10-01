@@ -250,6 +250,12 @@ p.axi-ink-dim { margin: 0 0 12px; }
    (a full-viewport takeover with no scrim) — neither language component fits
    this shape, so they stay local. */
 .axi-modal.wizard { min-width: 420px; max-width: 480px; }
+/* The floor the pre-migration .modal carried for every modal. .axi-modal
+   declares only a max-width, and the modal is a flex item of .axi-scrim with
+   align-items: center, so without this the title prompt shrinks to the
+   intrinsic width of its <input> plus the body's padding — about 215px. The
+   wizard kept its floor above; this is the same floor the old .modal had. */
+.axi-modal.title-prompt { min-width: 340px; }
 .wizard-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 .wizard-dots { display: flex; gap: 6px; list-style: none; margin: 0 0 12px; padding: 0; }
 .wizard-dots li { height: 3px; flex: 1; border-radius: 999px; background: rgba(255,255,255,.1); }
