@@ -104,9 +104,6 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 .hero-top { position: absolute; top: 0; left: 0; right: 0; height: 92px; display: flex; align-items: center; gap: 11px; padding: 0 120px 0 16px; background: linear-gradient(180deg,rgba(0,0,0,.55),transparent); z-index: 3; }
 .hero-title { color: #fff; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; }
-.badge { color: #9fd8ff; font: 700 10px/1 ui-monospace, monospace; border: 1px solid color-mix(in srgb, var(--axi-accent) 50%, transparent); padding: 6px 9px; border-radius: 20px; background: rgba(0,0,0,.3); }
-.badge.live { color: #fff; background: #e23a52; border: 0; box-shadow: 0 0 16px rgba(226,58,82,.55); }
-.badge.starting { color: var(--axi-accent); border-color: color-mix(in srgb, var(--axi-accent) 40%, transparent); background: color-mix(in srgb, var(--axi-accent) 8%, transparent); }
 .pill { display: inline-flex; align-items: center; gap: 6px; color: #dfe7ef; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); padding: 7px 10px; border-radius: 20px; }
 .pill.warn { color: #fbbf24; border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.07); }
 .mono { font: 600 12px/1 ui-monospace, monospace; }
@@ -121,11 +118,6 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .statusrow { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; color: #e6edf3; font-size: 13px; text-shadow: 0 1px 2px #000; }
 .statusrow .spacer { flex: 1; }
 .dot.good { color: #5fe39a; } .dot.good::before { content: '●'; }
-.chips { display: flex; gap: 8px; }
-.chip { color: #cdd6e0; background: rgba(0,0,0,.42); border: 1px solid rgba(255,255,255,.12); padding: 7px 11px; border-radius: 9px; font: 600 11px/1 ui-monospace, monospace; white-space: nowrap; }
-.chip.good { color: #7be3a0; }
-.chip.warn { color: #fbbf24; }
-.chip.bad { color: #f87171; }
 .link { background: none; border: 0; color: #9fd8ff; cursor: pointer; font: inherit; }
 
 /* Buttons — the language's .axi-btn family. .lg has no language step (only
@@ -328,13 +320,16 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* Toast stack — discrete events only (conditions use .overlay). Sits below
    .wctl so window controls stay clickable, above .overlay and the preview.
    Inside the .dragbar band, so it must opt out of window dragging. */
-.toasts { position: absolute; top: 44px; right: 11px; z-index: 8; display: flex; flex-direction: column; gap: 8px; max-width: 340px; -webkit-app-region: no-drag; }
-.toast { display: flex; align-items: flex-start; gap: 9px; padding: 10px 11px; border-radius: 10px; background: rgba(12,15,20,.92); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.45); }
-.toast .toast-icon { flex: none; margin-top: 1px; }
-.toast.info .toast-icon { color: var(--axi-accent); }
-.toast.success .toast-icon { color: #56d364; }
-.toast.error { border-color: rgba(240,85,107,.45); }
-.toast.error .toast-icon { color: #f85149; }
+/* Positioned to this app's own top bar, not the language's default
+   bottom-right — below .wctl so window controls stay clickable, inside the
+   .dragbar band so it must opt out of window dragging (behaviour, stays
+   local regardless of paint). The box itself (fill, border, radius, shadow)
+   is .axi-toast's. */
+.axi-toasts { position: absolute; top: 44px; right: 11px; bottom: auto; left: auto; z-index: 8; max-width: 340px; -webkit-app-region: no-drag; }
+.axi-toast .toast-icon { flex: none; margin-top: 1px; }
+.axi-toast.info .toast-icon { color: var(--axi-accent); }
+.axi-toast.success .toast-icon { color: var(--axi-ok); }
+.axi-toast.error .toast-icon { color: var(--axi-danger); }
 .toast-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .toast-msg { font-size: 13px; line-height: 1.35; color: #e6edf3; }
 /* Technical detail is selectable — users paste it to us. */
