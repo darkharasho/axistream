@@ -18,6 +18,16 @@ const api = (over: Record<string, any> = {}) => ({
   ...over,
 }) as any
 
+/** The tile whose key matches `label`, read back as its three parts. */
+const tile = (container: HTMLElement, label: RegExp) => {
+  const stat = [...container.querySelectorAll('.axi-stat')]
+    .find((el) => label.test(el.querySelector('.axi-stat__k')!.textContent ?? ''))!
+  return {
+    n: stat.querySelector('.axi-stat__n')!.textContent,
+    verdict: stat.querySelector('.summary-verdict')!.textContent,
+  }
+}
+
 describe('droppedVerdict', () => {
   it('calls a clean stream clean', () => {
     expect(droppedVerdict(0.02)).toMatch(/clean/i)
@@ -39,11 +49,25 @@ describe('StreamSummaryPanel', () => {
   it('judges each dropped-frame figure by its own number', () => {
     // A recovered 4% spike in an otherwise clean stream used to render
     // "0.03% — viewers likely saw stuttering": the session total beside the
-    // peak's verdict.
-    render(<StreamSummaryPanel summary={{ ...base, droppedPct: 0.03, peakDroppedPct: 4 }} axi={api()} />)
+    // peak's verdict. Asserted per tile rather than per string, because the
+    // figure and its verdict now sit in sibling elements.
+    const { container } = render(<StreamSummaryPanel summary={{ ...base, droppedPct: 0.03, peakDroppedPct: 4 }} axi={api()} />)
 
-    expect(screen.getByText(/0\.03% — clean/)).toBeTruthy()
-    expect(screen.getByText(/4\.00% — viewers likely saw stuttering/)).toBeTruthy()
+    expect(tile(container, /dropped frames/i)).toMatchObject({ n: '0.03%', verdict: 'clean' })
+    expect(tile(container, /worst moment/i)).toMatchObject({ n: '4.00%', verdict: 'viewers likely saw stuttering' })
+  })
+
+  it('draws the figure as the number and the label beneath it', () => {
+    // .axi-stat__n is --axi-t-h1 (900 30px/1.1) and .axi-stat__k carries a
+    // margin-top on the assumption it sits UNDER its number. Rendering the key
+    // first set every label in display type and pushed the gap to the wrong
+    // side of the pair.
+    const { container } = render(<StreamSummaryPanel summary={base} axi={api()} />)
+
+    for (const stat of container.querySelectorAll('.axi-stat')) {
+      expect(stat.children[0]!.className).toContain('axi-stat__n')
+      expect(stat.children[1]!.className).toContain('axi-stat__k')
+    }
   })
 
   it('omits the watch link entirely when there is no watch url', () => {
@@ -84,7 +108,7 @@ describe('StreamSummaryPanel', () => {
   it('reports dropped frames as a plain count and names the encoder', () => {
     render(<StreamSummaryPanel summary={{ ...base, droppedFrames: 412 }} axi={api()} />)
 
-    expect(screen.getByText(/412 ·/)).toBeTruthy()
+    expect(screen.getByText(/Dropped frames · 412/)).toBeTruthy()
     expect(screen.getByText('NVENC H.264')).toBeTruthy()
   })
 

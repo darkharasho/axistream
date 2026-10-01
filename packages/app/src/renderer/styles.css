@@ -412,6 +412,11 @@ p.axi-ink-dim { margin: 0 0 12px; }
 .summary-panel .axi-grid { --axi-grid-min: 140px; justify-items: center; text-align: center; }
 .summary-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .summary-path { font-size: 11px; color: var(--axi-text-dim); user-select: text; }
+/* The dropped-frame tiles' plain-English judgement. .axi-stat has a number
+   (__n) and a key (__k) and nothing for a sentence, and __k is uppercase micro
+   — shouting "VIEWERS LIKELY SAW STUTTERING" is not what a reassurance line
+   should do. Sentence case, one step under the key. */
+.summary-verdict { display: block; margin-top: 3px; font-size: 11px; line-height: 1.3; color: var(--axi-text-dim); }
 .rec-elapsed { margin-left: 6px; }
 
 /* Webcam settings: corner picker grid + manual mode selects. */
