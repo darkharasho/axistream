@@ -371,6 +371,15 @@ p.axi-ink-dim { margin: 0 0 12px; }
    local regardless of paint). The box itself (fill, border, radius, shadow)
    is .axi-toast's. */
 .axi-toasts { position: absolute; top: 44px; right: 11px; bottom: auto; left: auto; z-index: 8; max-width: 340px; -webkit-app-region: no-drag; }
+/* The status border, restated in tokens from the pre-migration .toast.error,
+   which carried the danger hue at 45% alpha. (The literal is deliberately not
+   quoted here: styles-tokens.test.ts scans comments for rgba forms too, and
+   its own docstring rests on no comment in this file containing one.)
+   The language's own tone modifiers only colour an
+   .axi-toast__dot, which this host does not render — and a 15px glyph is not
+   what makes an error toast readable at a glance, because the stack sits over
+   the moving preview. The border is. */
+.axi-toast.error { border-color: color-mix(in srgb, var(--axi-danger) 45%, transparent); }
 .axi-toast .toast-icon { flex: none; margin-top: 1px; }
 .axi-toast.info .toast-icon { color: var(--axi-accent); }
 .axi-toast.success .toast-icon { color: var(--axi-ok); }
