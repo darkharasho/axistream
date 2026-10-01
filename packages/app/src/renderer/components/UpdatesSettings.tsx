@@ -28,11 +28,11 @@ export function UpdatesSettings() {
   return (
     <section className="yt-settings">
       <h3>Updates</h3>
-      <p className="muted">AxiStream {version}</p>
+      <p className="axi-ink-dim">AxiStream {version}</p>
       <div className="updates-row">
         <button className="axi-btn axi-btn--ghost axi-btn--sm" disabled={busy} onClick={() => axi().checkForUpdates()}>Check for updates</button>
         {status?.state === 'ready' && <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => axi().installUpdate()}>Restart &amp; update</button>}
-        {status && <span className={status.state === 'error' ? 'field-err' : 'muted'}>{line()}</span>}
+        {status && <span className={status.state === 'error' ? 'field-err' : 'axi-ink-dim'}>{line()}</span>}
       </div>
       {notes && (
         <div className="whatsnew">

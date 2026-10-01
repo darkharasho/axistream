@@ -174,7 +174,7 @@ export function QualitySettings({ state, axi }: { state: AppState; axi: AxiApi }
         ) : selectedReason ? (
           <p className="q-fallback">{REASON_LONG[selectedReason]}</p>
         ) : (
-          <p className="muted">Auto picks the fastest encoder your graphics card supports.</p>
+          <p className="axi-ink-dim">Auto picks the fastest encoder your graphics card supports.</p>
         )}
       </div>
     </div>

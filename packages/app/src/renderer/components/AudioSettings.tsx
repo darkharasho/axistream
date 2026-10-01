@@ -173,7 +173,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
         )}
       </div>
       {pluginReady && (
-        <p className="muted">Pick your game to keep Discord and music off the stream. Checking an app switches off desktop audio automatically.</p>
+        <p className="axi-ink-dim">Pick your game to keep Discord and music off the stream. Checking an app switches off desktop audio automatically.</p>
       )}
 
       <label className="audio-row">
@@ -210,11 +210,11 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               ? <span className="ptt-live">🔴 TRANSMITTING</span>
               : <span className="ptt-muted">muted — hold {ptt.keyName} to talk</span>)}
           </label>
-          {!ptt.available && <p className="muted">Needs the GlobalShortcuts portal — available on KDE Plasma</p>}
+          {!ptt.available && <p className="axi-ink-dim">Needs the GlobalShortcuts portal — available on KDE Plasma</p>}
           {ptt.error && <p className="field-err">{ptt.error}</p>}
           {ptt.enabled && ptt.mode === 'passthrough' && (
             <>
-              <p className="muted">Key events pass through — Discord's own push-to-talk works alongside.</p>
+              <p className="axi-ink-dim">Key events pass through — Discord's own push-to-talk works alongside.</p>
               {/* state.ptt.keyName is a DISPLAY label (bindingLabel — "Ctrl + F18"
                   once a modifier is set), not a key name. KeyPicker renders the
                   modifier chip itself and passes binding.key straight back into
@@ -224,16 +224,16 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
               <KeyPicker binding={{ key: { code: ptt.keyCode, name: keyName(ptt.keyCode) }, modifier: ptt.modifier }}
                 onBind={(b) => axi().setPttBinding(b)} />
               {capturing
-                ? <span className="muted">Press any key… {captureLeft}s (Esc cancels)</span>
+                ? <span className="axi-ink-dim">Press any key… {captureLeft}s (Esc cancels)</span>
                 : <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={rebind}>…or press the key: Rebind</button>}
-              {captureMsg && !capturing && <p className="muted">{captureMsg}</p>}
+              {captureMsg && !capturing && <p className="axi-ink-dim">{captureMsg}</p>}
             </>
           )}
           {ptt.enabled && ptt.mode === 'exclusive' && (
             <>
-              <p className="muted">AxiStream owns the key — Discord won't see {ptt.keyName}.</p>
+              <p className="axi-ink-dim">AxiStream owns the key — Discord won't see {ptt.keyName}.</p>
               <button className="axi-btn axi-btn--ghost axi-btn--xs" onClick={unlock}>Enable pass-through (asks for your admin password)</button>
-              <p className="muted">Grants apps in your session read access to input devices (required for pass-through).</p>
+              <p className="axi-ink-dim">Grants apps in your session read access to input devices (required for pass-through).</p>
               {unlockErr && <p className="field-err">{unlockErr}</p>}
               <Select
                 label="Push-to-talk key"
@@ -244,7 +244,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
                   ...PTT_KEY_CHOICES.map((k) => ({ value: k.name, label: k.name })),
                 ]}
               />
-              <p className="muted">Binding again may show a KDE confirmation.</p>
+              <p className="axi-ink-dim">Binding again may show a KDE confirmation.</p>
             </>
           )}
         </div>
@@ -259,7 +259,7 @@ export function AudioSettings({ audio, gameAudioPlugin, phase, ptt }: { audio: A
             onError={() => setTest({ st: 'error', error: "Couldn't play the clip — the recording may be corrupt or blocked" })} />
         )}
         {test.st === 'error' && <span className="field-err">{test.error}</span>}
-        <p className="muted">Records 6 seconds of your actual stream output — speak, and check your game is audible.{pttEnabled ? ` Hold ${ptt.keyName} while recording to test your mic.` : null}</p>
+        <p className="axi-ink-dim">Records 6 seconds of your actual stream output — speak, and check your game is audible.{pttEnabled ? ` Hold ${ptt.keyName} while recording to test your mic.` : null}</p>
       </div>
     </section>
   )

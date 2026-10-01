@@ -29,34 +29,35 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
 
   return (
     <div className="hero summary-panel" role="region" aria-label="Stream summary">
+      <div className="axi-panel">
       <h2>Stream ended</h2>
 
-      <div className="summary-stats">
-        <div className="summary-stat">
-          <span className="summary-label">Duration</span>
-          <span className="summary-value mono">{formatElapsed(summary.durationMs)}</span>
+      <div className="axi-grid">
+        <div className="axi-stat">
+          <span className="axi-stat__k">Duration</span>
+          <span className="axi-stat__n mono">{formatElapsed(summary.durationMs)}</span>
         </div>
-        <div className="summary-stat">
-          <span className="summary-label">Average bitrate</span>
-          <span className="summary-value mono">{summary.avgBitrateKbps} kbps</span>
+        <div className="axi-stat">
+          <span className="axi-stat__k">Average bitrate</span>
+          <span className="axi-stat__n mono">{summary.avgBitrateKbps} kbps</span>
         </div>
         {/* Each figure is judged by its own verdict: pairing the session total
             with the peak's verdict read "0.03% — viewers likely saw stuttering". */}
-        <div className="summary-stat">
-          <span className="summary-label">Dropped frames</span>
-          <span className="summary-value mono">
+        <div className="axi-stat">
+          <span className="axi-stat__k">Dropped frames</span>
+          <span className="axi-stat__n mono">
             {summary.droppedFrames} · {summary.droppedPct.toFixed(2)}% — {droppedVerdict(summary.droppedPct)}
           </span>
         </div>
-        <div className="summary-stat">
-          <span className="summary-label">Worst moment</span>
-          <span className="summary-value mono">
+        <div className="axi-stat">
+          <span className="axi-stat__k">Worst moment</span>
+          <span className="axi-stat__n mono">
             {summary.peakDroppedPct.toFixed(2)}% — {droppedVerdict(summary.peakDroppedPct)}
           </span>
         </div>
-        <div className="summary-stat">
-          <span className="summary-label">Encoder</span>
-          <span className="summary-value mono">{summary.encoder || 'unknown'}</span>
+        <div className="axi-stat">
+          <span className="axi-stat__k">Encoder</span>
+          <span className="axi-stat__n mono">{summary.encoder || 'unknown'}</span>
         </div>
       </div>
 
@@ -79,7 +80,7 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
 
       {summary.recordingStillActive ? (
         <div className="summary-actions">
-          <span className="muted">Still recording — the stream ended but the recording did not.</span>
+          <span className="axi-ink-dim">Still recording — the stream ended but the recording did not.</span>
           <button className="axi-btn axi-ink-danger axi-btn--sm" onClick={() => void axi.stopRecording()}>
             <Square size={13} /> Stop recording
           </button>
@@ -95,6 +96,7 @@ export function StreamSummaryPanel({ summary, axi }: { summary: StreamSummary; a
       ) : null}
 
       <button className="axi-btn axi-btn--primary action" onClick={() => void axi.dismissSummary()}>Done</button>
+      </div>
     </div>
   )
 }

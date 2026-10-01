@@ -18,10 +18,10 @@ export function AppearanceSettings() {
   return (
     <>
       <h3>Appearance</h3>
-      <p className="muted">Shared with every other axi application.</p>
+      <p className="axi-ink-dim">Shared with every other axi application.</p>
 
-      <div className="opt">
-        <div className="opt-label">Accent</div>
+      <div className="axi-stack">
+        <div className="axi-ink-dim">Accent</div>
         <div className="quickrow">
           {ACCENTS.map((a) => (
             <button
@@ -40,8 +40,8 @@ export function AppearanceSettings() {
         </div>
       </div>
 
-      <div className="opt">
-        <div className="opt-label">Surface</div>
+      <div className="axi-stack">
+        <div className="axi-ink-dim">Surface</div>
         <div className="quickrow">
           {SURFACES.map((s) => (
             <button

@@ -65,7 +65,7 @@ export function KeyPicker({ binding, onBind, onClear }: {
           })}
         </div>
       )}
-      {keyCode !== null && typingKey(keyCode) && <p className="muted">Heads up: this key triggers PTT while typing anywhere.</p>}
+      {keyCode !== null && typingKey(keyCode) && <p className="axi-ink-dim">Heads up: this key triggers PTT while typing anywhere.</p>}
     </div>
   )
 }

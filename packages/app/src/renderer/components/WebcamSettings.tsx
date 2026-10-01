@@ -67,7 +67,7 @@ export function WebcamSettings({ webcam, axi }: { webcam: WebcamView; axi: AxiAp
       />
 
       {webcam.enabled && webcam.deviceId && !webcam.available && (
-        <p className="muted">Camera unavailable — the stream continues without it.</p>
+        <p className="axi-ink-dim">Camera unavailable — the stream continues without it.</p>
       )}
 
       <div className="webcam-corners">

@@ -28,7 +28,7 @@ export function DiagnosticsSettings({ axi }: { axi: AxiApi }) {
   return (
     <>
       <h3>Diagnostics</h3>
-      <p className="muted">
+      <p className="axi-ink-dim">
         Bundles the app log, OBS&apos;s logs, and your encoder and device settings into a zip
         you can send us. Your stream key, YouTube sign-in, and Discord webhook are left out.
       </p>
@@ -37,7 +37,7 @@ export function DiagnosticsSettings({ axi }: { axi: AxiApi }) {
       </button>
       {path && (
         <>
-          <p className="muted">Bundle saved — attach this file to your report.</p>
+          <p className="axi-ink-dim">Bundle saved — attach this file to your report.</p>
           <p className="mono summary-path">{path}</p>
           <div className="yt-account">
             <button className="axi-btn axi-btn--ghost axi-btn--sm" onClick={() => void axi.revealFile(path)}>Show in folder</button>

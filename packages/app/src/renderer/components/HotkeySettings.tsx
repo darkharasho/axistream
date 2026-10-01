@@ -19,8 +19,8 @@ export function HotkeySettings({ hotkeys, axi }: { hotkeys: AppState['hotkeys'];
   return (
     <>
       <h3>Hotkeys</h3>
-      <p className="muted">Control AxiStream without leaving the game. Nothing is bound until you set it.</p>
-      {hotkeys.mode ? <p className="muted">{MODE_COPY[hotkeys.mode]}</p> : null}
+      <p className="axi-ink-dim">Control AxiStream without leaving the game. Nothing is bound until you set it.</p>
+      {hotkeys.mode ? <p className="axi-ink-dim">{MODE_COPY[hotkeys.mode]}</p> : null}
       {alert ? <p className="field-err" role="alert">{alert}</p> : null}
       <div className="hotkey-rows">
         {HOTKEY_IDS.map((id) => (

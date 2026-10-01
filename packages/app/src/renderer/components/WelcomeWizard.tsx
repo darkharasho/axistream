@@ -72,7 +72,7 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
 
         {step === 0 ? (
           <div className="wizard-body">
-            <p className="muted">AxiStream captures one screen or window — the one showing your game.</p>
+            <p className="axi-ink-dim">AxiStream captures one screen or window — the one showing your game.</p>
             {capture
               ? <p className="wizard-ok"><Check size={14} /> Capturing {capture.sourceLabel}</p>
               : choosing
@@ -90,17 +90,17 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
 
         {step === 1 ? (
           <div className="wizard-body">
-            <p className="muted">Connecting YouTube lets AxiStream create the broadcast for you — no stream key to copy.</p>
+            <p className="axi-ink-dim">Connecting YouTube lets AxiStream create the broadcast for you — no stream key to copy.</p>
             {connected
               ? <p className="wizard-ok"><Check size={14} /> Connected as {state.youtube.channel}</p>
               : <button className="axi-btn axi-btn--primary axi-btn--sm" onClick={() => void axi.connectYouTube()}>Connect YouTube</button>}
-            <p className="muted">You can skip this and paste a stream key in Settings instead.</p>
+            <p className="axi-ink-dim">You can skip this and paste a stream key in Settings instead.</p>
           </div>
         ) : null}
 
         {step === 2 ? (
           <div className="wizard-body">
-            <p className="muted">Hear yourself before a stranger does.</p>
+            <p className="axi-ink-dim">Hear yourself before a stranger does.</p>
             <Select
               label="Microphone"
               value={state.audio.micDevice ?? ''}
@@ -123,7 +123,7 @@ export function WelcomeWizard({ state, axi, onClose, onGoLive }: { state: AppSta
             <p className="wizard-ok">{capture ? <Check size={14} /> : null} Capture — {capture ? capture.sourceLabel : 'not set up'}</p>
             <p className="wizard-ok">{connected ? <Check size={14} /> : null} YouTube — {connected ? state.youtube.channel : 'using a stream key'}</p>
             <p className="wizard-ok">{test.st === 'ready' ? <Check size={14} /> : null} Microphone — {test.st === 'ready' ? 'tested' : 'not tested'}</p>
-            <p className="muted">Everything here can be changed later in Settings.</p>
+            <p className="axi-ink-dim">Everything here can be changed later in Settings.</p>
           </div>
         ) : null}
         </div>

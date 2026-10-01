@@ -10,10 +10,10 @@ export function GameAudioSettings({ plugin, phase }: { plugin: AppState['gameAud
   return (
     <section className="yt-settings">
       <h3>Game audio</h3>
-      {status === 'unsupported' && <p className="muted">Per-app game audio requires the OBS flatpak.</p>}
+      {status === 'unsupported' && <p className="axi-ink-dim">Per-app game audio requires the OBS flatpak.</p>}
       {status === 'missing' && (
         <>
-          <p className="muted">Capture only your game's audio — needs a free OBS plugin.</p>
+          <p className="axi-ink-dim">Capture only your game's audio — needs a free OBS plugin.</p>
           <button className="axi-btn axi-btn--ghost" onClick={() => axi().installGameAudioPlugin()}>Install plugin</button>
         </>
       )}
@@ -22,7 +22,7 @@ export function GameAudioSettings({ plugin, phase }: { plugin: AppState['gameAud
       )}
       {status === 'installed' && (
         <>
-          <p className="muted">Installed — restart AxiStream to activate.</p>
+          <p className="axi-ink-dim">Installed — restart AxiStream to activate.</p>
           {LIVE_PHASES.includes(phase) ? null : (
             <button className="axi-btn axi-btn--ghost" onClick={() => axi().relaunchApp()}>Restart AxiStream</button>
           )}
@@ -30,7 +30,7 @@ export function GameAudioSettings({ plugin, phase }: { plugin: AppState['gameAud
       )}
       {status === 'error' && (
         <>
-          <p className="muted mono">{error}</p>
+          <p className="axi-ink-dim mono">{error}</p>
           <button className="axi-btn axi-btn--ghost" onClick={() => axi().installGameAudioPlugin()}>Retry install</button>
         </>
       )}
