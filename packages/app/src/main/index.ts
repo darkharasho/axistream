@@ -171,8 +171,21 @@ if (primary) app.whenReady().then(async () => {
   // Access check (see README "Access"): when this install is blocked, start
   // nothing else: no window, updater, tray, OBS runtime or hotkeys.
   const settings = new StreamSettings(join(app.getPath('userData'), 'stream.json'))
-  const access = await startAccess({ electron: { app, BrowserWindow, shell }, readWebhookUrl: () => settings.load().discordWebhookUrl })
-  if (access.blocked) return
+  // A runtime block exits the app and skips the window-close teardown, so it
+  // runs the sidecar teardown first (assigned once teardownSidecar exists).
+  let stopSidecarForBlock: () => Promise<void> = async () => {}
+  let access: Awaited<ReturnType<typeof startAccess>> | null = null
+  try {
+    access = await startAccess({
+      electron: { app, BrowserWindow, shell },
+      readWebhookUrl: () => settings.load().discordWebhookUrl,
+      beforeBlocked: () => stopSidecarForBlock(),
+    })
+  } catch {
+    // Fail open: a bug in the check must not take the app down.
+    console.warn('access check unavailable')
+  }
+  if (access?.blocked) return
 
   const win = createWindow()
 
@@ -848,7 +861,7 @@ if (primary) app.whenReady().then(async () => {
     getSettings: async () => viewOf(settings.load()),
     saveSettings: async (p) => {
       const next = settings.patch(p)
-      if (p.discordWebhookUrl !== undefined) void access.gate.recheck()
+      if (p.discordWebhookUrl !== undefined && access && !access.blocked) void access.gate.recheck()
       const view = viewOf(next)
       setState({ settings: view })
       return view
@@ -1355,6 +1368,7 @@ if (primary) app.whenReady().then(async () => {
   // handler a second time, which must not re-ask.
   let closeConfirmed = false
   const teardownSidecar = createSidecarTeardown({ stopSidecar: () => sidecar.stop() })
+  stopSidecarForBlock = teardownSidecar
   let teardownStarted = false
   win.on('close', (e) => {
     const live = stream.isLive()
@@ -1431,7 +1445,7 @@ if (primary) app.whenReady().then(async () => {
   })()
 
   // Not awaited: the check never delays startup.
-  void access.gate.recheck()
+  if (access && !access.blocked) void access.gate.recheck()
 
   // Boot the engine, then derive the initial phase.
   try {

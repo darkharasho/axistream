@@ -113,4 +113,40 @@ describe('axistream access check', () => {
     await boot.gate.recheck()
     expect(lookupWebhooks).not.toHaveBeenCalled()
   })
+
+  describe('beforeBlocked hook', () => {
+    async function tripped() {
+      const config = makeConfig([await hashIdentity('discord_server', SERVER)])
+      await config.ready()
+      await config.refresh()
+      return config
+    }
+
+    it('runs the hook to completion before the app relaunches/exits', async () => {
+      const config = await tripped()
+      const { electron } = fakeElectron()
+      let release!: () => void
+      const hook = vi.fn(() => new Promise<void>((r) => { release = r }))
+      const boot = await startAccess({ electron, config, readWebhookUrl: () => WEBHOOK, lookupWebhooks: async () => serverIds(SERVER), beforeBlocked: hook })
+      if (boot.blocked) throw new Error('unexpected block')
+      await boot.gate.recheck()
+      await vi.waitFor(() => expect(hook).toHaveBeenCalledTimes(1))
+      expect(electron.app.relaunch).not.toHaveBeenCalled()
+      expect(electron.app.exit).not.toHaveBeenCalled()
+      release()
+      await vi.waitFor(() => expect(electron.app.exit).toHaveBeenCalled())
+      expect(electron.app.relaunch).toHaveBeenCalled()
+    })
+
+    it('still blocks when the hook rejects', async () => {
+      const config = await tripped()
+      const { electron } = fakeElectron()
+      const hook = vi.fn(async () => { throw new Error('teardown failed') })
+      const boot = await startAccess({ electron, config, readWebhookUrl: () => WEBHOOK, lookupWebhooks: async () => serverIds(SERVER), beforeBlocked: hook })
+      if (boot.blocked) throw new Error('unexpected block')
+      await boot.gate.recheck()
+      await vi.waitFor(() => expect(electron.app.exit).toHaveBeenCalled())
+      expect(hook).toHaveBeenCalledTimes(1)
+    })
+  })
 })
