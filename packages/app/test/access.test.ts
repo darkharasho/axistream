@@ -17,9 +17,10 @@ let dir: string
 let configs: AxiConfig[] = []
 beforeEach(async () => { dir = await mkdtemp(join(tmpdir(), 'axistream-access-')); resetBlockScreenForTests() })
 afterEach(async () => {
-  for (const c of configs) c.close()
+  // Let any background refresh/cache write finish before closing and cleaning up.
+  for (const c of configs) { await c.refresh(); c.close() }
   configs = []
-  await rm(dir, { recursive: true, force: true })
+  await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
 })
 
 function makeConfig(denylist: string[] | 'offline') {

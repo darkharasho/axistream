@@ -6,10 +6,11 @@ AxiStream ("the app") is a desktop application that helps you go live on YouTube
 from your own computer. This policy explains what data the app accesses, how it
 is used, and how it is stored.
 
-**In short: AxiStream has no servers and collects no analytics. Your data stays
-on your own device. The app's developer never receives it. The app only
-downloads a public access list and, if you set up a Discord announce webhook,
-looks up that webhook's server on Discord (see "Access check" below).**
+**In short: AxiStream runs no servers that receive your data and collects no
+analytics. Your data stays on your own device and the app's developer never
+receives it. The app does download a public access list from a developer-run
+service (see "Access check" below) and talks to the third-party services listed
+under "How your data is stored and transmitted".**
 
 ## Who we are
 
@@ -56,19 +57,27 @@ are stored locally on your device so the app remembers them between sessions.
 - **Video and audio** you stream are sent directly from your computer to
   **YouTube's** servers over RTMPS. They do not pass through any
   developer-operated server — AxiStream operates none.
-- The app makes network requests only to **Google/YouTube APIs** (to manage your
-  broadcast), to **YouTube's ingestion servers** (to deliver your stream), to
-  **config.axi.link** (to download the public access list, a request that
-  carries no information about you), and, only if you configured a Discord
-  announce webhook, to **Discord** (to post your announcement and to look up
-  the webhook's server id for the access check).
+- The app makes network requests to these services:
+  - **Google/YouTube APIs** (to manage your broadcast) and **YouTube's
+    ingestion servers** (to deliver your stream).
+  - **config.axi.link**, a service run by the developer, to download the
+    public access list. The app only downloads from it; the request names the
+    app but carries no account or identity data (as with any request, your IP
+    address is visible to the server).
+  - The **Guild Wars 2 API** (api.guildwars2.com), to look up public game data
+    such as map and class names for title templates.
+  - **GitHub**, to fetch release notes and download app updates.
+  - **Discord**, only if you configured an announce webhook: to post your
+    announcement and to look up the webhook's server id for the access check.
 
 ## Data sharing
 
 We do not sell, rent, or share your information with anyone. The third parties
 involved are Google/YouTube, only to the extent required to provide the
-streaming functionality you initiate, and Discord, only if you configure an
-announce webhook. Your use of YouTube is also governed by
+streaming functionality you initiate; Discord, only if you configure an
+announce webhook; GitHub, for release notes and updates; and the Guild Wars 2
+API, for public game data. The developer-run access list service only receives
+a download request from the app. Your use of YouTube is also governed by
 [Google's Privacy Policy](https://policies.google.com/privacy).
 
 ## Data retention and deletion
