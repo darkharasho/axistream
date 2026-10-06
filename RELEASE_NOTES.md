@@ -1,5 +1,15 @@
 # Release Notes
 
+## Version v1.2.0 — October 5, 2026
+
+### Access check
+
+AxiStream now checks a public access list when it starts and every few hours. Access to the Axi apps can be revoked for accounts, guilds or Discord servers that violate the terms of use, and a revoked install shows a block screen instead of the app.
+
+The list is downloaded from `config.axi.link` and holds only one-way hashes. AxiStream checks the Discord server behind your announce webhook against it on your device and never sends it anywhere. To find the webhook's server, it sends an unauthenticated request to the webhook URL on discord.com. If access is revoked while AxiStream is running, it stops OBS (and any stream in progress) before closing.
+
+If the list can't be reached, AxiStream keeps working as before. The README has a new **Access** section that spells out exactly what is checked and how to appeal.
+
 ## Version v1.1.0 — October 1, 2026
 
 AxiStream has been redrawn in axi-design, the visual language the Axi apps share, and it now lets you choose how it looks.
