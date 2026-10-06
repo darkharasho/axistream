@@ -21,3 +21,7 @@ Linux runtime preparation downloads the published, hash-pinned `link.axi.AxiStre
 If an older AxiStream build changed a personal OBS profile, follow [the manual recovery guide](docs/obs-recovery.md). Runtime provenance and redistribution details are in [the OBS redistribution notes](docs/obs-redistribution.md).
 
 Design specs live in `docs/superpowers/specs/`, implementation plans in `docs/superpowers/plans/`.
+
+## Access
+
+AxiStream checks a public access list when it starts and every few hours, by downloading `https://config.axi.link/v1/manifest`. Access to the Axi apps can be revoked for accounts, guilds or Discord servers that violate the terms of use. The list holds only one-way SHA-256 hashes, and the comparison happens on your device: AxiStream compares the Discord server behind your announce webhook against it and never sends it, or anything else about you, anywhere. If the list can't be reached, AxiStream keeps working. If you believe your access was revoked by mistake, use the contact link on the block screen, or reach the author through https://github.com/darkharasho.

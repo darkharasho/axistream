@@ -1,13 +1,15 @@
 # AxiStream Privacy Policy
 
-_Last updated: June 24, 2026_
+_Last updated: October 5, 2026_
 
 AxiStream ("the app") is a desktop application that helps you go live on YouTube
 from your own computer. This policy explains what data the app accesses, how it
 is used, and how it is stored.
 
-**In short: AxiStream has no servers and collects no analytics. Everything stays
-on your own device. The app's developer never receives your data.**
+**In short: AxiStream has no servers and collects no analytics. Your data stays
+on your own device. The app's developer never receives it. The app only
+downloads a public access list and, if you set up a Discord announce webhook,
+looks up that webhook's server on Discord (see "Access check" below).**
 
 ## Who we are
 
@@ -31,6 +33,15 @@ AxiStream does **not** read, modify, or delete your videos, comments, playlists,
 subscriptions, or any other YouTube data beyond what is required to run a live
 broadcast you have started.
 
+### Access check
+
+AxiStream checks a public access list when it starts and every few hours, by downloading `https://config.axi.link/v1/manifest`. Access to the Axi apps can be revoked for accounts, guilds or Discord servers that violate the terms of use. The list holds only one-way SHA-256 hashes, and the comparison happens on your device: AxiStream compares the Discord server behind your announce webhook against it and never sends it, or anything else about you, anywhere. If the list can't be reached, AxiStream keeps working. If you believe your access was revoked by mistake, use the contact link on the block screen, or reach the author through https://github.com/darkharasho.
+
+If you have configured a Discord announce webhook, the app sends an
+unauthenticated GET request to that webhook URL on discord.com to read the id of
+the server it posts into. That id is compared locally with the access list and
+is never sent anywhere else. If no webhook is configured, no lookup is made.
+
 ### Local app settings
 
 Your stream title template, date format, privacy preference, and session counter
@@ -46,13 +57,18 @@ are stored locally on your device so the app remembers them between sessions.
   **YouTube's** servers over RTMPS. They do not pass through any
   developer-operated server — AxiStream operates none.
 - The app makes network requests only to **Google/YouTube APIs** (to manage your
-  broadcast) and to **YouTube's ingestion servers** (to deliver your stream).
+  broadcast), to **YouTube's ingestion servers** (to deliver your stream), to
+  **config.axi.link** (to download the public access list, a request that
+  carries no information about you), and, only if you configured a Discord
+  announce webhook, to **Discord** (to post your announcement and to look up
+  the webhook's server id for the access check).
 
 ## Data sharing
 
-We do not sell, rent, or share your information with anyone. The only third party
-involved is Google/YouTube, and only to the extent required to provide the
-streaming functionality you initiate. Your use of YouTube is also governed by
+We do not sell, rent, or share your information with anyone. The third parties
+involved are Google/YouTube, only to the extent required to provide the
+streaming functionality you initiate, and Discord, only if you configure an
+announce webhook. Your use of YouTube is also governed by
 [Google's Privacy Policy](https://policies.google.com/privacy).
 
 ## Data retention and deletion

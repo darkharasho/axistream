@@ -25,6 +25,7 @@ import { MaskController } from './MaskController.js'
 import { PluginInstaller, deriveGameAudioStatus, deriveBlurStatus, GAME_AUDIO_PLUGIN_REF, BLUR_PLUGIN_REF } from './PluginInstaller.js'
 import { GameAudioController } from './GameAudioController.js'
 import { announce, type FetchLike } from './DiscordAnnounce.js'
+import { startAccess } from './access.js'
 import { RecordController } from './RecordController.js'
 import { defaultRecordDir, validateRecordDir, RECORD_DIR_ERROR } from './record-dir.js'
 import { recordStartRejection } from './record-gate.js'
@@ -167,6 +168,12 @@ if (primary) app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'))
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media')
 
+  // Access check (see README "Access"): when this install is blocked, start
+  // nothing else: no window, updater, tray, OBS runtime or hotkeys.
+  const settings = new StreamSettings(join(app.getPath('userData'), 'stream.json'))
+  const access = await startAccess({ electron: { app, BrowserWindow, shell }, readWebhookUrl: () => settings.load().discordWebhookUrl })
+  if (access.blocked) return
+
   const win = createWindow()
 
   // GitHub-Releases auto-update (packaged only) + tell the AxiOM launcher
@@ -209,7 +216,6 @@ if (primary) app.whenReady().then(async () => {
 
   const userData = app.getPath('userData')
   const tokenStore = new TokenStore(join(userData, 'yt-tokens.bin'), safeStorage)
-  const settings = new StreamSettings(join(userData, 'stream.json'))
   const resolveRecordDir = () => {
     const saved = settings.load().recordDir
     // Stored empty by default so the path follows the user's actual home
@@ -842,6 +848,7 @@ if (primary) app.whenReady().then(async () => {
     getSettings: async () => viewOf(settings.load()),
     saveSettings: async (p) => {
       const next = settings.patch(p)
+      if (p.discordWebhookUrl !== undefined) void access.gate.recheck()
       const view = viewOf(next)
       setState({ settings: view })
       return view
@@ -1422,6 +1429,9 @@ if (primary) app.whenReady().then(async () => {
       }
     } catch { /* best-effort — dir may not exist yet */ }
   })()
+
+  // Not awaited: the check never delays startup.
+  void access.gate.recheck()
 
   // Boot the engine, then derive the initial phase.
   try {
